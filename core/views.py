@@ -612,3 +612,19 @@ class DeleteAccountPage(View):
                 'errors': errors
             }
         )
+
+
+def custom_404(request, exception):
+    try:
+        g = GlobalVars.get_globals(request)
+    except Exception:
+        g = {}
+    return render(request, '404.html', {'g': g}, status=404)
+
+
+def custom_500(request):
+    try:
+        g = GlobalVars.get_globals(request)
+    except Exception:
+        g = {}
+    return render(request, '500.html', {'g': g}, status=500)
