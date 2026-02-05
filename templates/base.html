@@ -81,7 +81,7 @@
                                     <div class="text-muted" style="font-size:0.75rem">{{ g.i18n.paraphraser_desc|default:"Rewrite text in different styles" }}</div>
                                 </div>
                             </a>
-                            <a href="/grammar-checker/?lang={{ g.lang.iso }}" class="d-flex align-items-start gap-3 p-3 rounded-3 dropdown-item-custom">
+                            <a href="/grammar-check/?lang={{ g.lang.iso }}" class="d-flex align-items-start gap-3 p-3 rounded-3 dropdown-item-custom">
                                 <div class="d-flex align-items-center justify-content-center flex-shrink-0 rounded-3" style="width:40px;height:40px;background:#dcfce7">
                                     <svg style="width:20px;height:20px;color:#16a34a" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                 </div>
@@ -90,7 +90,7 @@
                                     <div class="text-muted" style="font-size:0.75rem">{{ g.i18n.grammar_desc|default:"Fix grammar, spelling & punctuation" }}</div>
                                 </div>
                             </a>
-                            <a href="/summarizer/?lang={{ g.lang.iso }}" class="d-flex align-items-start gap-3 p-3 rounded-3 dropdown-item-custom">
+                            <a href="/summarize/?lang={{ g.lang.iso }}" class="d-flex align-items-start gap-3 p-3 rounded-3 dropdown-item-custom">
                                 <div class="d-flex align-items-center justify-content-center flex-shrink-0 rounded-3" style="width:40px;height:40px;background:#f3e8ff">
                                     <svg style="width:20px;height:20px;color:#9333ea" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h8m-8 6h16"/></svg>
                                 </div>
@@ -99,7 +99,7 @@
                                     <div class="text-muted" style="font-size:0.75rem">{{ g.i18n.summarizer_desc|default:"Condense long texts to key points" }}</div>
                                 </div>
                             </a>
-                            <a href="/ai-detector/?lang={{ g.lang.iso }}" class="d-flex align-items-start gap-3 p-3 rounded-3 dropdown-item-custom">
+                            <a href="/ai-content-detector/?lang={{ g.lang.iso }}" class="d-flex align-items-start gap-3 p-3 rounded-3 dropdown-item-custom">
                                 <div class="d-flex align-items-center justify-content-center flex-shrink-0 rounded-3" style="width:40px;height:40px;background:#fef3c7">
                                     <svg style="width:20px;height:20px;color:#d97706" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
                                 </div>
@@ -108,7 +108,7 @@
                                     <div class="text-muted" style="font-size:0.75rem">{{ g.i18n.ai_detector_desc|default:"Detect AI-generated content" }}</div>
                                 </div>
                             </a>
-                            <a href="/humanizer/?lang={{ g.lang.iso }}" class="d-flex align-items-start gap-3 p-3 rounded-3 dropdown-item-custom">
+                            <a href="/ai-humanizer/?lang={{ g.lang.iso }}" class="d-flex align-items-start gap-3 p-3 rounded-3 dropdown-item-custom">
                                 <div class="d-flex align-items-center justify-content-center flex-shrink-0 rounded-3" style="width:40px;height:40px;background:#ffe4e6">
                                     <svg style="width:20px;height:20px;color:#e11d48" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
                                 </div>
@@ -126,7 +126,7 @@
                             {{ g.i18n.content_tools|default:"Content Tools" }}
                         </a>
                         <div class="dropdown-menu p-3 shadow-lg border-0 rounded-3" style="min-width:320px">
-                            <a href="/translator/?lang={{ g.lang.iso }}" class="d-flex align-items-start gap-3 p-3 rounded-3 dropdown-item-custom">
+                            <a href="/translate/?lang={{ g.lang.iso }}" class="d-flex align-items-start gap-3 p-3 rounded-3 dropdown-item-custom">
                                 <div class="d-flex align-items-center justify-content-center flex-shrink-0 rounded-3" style="width:40px;height:40px;background:#e0f2fe">
                                     <svg style="width:20px;height:20px;color:#0284c7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"/></svg>
                                 </div>
@@ -317,11 +317,11 @@
                     <h6 class="text-uppercase text-white small fw-semibold mb-3">{{ g.i18n.tools|default:"Tools" }}</h6>
                     <ul class="list-unstyled">
                         <li class="mb-2"><a href="/paraphraser/?lang={{ g.lang.iso }}" class="text-decoration-none text-secondary link-light small">{{ g.i18n.paraphraser|default:"Paraphraser" }}</a></li>
-                        <li class="mb-2"><a href="/grammar-checker/?lang={{ g.lang.iso }}" class="text-decoration-none text-secondary link-light small">{{ g.i18n.grammar_checker|default:"Grammar Checker" }}</a></li>
-                        <li class="mb-2"><a href="/summarizer/?lang={{ g.lang.iso }}" class="text-decoration-none text-secondary link-light small">{{ g.i18n.summarizer|default:"Summarizer" }}</a></li>
-                        <li class="mb-2"><a href="/ai-detector/?lang={{ g.lang.iso }}" class="text-decoration-none text-secondary link-light small">{{ g.i18n.ai_detector|default:"AI Detector" }}</a></li>
-                        <li class="mb-2"><a href="/humanizer/?lang={{ g.lang.iso }}" class="text-decoration-none text-secondary link-light small">{{ g.i18n.humanizer|default:"Humanizer" }}</a></li>
-                        <li class="mb-2"><a href="/translator/?lang={{ g.lang.iso }}" class="text-decoration-none text-secondary link-light small">{{ g.i18n.translator|default:"Translator" }}</a></li>
+                        <li class="mb-2"><a href="/grammar-check/?lang={{ g.lang.iso }}" class="text-decoration-none text-secondary link-light small">{{ g.i18n.grammar_checker|default:"Grammar Checker" }}</a></li>
+                        <li class="mb-2"><a href="/summarize/?lang={{ g.lang.iso }}" class="text-decoration-none text-secondary link-light small">{{ g.i18n.summarizer|default:"Summarizer" }}</a></li>
+                        <li class="mb-2"><a href="/ai-content-detector/?lang={{ g.lang.iso }}" class="text-decoration-none text-secondary link-light small">{{ g.i18n.ai_detector|default:"AI Detector" }}</a></li>
+                        <li class="mb-2"><a href="/ai-humanizer/?lang={{ g.lang.iso }}" class="text-decoration-none text-secondary link-light small">{{ g.i18n.humanizer|default:"Humanizer" }}</a></li>
+                        <li class="mb-2"><a href="/translate/?lang={{ g.lang.iso }}" class="text-decoration-none text-secondary link-light small">{{ g.i18n.translator|default:"Translator" }}</a></li>
                         <li class="mb-2"><a href="/ai-writing-tools/?lang={{ g.lang.iso }}" class="text-decoration-none text-secondary link-light small">{{ g.i18n.ai_writing_tools|default:"AI Writing Tools" }}</a></li>
                     </ul>
                 </div>
