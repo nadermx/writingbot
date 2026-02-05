@@ -4,7 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-DjangoBase is a reusable Django 5.x project template with built-in user authentication, credits-based billing, multi-processor payments (Stripe, PayPal, Square, Coinbase), and a custom database-driven translation system. It's designed to be cloned and customized for new SaaS projects.
+**WritingBot.ai** is an AI-powered writing assistant platform competing with QuillBot.com. Built on Django 6.x (forked from nadermx/djangobase), it offers paraphrasing, grammar checking, AI detection, summarization, translation, citation generation, plagiarism checking, and 100+ AI writing tool generators.
+
+**Domain:** writingbot.ai
+**Repository:** https://github.com/nadermx/writingbot
 
 ## Common Commands
 
@@ -15,229 +18,105 @@ python manage.py migrate
 python manage.py createsuperuser
 
 # Translations
-python manage.py set_languages      # Load languages from JSON
-python manage.py run_translation    # Auto-translate via Google Translate API
+python manage.py set_languages
+python manage.py run_translation
 
 # Plans
-python manage.py set_plans          # Load plans from finances/json/plans.json
+python manage.py set_plans
 
-# PayPal Setup (if using subscriptions)
-python manage.py create_paypal_product
-python manage.py create_paypal_plans
+# Subscription Management (cron)
+python manage.py rebill
+python manage.py expire_pro_users
 
-# Subscription Management (run via cron)
-python manage.py rebill             # Daily billing for subscriptions
-python manage.py expire_pro_users   # Deactivate expired subscriptions
-
-# Run tests
+# Tests
 python manage.py test
-python manage.py test accounts      # Single app
+python manage.py test paraphraser
 ```
 
-## Quick Start for New Projects
+## Quick Start
 
 ```bash
-python customize.py           # Interactive setup script
-cp config_example.py config.py  # If not using customize.py
+cp config_example.py config.py   # Configure secrets
 pip install -r requirements.txt
 python manage.py migrate
 python manage.py set_languages
 python manage.py runserver
 ```
 
-See `SETUP.md` for detailed customization instructions.
-
 ## Architecture
 
+### Core Apps (from djangobase)
+- `accounts/` - Custom user model (email-based auth, credits, subscriptions)
+- `finances/` - Plans, payments (Stripe, PayPal, Square)
+- `translations/` - Database-driven i18n system
+- `contact_messages/` - Contact form
+- `core/` - Static pages (about, terms, privacy, pricing, auth pages)
+
+### Tool Apps (WritingBot-specific)
+- `paraphraser/` - Flagship paraphrasing tool (10 modes, synonym slider, freeze words)
+- `grammar/` - Grammar checker (spelling, punctuation, style, writing score)
+- `summarizer/` - Text summarization (key sentences, paragraph, length slider)
+- `ai_detector/` - AI content detection (sentence-level scoring)
+- `humanizer/` - AI text humanizer (basic + advanced modes)
+- `plagiarism/` - Plagiarism checker (premium only, web scanning)
+- `translator/` - Translation tool (52+ languages)
+- `citations/` - Citation generator (1000+ styles, autocite)
+- `word_counter/` - Word/character counter
+- `flow/` - Co-Writer workspace (document editor, research, AI suggestions)
+- `ai_tools/` - 100+ AI writing generators (generic framework)
+- `pdf_tools/` - PDF processing suite
+- `media_tools/` - Image, audio, converter tools
+- `courses/` - Free educational courses (OER)
+- `blog/` - Content marketing blog
+- `seo/` - SEO landing pages
+- `api/` - Public API (v1)
+
 ### Configuration
-Settings split between `app/settings.py` (Django defaults) and `config.py` (secrets/env-specific). The `config.py` is gitignored - copy from `config_example.py` or use `customize.py`.
+- `app/settings.py` - Django settings
+- `config.py` - Secrets, API keys (gitignored)
+- `config_example.py` - Template for config.py
 
-Key config values:
-- `PROJECT_NAME` - Used in templates, emails, and payment descriptions
-- `PROJECT_DOMAIN` - Your domain for email sending
-- `ROOT_DOMAIN` - Full URL (e.g., https://myapp.com)
-- `SECRET_KEY` - Django secret key (generate a unique one for production)
-- `CSRF_TRUSTED_ORIGINS` - Required for Django 4+ to fix 403 errors
-- `ALLOWED_HOSTS` - List of allowed hostnames
-- `CURRENCY_CODE` - Currency code (default: 'USD')
-- `CURRENCY_SYMBOL` - Currency symbol (default: '$')
-- `PROCESSORS` - List of enabled payment processors: `['stripe', 'paypal']`
+### Key Patterns
+- Views use `GlobalVars.get_globals(request)` for context (i18n, settings)
+- Templates access context via `{{ g.i18n.key }}`, `{{ g.project_name }}`
+- Methods return `(result, error)` tuples
+- AI services in each app's `services.py` handle LLM API calls
+- Rate limiting uses IP+User-Agent hash in Redis
+- All AI tools share a generic generator pattern in `ai_tools/generators/`
 
-### Custom Translation System
-**Not Django's built-in i18n.** Uses three models in `translations/`:
-- `Language` - available languages (populated via `set_languages` command)
-- `TextBase` - source text entries with `code_name` identifier
-- `Translation` - translated text per language
-
-Usage in views: `Translation.get_text_by_lang('en')` returns dict of `{code_name: text}`. Add new text via admin at `Translations > Text bases`, then run `python manage.py run_translation`.
-
-### User & Authentication
-Custom user model `accounts.CustomUser` (single file at `accounts/models.py`) with:
-- Email as username (`USERNAME_FIELD = "email"`)
-- Credits system for usage-based billing
-- Subscription tracking (`is_plan_active`, `next_billing_date`, `plan_subscribed`)
-- Payment processor tokens (`payment_nonce`, `card_nonce`, `processor`)
-- 6-digit email verification codes (`verification_code`)
-- API token for external authentication
-
-User model contains most business logic as static methods: `register_user()`, `login_user()`, `upgrade_account()`, `cancel_subscription()`, etc.
-
-### Email System
-Uses `Utils.send_email()` from `app/utils.py` with Django's native SMTP backend. See `EMAIL_SETUP.md` for DNS configuration.
-
-Email templates in `templates/mailing/` use `{{ project_name }}`, `{{ root_domain }}`, and `{{ currency_symbol }}` variables.
-
-For development, set in `config.py`:
-```python
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-```
-
-### Payment Processing
-`finances/` supports Stripe, Square, PayPal, Coinbase. Plans defined in `finances/json/plans.json` or admin.
-
-Key models:
-- `Plan` (`finances/models/plan.py`) - pricing, credits granted, subscription length, processor keys
-- `Payment` (`finances/models/payment.py`) - transactions with status (pending/success/failed/refunded)
-
-Payment methods are static on `Payment`: `make_charge_stripe()`, `make_charge_square()`, `make_charge_paypal()`.
-
-Webhooks at `/ipns/paypal` and `/ipns/coinbase`.
-
-### View Pattern
-All views call `GlobalVars.get_globals(request)` from `accounts/views.py` to build context:
-```python
-settings = GlobalVars.get_globals(request)
-# Returns: {
-#   'lang': Language,
-#   'i18n': {code_name: text},
-#   'languages': [...],
-#   'scripts_version': str,
-#   'project_name': str,
-#   'currency_symbol': str,
-#   'currency_code': str
-# }
-```
-Templates receive this as `g` context variable (e.g., `{{ g.i18n.welcome_title }}`, `{{ g.currency_symbol }}`).
-
-Views are class-based in `core/views.py`. Most authentication/payment logic is delegated to `CustomUser` model methods.
-
-### API Endpoints
-REST Framework views in `accounts/views.py` (not a separate api_views.py):
-- `/api/accounts/rate_limit/` - Check usage quotas per IP
-- `/api/accounts/consume/` - Decrement credits after API usage
-- `/api/accounts/resend-verification/` - Resend email verification
-- `/api/accounts/cancel-subscription/` - Cancel active subscription
-- `/api/accounts/log-error/` - Log frontend JavaScript errors
+### AI Service Layer
+- Primary: Claude API (Anthropic) for NLP tasks
+- Translation: translateapi.ai
+- All AI calls go through `services.py` in each app
+- Rate limits enforced per tool, per user tier (free/premium)
 
 ### Frontend
-- Bootstrap 5.3 (loaded via CDN)
-- Custom styles in `static/css/styles.css`
-- Language selector in navbar with `?lang=` URL parameter
-- All templates use consistent card-based layout
+- Tailwind CSS for styling
+- Alpine.js for reactivity
+- TipTap/ProseMirror for rich text editing (Flow)
+- Vanilla JS for tool interactions
+- No build step required for MVP
 
-
-## Key Patterns
-
-### Method Return Convention
-Methods return `(object, error)` tuples - check first element for success:
-```python
-payment, errors = Payment.make_charge_stripe(user, token, amount, settings)
-if errors:
-    # handle error
-```
-This pattern is used throughout: `CustomUser.register_user()`, `Payment.make_refund()`, `Message.save_message()`, etc.
-
-### Template Variables
-All templates have access to the `g` context with:
-- `g.i18n.{code_name}` - Translated text (use `|default:"Fallback"` for safety)
-- `g.project_name` - Project name from config
-- `g.currency_symbol` - Currency symbol ($, €, etc.)
-- `g.currency_code` - Currency code (USD, EUR, etc.)
-- `g.lang` - Current language object
-- `g.languages` - All available languages
-- `g.scripts_version` - For cache busting
-
-### Adding New Translations
-1. Add TextBase entry in admin (`Translations > Text bases`) with unique `code_name`
-2. Run `python manage.py run_translation` to auto-translate via Google API
-3. Access in templates: `{{ g.i18n.your_code_name|default:"Fallback" }}`
-
-### Rate Limiting
-- API rate limiting in `RateLimit` view uses IP+User-Agent hash stored in Redis
-- Payment rate limiting in `CustomUser.payment_ratelimited()` - max 3 attempts per hour
-- Authenticated users with active plans or credits bypass limits
-
-### Caching
-Uses Django-Redis. Cache helpers in `app/utils.py`:
-- `Utils.get_from_cache(key)` / `Utils.set_to_cache(key, value, exp)`
-- Languages are cached globally in `GlobalVars.get_globals()`
-
-### Logging
-Uses StreamHandler (logs to stderr) so supervisor captures all output automatically.
-
-**Backend Logging:**
-```python
-import logging
-logger = logging.getLogger('app')
-logger.warning('Something happened')
-logger.error('Something failed', exc_info=True)
-```
-
-Logs appear in supervisor's stderr file: `/var/log/{project}/{project}.err.log`
-
-**Frontend Error Logging:**
-JavaScript errors are automatically captured via `window.onerror` and `unhandledrejection` handlers in `base.html`. Errors are POSTed to `/api/accounts/log-error/` and logged with the `app` logger.
-
-Frontend error logs include: message, source file, line/column, stack trace, URL, user ID, and user agent.
-
-**View logs on server:**
-```bash
-ansible -i servers all -m shell -a "tail -100 /var/log/{project}/{project}.err.log" --become
-```
+### Free vs Premium Limits
+| Tool | Free | Premium |
+|------|------|---------|
+| Paraphraser | 500 words, 2 modes | Unlimited, all modes |
+| Grammar | Basic | Advanced + rewrites |
+| Summarizer | 1,200 words | 6,000 words |
+| AI Detector | 1,200 words | Unlimited |
+| Plagiarism | Not included | 30,000 words/mo |
+| Translator | 5,000 chars | Unlimited |
+| AI Tools | 50/day | Unlimited |
 
 ## Deployment
 
-Ansible playbooks in `ansible/` for Ubuntu 24.04.
-
-### IMPORTANT: Two-Step Initial Deployment
-
-**You MUST run `disableroot.yml` first on a new server.** This creates the deploy user and disables root SSH access for security.
-
-### First Deployment (New Server)
-
+Uses Ansible (from djangobase):
 ```bash
 cd ansible
-
-# 1. Copy and configure files
-cp servers.example servers                    # Add server IP
-cp group_vars/all.example group_vars/all      # Add credentials
-
-# 2. Add your SSH key to root
-ssh-copy-id root@your-server-ip
-
-# 3. REQUIRED: Create deploy user and disable root (run ONCE)
-ansible-playbook -i servers disableroot.yml -e "ansible_user=root"
-
-# 4. Deploy application
 ansible-playbook -i servers djangodeployubuntu24.yml --tags=all,first_run
+ansible-playbook -i servers gitpull.yml
 ```
 
-> **After step 3, root SSH is DISABLED.** All future access uses the deploy user.
+## Development Plan
 
-### Subsequent Deployments
-
-```bash
-ansible-playbook -i servers gitpull.yml              # Quick code update
-ansible-playbook -i servers djangodeployubuntu24.yml  # Full redeploy
-```
-
-### Required Variables in `group_vars/all`
-
-| Variable | Description |
-|----------|-------------|
-| `deploy_user` | Non-root user that runs the app |
-| `deploy_password` | Password for deploy user |
-| `db_name`, `db_user`, `db_password` | PostgreSQL credentials |
-| `githuburl` | Repository URL |
-| `projectname` | Used for nginx/supervisor configs |
-| `domain` | Your domain name |
+See `DEVELOPMENT_PLAN.md` for the full competitive analysis, feature inventory, technical architecture, database schema, API design, and phased implementation roadmap.
