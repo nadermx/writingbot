@@ -1,131 +1,147 @@
 import logging
 
 from django.shortcuts import render
-from django.views.generic import View
+from django.views import View
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.views import GlobalVars
-from ai_tools.services import GeneratorRegistry, AIToolsService
+from ai_tools.generators import GENERATOR_REGISTRY, CATEGORY_NAMES
+from ai_tools.services import AIToolsService
+from app.utils import Utils
 import config
 
 logger = logging.getLogger('app')
 
 
-class AIToolsIndex(View):
-    """Renders the AI writing tools index page with all generators grouped by category."""
+class AIToolsIndexPage(View):
+    """GET /ai-writing-tools/ - Renders the index page listing all tools by category."""
 
     def get(self, request):
         g = GlobalVars.get_globals(request)
-        categories = GeneratorRegistry.by_category()
-        total = GeneratorRegistry.count()
+        categories = AIToolsService.get_generators_by_category()
+        total = len(GENERATOR_REGISTRY)
 
-        return render(request, 'ai-tools/index.html', {
-            'title': f'AI Writing Tools ({total}+ Free Tools) | {config.PROJECT_NAME}',
-            'description': f'Free AI writing tools: essay writer, blog generator, email writer, and {total}+ more. Generate any type of content instantly.',
-            'page': 'ai-tools',
+        context = {
             'g': g,
+            'title': f'AI Writing Tools ({total}+ Free Tools) - {config.PROJECT_NAME}',
+            'description': f'Free AI writing tools: essay writer, blog generator, email writer, and {total}+ more. Generate any type of content instantly with AI.',
+            'page': 'ai-tools',
             'categories': categories,
             'total_tools': total,
-        })
+        }
+        return render(request, 'ai-tools/index.html', context)
 
 
 class AIToolPage(View):
-    """Renders an individual AI tool generator page."""
+    """GET /ai-writing-tools/<slug>/ - Renders the individual tool generator page."""
 
-    def get(self, request, tool_slug):
+    def get(self, request, slug):
         g = GlobalVars.get_globals(request)
-        generator = GeneratorRegistry.get(tool_slug)
+        generator = GENERATOR_REGISTRY.get(slug)
 
         if not generator:
             return render(request, '404.html', {'g': g}, status=404)
 
-        is_premium = request.user.is_authenticated and request.user.is_plan_active
-        allowed, remaining, limit = AIToolsService.check_daily_limit(request)
+        is_premium = (
+            request.user.is_authenticated
+            and getattr(request.user, 'is_plan_active', False)
+        )
 
-        # Get related tools from same category
-        all_in_category = GeneratorRegistry.by_category().get(generator.category, [])
-        related = [t for t in all_in_category if t.slug != generator.slug][:6]
+        ip = Utils.get_ip(request)
+        user_agent = request.META.get('HTTP_USER_AGENT', '')
+        allowed, remaining, limit = AIToolsService.check_daily_limit(
+            request.user, ip, user_agent,
+        )
 
-        return render(request, 'ai-tools/generator.html', {
-            'title': f'{generator.meta_title} | {config.PROJECT_NAME}',
+        # Related tools from the same category (up to 6)
+        related = []
+        for s, gen in GENERATOR_REGISTRY.items():
+            if gen.category == generator.category and s != slug:
+                related.append(gen.to_dict())
+                if len(related) >= 6:
+                    break
+
+        context = {
+            'g': g,
+            'title': generator.meta_title,
             'description': generator.meta_description,
             'page': 'ai-tools',
-            'g': g,
             'tool': generator.to_dict(),
             'is_premium': is_premium,
             'remaining': remaining,
             'limit': limit,
-            'related_tools': [t.to_dict() for t in related],
-        })
+            'related_tools': related,
+        }
+        return render(request, 'ai-tools/generator.html', context)
 
 
 class AIToolGenerateAPI(APIView):
-    """POST /api/ai-tools/generate/ - Generate content using an AI tool."""
+    """POST /api/ai-tools/generate/ - Validates limit, generates content, returns JSON."""
 
     def post(self, request):
         tool_slug = request.data.get('tool', '').strip()
         if not tool_slug:
             return Response(
                 {'error': 'The "tool" field is required.'},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
-        generator = GeneratorRegistry.get(tool_slug)
+        generator = GENERATOR_REGISTRY.get(tool_slug)
         if not generator:
             return Response(
                 {'error': f'Unknown tool: {tool_slug}'},
-                status=status.HTTP_404_NOT_FOUND
+                status=status.HTTP_404_NOT_FOUND,
             )
 
-        # Extract parameters from request
+        # Extract and validate parameters
         params = {}
         for field in generator.fields:
-            value = request.data.get(field['name'], '').strip() if isinstance(request.data.get(field['name'], ''), str) else request.data.get(field['name'], '')
+            raw = request.data.get(field['name'], '')
+            value = raw.strip() if isinstance(raw, str) else raw
             if field.get('required') and not value:
                 return Response(
                     {'error': f'The "{field["label"]}" field is required.'},
-                    status=status.HTTP_400_BAD_REQUEST
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
             params[field['name']] = value
 
-        # Include tone if sent separately
+        # Include tone if provided separately
         tone = request.data.get('tone', '')
-        if tone and 'tone' not in params:
+        if tone:
             params['tone'] = tone
 
-        output_text, error = AIToolsService.generate(tool_slug, params, request)
+        ip = Utils.get_ip(request)
+        user_agent = request.META.get('HTTP_USER_AGENT', '')
+
+        output_text, error = AIToolsService.generate(
+            slug=tool_slug,
+            params=params,
+            user=request.user,
+            ip=ip,
+            user_agent=user_agent,
+        )
 
         if error:
             if 'Daily limit' in error:
-                return Response({'error': error, 'upgrade': True}, status=status.HTTP_403_FORBIDDEN)
-            return Response({'error': error}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                return Response(
+                    {'error': error, 'upgrade': True},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+            return Response(
+                {'error': error},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        # Return remaining count after generation
+        allowed, remaining, limit = AIToolsService.check_daily_limit(
+            request.user, ip, user_agent,
+        )
 
         return Response({
             'output': output_text,
             'tool': tool_slug,
-        })
-
-
-class AIToolsListAPI(APIView):
-    """GET /api/ai-tools/ - List all available AI tools."""
-
-    def get(self, request):
-        generators = GeneratorRegistry.all()
-        tools = [g.to_dict() for g in generators]
-        categories = {}
-        for tool in tools:
-            cat = tool['category']
-            if cat not in categories:
-                categories[cat] = []
-            categories[cat].append({
-                'slug': tool['slug'],
-                'name': tool['name'],
-                'description': tool['description'],
-            })
-
-        return Response({
-            'total': len(tools),
-            'categories': categories,
+            'remaining': remaining,
+            'limit': limit,
         })

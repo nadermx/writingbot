@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <h1 class="text-center mb-4">Trust Center</h1>
+            <p class="text-center text-muted mb-5">Your data security and privacy are our top priorities.</p>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">Data Protection</h2>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><strong>No data training by default</strong> &mdash; We do not use your text inputs to train AI models unless you explicitly opt in.</li>
+                        <li class="mb-2"><strong>Encrypted in transit</strong> &mdash; All data is encrypted using TLS 1.3 between your browser and our servers.</li>
+                        <li class="mb-2"><strong>No text storage</strong> &mdash; Text submitted to our tools is processed in real-time and not permanently stored.</li>
+                        <li class="mb-2"><strong>Secure file handling</strong> &mdash; Uploaded files (PDFs, images) are processed in memory and deleted immediately after.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">Compliance</h2>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><strong>GDPR</strong> &mdash; We comply with the General Data Protection Regulation for EU users.</li>
+                        <li class="mb-2"><strong>CCPA</strong> &mdash; We comply with the California Consumer Privacy Act. We do not sell personal information.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">Security Infrastructure</h2>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><strong>HTTPS Everywhere</strong> &mdash; Our entire platform is served over HTTPS with Let's Encrypt SSL certificates.</li>
+                        <li class="mb-2"><strong>PCI-Compliant Payments</strong> &mdash; All payments are processed through Stripe, PayPal, or Square &mdash; we never see or store your card details.</li>
+                        <li class="mb-2"><strong>Rate Limiting</strong> &mdash; API and tool endpoints are rate-limited to prevent abuse.</li>
+                        <li class="mb-2"><strong>Secure Authentication</strong> &mdash; Password hashing, email verification, and session management follow industry best practices.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">Your Privacy Controls</h2>
+                    <p>As a {{ g.project_name }} user, you can:</p>
+                    <ul>
+                        <li>Delete your account and all associated data at any time</li>
+                        <li>Request a copy of your personal data</li>
+                        <li>Opt out of marketing communications</li>
+                        <li>Contact our support team with any privacy questions</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">Third-Party AI Providers</h2>
+                    <p class="mb-0">{{ g.project_name }} uses Anthropic's Claude API for AI-powered features. Anthropic's API does not retain or train on user data submitted through API calls. Your text is processed and discarded. See <a href="/privacy/">our Privacy Policy</a> for full details.</p>
+                </div>
+            </div>
+
+            <div class="text-center mt-4">
+                <p class="text-muted">Questions about security or privacy?</p>
+                <a href="/contact/" class="btn btn-primary">Contact Us</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -20,4 +20,8 @@ urlpatterns = [
     path('success/', views.SuccessPage.as_view(), name='success'),
     path('cancel/', views.CancelSubscriptionPage.as_view(), name='cancel'),
     path('delete-account/', views.DeleteAccountPage.as_view(), name='delete'),
+    path('help/', views.HelpCenterPage.as_view(), name='help'),
+    path('trust-center/', views.TrustCenterPage.as_view(), name='trust'),
+    path('student-resources/', views.StudentResourcesPage.as_view(), name='student-resources'),
+    path('professionals/', views.ProfessionalsPage.as_view(), name='professionals'),
 ]

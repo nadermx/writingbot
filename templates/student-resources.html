@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <h1 class="text-center mb-2">Student Resources</h1>
+            <p class="text-center text-muted mb-5">Free AI-powered writing tools to help you succeed in school.</p>
+
+            <!-- Core Tools for Students -->
+            <h2 class="h4 mb-3">Essential Writing Tools</h2>
+            <div class="row mb-5">
+                <div class="col-md-4 mb-3">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body">
+                            <h3 class="h6 mb-2">Paraphraser</h3>
+                            <p class="small text-muted mb-2">Rephrase text in 10 different modes while keeping the original meaning. Great for avoiding repetition in essays.</p>
+                            <a href="/paraphrasing-tool/" class="btn btn-sm btn-outline-primary">Try Free</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body">
+                            <h3 class="h6 mb-2">Grammar Checker</h3>
+                            <p class="small text-muted mb-2">Fix grammar, spelling, and punctuation errors. Get a writing quality score for your papers.</p>
+                            <a href="/grammar-check/" class="btn btn-sm btn-outline-primary">Try Free</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body">
+                            <h3 class="h6 mb-2">Plagiarism Checker</h3>
+                            <p class="small text-muted mb-2">Scan your work against web sources to ensure originality before submitting.</p>
+                            <a href="/plagiarism-checker/" class="btn btn-sm btn-outline-primary">Try Free</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body">
+                            <h3 class="h6 mb-2">Citation Generator</h3>
+                            <p class="small text-muted mb-2">Generate citations in APA, MLA, Chicago, Harvard, and 1000+ other styles. Auto-cite from URLs.</p>
+                            <a href="/citation-generator/" class="btn btn-sm btn-outline-primary">Try Free</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body">
+                            <h3 class="h6 mb-2">AI Content Detector</h3>
+                            <p class="small text-muted mb-2">Check if text is AI-generated. Useful for verifying your own work before submission.</p>
+                            <a href="/ai-content-detector/" class="btn btn-sm btn-outline-primary">Try Free</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body">
+                            <h3 class="h6 mb-2">Summarizer</h3>
+                            <p class="small text-muted mb-2">Condense long articles and research papers into key points for faster studying.</p>
+                            <a href="/summarize/" class="btn btn-sm btn-outline-primary">Try Free</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Academic AI Tools -->
+            <h2 class="h4 mb-3">Academic Writing Generators</h2>
+            <div class="row mb-5">
+                <div class="col-md-6 mb-2">
+                    <a href="/ai-writing-tools/ai-essay-writer/" class="text-decoration-none">
+                        <div class="card shadow-sm"><div class="card-body py-2 px-3 d-flex justify-content-between align-items-center"><span>AI Essay Writer</span><span class="text-muted">&rarr;</span></div></div>
+                    </a>
+                </div>
+                <div class="col-md-6 mb-2">
+                    <a href="/ai-writing-tools/ai-essay-outline-generator/" class="text-decoration-none">
+                        <div class="card shadow-sm"><div class="card-body py-2 px-3 d-flex justify-content-between align-items-center"><span>AI Essay Outline Generator</span><span class="text-muted">&rarr;</span></div></div>
+                    </a>
+                </div>
+                <div class="col-md-6 mb-2">
+                    <a href="/ai-writing-tools/ai-thesis-statement-generator/" class="text-decoration-none">
+                        <div class="card shadow-sm"><div class="card-body py-2 px-3 d-flex justify-content-between align-items-center"><span>AI Thesis Statement Generator</span><span class="text-muted">&rarr;</span></div></div>
+                    </a>
+                </div>
+                <div class="col-md-6 mb-2">
+                    <a href="/ai-writing-tools/ai-research-paper-writer/" class="text-decoration-none">
+                        <div class="card shadow-sm"><div class="card-body py-2 px-3 d-flex justify-content-between align-items-center"><span>AI Research Paper Writer</span><span class="text-muted">&rarr;</span></div></div>
+                    </a>
+                </div>
+                <div class="col-md-6 mb-2">
+                    <a href="/ai-writing-tools/ai-conclusion-writer/" class="text-decoration-none">
+                        <div class="card shadow-sm"><div class="card-body py-2 px-3 d-flex justify-content-between align-items-center"><span>AI Conclusion Writer</span><span class="text-muted">&rarr;</span></div></div>
+                    </a>
+                </div>
+                <div class="col-md-6 mb-2">
+                    <a href="/ai-writing-tools/ai-annotated-bibliography-generator/" class="text-decoration-none">
+                        <div class="card shadow-sm"><div class="card-body py-2 px-3 d-flex justify-content-between align-items-center"><span>AI Annotated Bibliography Generator</span><span class="text-muted">&rarr;</span></div></div>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Free Courses CTA -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-body text-center py-4">
+                    <h2 class="h5 mb-2">Free Writing Courses</h2>
+                    <p class="text-muted mb-3">Access our catalog of free educational courses on English composition, research writing, grammar, and more.</p>
+                    <a href="/courses/" class="btn btn-primary">Browse Courses</a>
+                </div>
+            </div>
+
+            <!-- More Tools CTA -->
+            <div class="card shadow-sm">
+                <div class="card-body text-center py-4">
+                    <h2 class="h5 mb-2">89+ AI Writing Tools</h2>
+                    <p class="text-muted mb-3">Explore our full suite of AI writing generators for essays, emails, social media, creative writing, and more.</p>
+                    <a href="/ai-writing-tools/" class="btn btn-outline-primary">Browse All Tools</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

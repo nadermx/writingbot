@@ -1,10 +1,18 @@
+import hashlib
 import json
 import logging
 
 import anthropic
 from django.conf import settings
+from django.utils import timezone
 
 logger = logging.getLogger('app')
+
+# Rate limits for chat and search
+CHAT_LIMITS = settings.TOOL_LIMITS.get('ai_chat', {})
+CHAT_FREE_DAILY = CHAT_LIMITS.get('free_daily', 20)
+SEARCH_LIMITS = settings.TOOL_LIMITS.get('ai_search', {})
+SEARCH_FREE_DAILY = SEARCH_LIMITS.get('free_daily', 10)
 
 
 class FlowService:
@@ -259,4 +267,209 @@ class FlowService:
             return None, 'An error occurred while generating the outline. Please try again.'
         except Exception as e:
             logger.error(f'Unexpected error during generate_outline: {e}')
+            return None, 'An unexpected error occurred. Please try again.'
+
+    # ------------------------------------------------------------------
+    # Rate limiting helpers for AI Chat and AI Search
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _ip_hash(ip, user_agent=''):
+        raw = f'{ip}:{user_agent}'
+        return hashlib.sha256(raw.encode()).hexdigest()
+
+    @staticmethod
+    def check_daily_limit(tool, user, ip, user_agent=''):
+        """
+        Check daily usage for a tool ('ai_chat' or 'ai_search').
+
+        Returns:
+            Tuple of (allowed: bool, remaining: int, limit: int).
+            Premium users get (-1, -1) for unlimited.
+        """
+        from django.core.cache import cache
+
+        is_premium = (
+            user and user.is_authenticated
+            and getattr(user, 'is_plan_active', False)
+        )
+        if is_premium:
+            return True, -1, -1
+
+        limit = CHAT_FREE_DAILY if tool == 'ai_chat' else SEARCH_FREE_DAILY
+
+        today = timezone.now().strftime('%Y-%m-%d')
+        if user and user.is_authenticated:
+            cache_key = f'{tool}:user:{user.id}:{today}'
+        else:
+            ip_hash = FlowService._ip_hash(ip, user_agent)
+            cache_key = f'{tool}:anon:{ip_hash}:{today}'
+
+        count = cache.get(cache_key, 0)
+        remaining = max(0, limit - count)
+        return count < limit, remaining, limit
+
+    @staticmethod
+    def increment_daily_usage(tool, user, ip, user_agent=''):
+        """Increment the daily usage counter in cache (expires at midnight)."""
+        from django.core.cache import cache
+
+        today = timezone.now().strftime('%Y-%m-%d')
+        if user and user.is_authenticated:
+            cache_key = f'{tool}:user:{user.id}:{today}'
+        else:
+            ip_hash = FlowService._ip_hash(ip, user_agent)
+            cache_key = f'{tool}:anon:{ip_hash}:{today}'
+
+        try:
+            count = cache.get(cache_key, 0)
+            cache.set(cache_key, count + 1, timeout=86400)
+        except Exception as e:
+            logger.error(f'Failed to increment daily usage for {tool}: {e}')
+
+    # ------------------------------------------------------------------
+    # AI Chat
+    # ------------------------------------------------------------------
+
+    @classmethod
+    def chat(cls, message, history=None):
+        """
+        Send a message with conversation history to Claude and return the response.
+
+        Args:
+            message: The user's latest message string.
+            history: List of dicts with 'role' ('user'|'assistant') and 'content'.
+
+        Returns:
+            Tuple of (response_text, error). On success error is None.
+        """
+        system_prompt = (
+            'You are a helpful, friendly AI writing assistant on WritingBot.ai. '
+            'You help users with writing tasks such as brainstorming ideas, improving '
+            'their writing, explaining grammar rules, suggesting outlines, and answering '
+            'questions about writing, language, and communication. '
+            'Be concise but thorough. Use markdown formatting in your responses when '
+            'appropriate (headings, bullet points, bold, code blocks, etc.). '
+            'If the user asks something outside the scope of writing and language, '
+            'you may still answer helpfully but gently steer back to writing topics.'
+        )
+
+        if not message or not message.strip():
+            return None, 'Please enter a message.'
+
+        # Build the messages list from history + current message
+        messages = []
+        if history:
+            for entry in history:
+                role = entry.get('role', '')
+                content = entry.get('content', '')
+                if role in ('user', 'assistant') and content:
+                    messages.append({'role': role, 'content': content})
+
+        messages.append({'role': 'user', 'content': message.strip()})
+
+        # Limit conversation context to last 20 messages to manage token usage
+        if len(messages) > 20:
+            messages = messages[-20:]
+
+        try:
+            client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+            response = client.messages.create(
+                model=settings.ANTHROPIC_MODEL,
+                max_tokens=2048,
+                system=system_prompt,
+                messages=messages,
+            )
+            reply = response.content[0].text.strip()
+            return reply, None
+
+        except anthropic.RateLimitError:
+            logger.warning('Anthropic rate limit reached during chat')
+            return None, 'Service is temporarily busy. Please try again in a moment.'
+        except anthropic.APIError as e:
+            logger.error(f'Anthropic API error during chat: {e}')
+            return None, 'An error occurred while generating a response. Please try again.'
+        except Exception as e:
+            logger.error(f'Unexpected error during chat: {e}')
+            return None, 'An unexpected error occurred. Please try again.'
+
+    # ------------------------------------------------------------------
+    # AI Search
+    # ------------------------------------------------------------------
+
+    @classmethod
+    def search(cls, query):
+        """
+        Generate an AI-synthesized answer for a search query, including
+        structured source-like references.
+
+        Args:
+            query: The user's search query string.
+
+        Returns:
+            Tuple of (result_dict, error).
+            result_dict has keys: answer (str), sources (list of dicts with title, snippet).
+        """
+        system_prompt = (
+            'You are an AI-powered research assistant on WritingBot.ai. '
+            'Given a user query, provide a comprehensive, well-researched answer. '
+            'Write the answer in clear, readable prose using markdown formatting '
+            '(headings, bullet points, bold text, etc.). '
+            'At the end, include a JSON block with synthesized source references. '
+            'Return your response in this exact format:\n\n'
+            'ANSWER:\n<your detailed answer in markdown>\n\n'
+            'SOURCES_JSON:\n[{"title": "Source Title", "snippet": "Brief description of what this source covers"}]\n\n'
+            'Include 3-5 relevant source references. The sources should be plausible, '
+            'topic-relevant references that support the answer. '
+            'Make the answer thorough (3-6 paragraphs) and informative.'
+        )
+
+        if not query or not query.strip():
+            return None, 'Please enter a search query.'
+
+        try:
+            client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+            response = client.messages.create(
+                model=settings.ANTHROPIC_MODEL,
+                max_tokens=3000,
+                system=system_prompt,
+                messages=[
+                    {'role': 'user', 'content': f'Research this topic: {query.strip()}'}
+                ]
+            )
+            raw = response.content[0].text.strip()
+
+            # Parse the structured response
+            answer = raw
+            sources = []
+
+            if 'SOURCES_JSON:' in raw:
+                parts = raw.split('SOURCES_JSON:', 1)
+                answer = parts[0].strip()
+                # Remove "ANSWER:" prefix if present
+                if answer.startswith('ANSWER:'):
+                    answer = answer[len('ANSWER:'):].strip()
+
+                sources_raw = parts[1].strip()
+                # Strip markdown code fences if present
+                if sources_raw.startswith('```'):
+                    sources_raw = sources_raw.split('\n', 1)[-1].rsplit('```', 1)[0].strip()
+                try:
+                    sources = json.loads(sources_raw)
+                except json.JSONDecodeError:
+                    logger.warning('Failed to parse AI search sources JSON')
+                    sources = []
+            elif 'ANSWER:' in raw:
+                answer = raw.split('ANSWER:', 1)[1].strip()
+
+            return {'answer': answer, 'sources': sources}, None
+
+        except anthropic.RateLimitError:
+            logger.warning('Anthropic rate limit reached during search')
+            return None, 'Service is temporarily busy. Please try again in a moment.'
+        except anthropic.APIError as e:
+            logger.error(f'Anthropic API error during search: {e}')
+            return None, 'An error occurred while researching your query. Please try again.'
+        except Exception as e:
+            logger.error(f'Unexpected error during search: {e}')
             return None, 'An unexpected error occurred. Please try again.'

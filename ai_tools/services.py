@@ -4,6 +4,7 @@ import logging
 from django.conf import settings as django_settings
 from django.utils import timezone
 
+from ai_tools.generators import GENERATOR_REGISTRY, CATEGORY_NAMES
 from ai_tools.models import GenerationHistory, DailyUsage
 
 logger = logging.getLogger('app')
@@ -12,137 +13,78 @@ TOOL_LIMITS = django_settings.TOOL_LIMITS.get('ai_tools', {})
 FREE_DAILY_LIMIT = TOOL_LIMITS.get('free_daily', 50)
 
 
-class GeneratorRegistry:
-    """
-    Central registry for all AI writing tool generators.
-    Lazily imports and caches generator instances on first access.
-    """
-
-    _generators = None
-    _by_slug = None
-    _by_category = None
-
-    @classmethod
-    def _load(cls):
-        if cls._generators is not None:
-            return
-
-        from ai_tools.generators.academic import ACADEMIC_GENERATORS
-        from ai_tools.generators.business import BUSINESS_GENERATORS
-        from ai_tools.generators.marketing import MARKETING_GENERATORS
-        from ai_tools.generators.social_media import SOCIAL_MEDIA_GENERATORS
-        from ai_tools.generators.creative import CREATIVE_GENERATORS
-        from ai_tools.generators.professional import PROFESSIONAL_GENERATORS
-        from ai_tools.generators.content import CONTENT_GENERATORS
-        from ai_tools.generators.utility import UTILITY_GENERATORS
-
-        all_classes = (
-            ACADEMIC_GENERATORS
-            + BUSINESS_GENERATORS
-            + MARKETING_GENERATORS
-            + SOCIAL_MEDIA_GENERATORS
-            + CREATIVE_GENERATORS
-            + PROFESSIONAL_GENERATORS
-            + CONTENT_GENERATORS
-            + UTILITY_GENERATORS
-        )
-
-        cls._generators = [klass() for klass in all_classes]
-        cls._by_slug = {g.slug: g for g in cls._generators}
-        cls._by_category = {}
-        for g in cls._generators:
-            cls._by_category.setdefault(g.category, []).append(g)
-
-    @classmethod
-    def all(cls):
-        """Return all generator instances."""
-        cls._load()
-        return cls._generators
-
-    @classmethod
-    def get(cls, slug):
-        """Return a generator by slug, or None."""
-        cls._load()
-        return cls._by_slug.get(slug)
-
-    @classmethod
-    def by_category(cls):
-        """Return generators grouped by category as an OrderedDict-like dict."""
-        cls._load()
-        return cls._by_category
-
-    @classmethod
-    def slugs(cls):
-        """Return all registered slugs."""
-        cls._load()
-        return list(cls._by_slug.keys())
-
-    @classmethod
-    def count(cls):
-        """Return total number of generators."""
-        cls._load()
-        return len(cls._generators)
-
-
 class AIToolsService:
     """Service layer for AI tools usage tracking and generation."""
 
     @staticmethod
-    def get_ip_hash(request):
+    def get_ip_hash(ip, user_agent=''):
         """Hash IP + user-agent for anonymous rate limiting."""
-        ip = request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', ''))
-        if ',' in ip:
-            ip = ip.split(',')[0].strip()
-        ua = request.META.get('HTTP_USER_AGENT', '')
-        raw = f'{ip}:{ua}'
+        raw = f'{ip}:{user_agent}'
         return hashlib.sha256(raw.encode()).hexdigest()
 
     @staticmethod
-    def check_daily_limit(request):
+    def check_daily_usage(user, ip, user_agent=''):
         """
-        Check if the user has exceeded their daily AI tool generation limit.
+        Return the current daily usage count for a user or anonymous IP.
+
+        Args:
+            user: The request user (may be anonymous).
+            ip: Client IP address.
+            user_agent: Client user-agent string.
 
         Returns:
-            Tuple of (allowed: bool, remaining: int, limit: int).
+            int: Number of generations used today.
         """
         today = timezone.now().date()
-        is_premium = (
-            request.user.is_authenticated
-            and getattr(request.user, 'is_plan_active', False)
-        )
 
-        if is_premium:
-            return True, -1, -1  # Unlimited
-
-        limit = FREE_DAILY_LIMIT
-
-        if request.user.is_authenticated:
+        if user and user.is_authenticated:
             usage, _ = DailyUsage.objects.get_or_create(
-                user=request.user, date=today,
+                user=user, date=today,
                 defaults={'count': 0},
             )
         else:
-            ip_hash = AIToolsService.get_ip_hash(request)
+            ip_hash = AIToolsService.get_ip_hash(ip, user_agent)
             usage, _ = DailyUsage.objects.get_or_create(
                 ip_hash=ip_hash, date=today, user=None,
                 defaults={'count': 0},
             )
 
-        remaining = max(0, limit - usage.count)
-        return usage.count < limit, remaining, limit
+        return usage.count
 
     @staticmethod
-    def increment_usage(request):
+    def check_daily_limit(user, ip, user_agent=''):
+        """
+        Check if the user/IP has exceeded their daily generation limit.
+
+        Returns:
+            Tuple of (allowed: bool, remaining: int, limit: int).
+            For premium users, remaining and limit are -1 (unlimited).
+        """
+        is_premium = (
+            user and user.is_authenticated
+            and getattr(user, 'is_plan_active', False)
+        )
+
+        if is_premium:
+            return True, -1, -1
+
+        limit = FREE_DAILY_LIMIT
+        count = AIToolsService.check_daily_usage(user, ip, user_agent)
+        remaining = max(0, limit - count)
+        return count < limit, remaining, limit
+
+    @staticmethod
+    def increment_usage(user, ip, user_agent=''):
         """Increment the daily usage counter for this user/IP."""
         today = timezone.now().date()
 
-        if request.user.is_authenticated:
+        if user and user.is_authenticated:
             usage, _ = DailyUsage.objects.get_or_create(
-                user=request.user, date=today,
+                user=user, date=today,
                 defaults={'count': 0},
             )
         else:
-            ip_hash = AIToolsService.get_ip_hash(request)
+            ip_hash = AIToolsService.get_ip_hash(ip, user_agent)
             usage, _ = DailyUsage.objects.get_or_create(
                 ip_hash=ip_hash, date=today, user=None,
                 defaults={'count': 0},
@@ -152,37 +94,38 @@ class AIToolsService:
         usage.save(update_fields=['count'])
 
     @staticmethod
-    def save_history(request, tool_slug, input_params, output_text):
+    def save_history(user, tool_slug, input_params, output_text):
         """Save a generation to history."""
         GenerationHistory.objects.create(
-            user=request.user if request.user.is_authenticated else None,
+            user=user if user and user.is_authenticated else None,
             tool_slug=tool_slug,
             input_params=input_params,
             output_text=output_text,
         )
 
     @staticmethod
-    def generate(tool_slug, params, request=None):
+    def generate(slug, params, user=None, ip='', user_agent=''):
         """
-        Run a generator and return the result.
+        Look up generator, check daily limit, call generate(), save history.
 
         Args:
-            tool_slug: The generator slug.
+            slug: The generator slug.
             params: Dict of user input parameters.
-            request: The HTTP request (for usage tracking).
+            user: The request user (may be None/anonymous).
+            ip: Client IP address.
+            user_agent: Client user-agent string.
 
         Returns:
             Tuple of (output_text, error).
         """
-        generator = GeneratorRegistry.get(tool_slug)
+        generator = GENERATOR_REGISTRY.get(slug)
         if not generator:
-            return None, f'Unknown tool: {tool_slug}'
+            return None, f'Unknown tool: {slug}'
 
         # Check daily limits
-        if request:
-            allowed, remaining, limit = AIToolsService.check_daily_limit(request)
-            if not allowed:
-                return None, f'Daily limit of {limit} free generations reached. Upgrade to Premium for unlimited access.'
+        allowed, remaining, limit = AIToolsService.check_daily_limit(user, ip, user_agent)
+        if not allowed:
+            return None, f'Daily limit of {limit} free generations reached. Upgrade to Premium for unlimited access.'
 
         # Generate content
         output_text, error = generator.generate(params)
@@ -191,8 +134,32 @@ class AIToolsService:
             return None, error
 
         # Track usage and save history
-        if request:
-            AIToolsService.increment_usage(request)
-            AIToolsService.save_history(request, tool_slug, params, output_text)
+        AIToolsService.increment_usage(user, ip, user_agent)
+        AIToolsService.save_history(user, slug, params, output_text)
 
         return output_text, None
+
+    @staticmethod
+    def get_generators_by_category():
+        """
+        Return generators grouped by category with display names.
+
+        Returns:
+            dict: {category_key: {'name': display_name, 'generators': [generator_dicts]}}
+        """
+        grouped = {}
+        for slug, gen in GENERATOR_REGISTRY.items():
+            cat = gen.category
+            if cat not in grouped:
+                grouped[cat] = {
+                    'name': CATEGORY_NAMES.get(cat, cat),
+                    'generators': [],
+                }
+            grouped[cat]['generators'].append(gen.to_dict())
+
+        # Return in a consistent category order
+        ordered = {}
+        for cat_key in CATEGORY_NAMES:
+            if cat_key in grouped:
+                ordered[cat_key] = grouped[cat_key]
+        return ordered

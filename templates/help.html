@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container" x-data="helpCenter()">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <h1 class="text-center mb-2">Help Center</h1>
+            <p class="text-center text-muted mb-4">Find answers to frequently asked questions about {{ g.project_name }}.</p>
+
+            <!-- Search -->
+            <div class="mb-4">
+                <input type="text" class="form-control form-control-lg" placeholder="Search for help..." x-model="searchQuery" @input="filterFaqs()">
+            </div>
+
+            <!-- Categories -->
+            <div class="d-flex flex-wrap gap-2 mb-4">
+                <button class="btn btn-sm" :class="activeCategory === 'all' ? 'btn-primary' : 'btn-outline-secondary'" @click="activeCategory = 'all'; filterFaqs()">All</button>
+                <template x-for="cat in categories" :key="cat.slug">
+                    <button class="btn btn-sm" :class="activeCategory === cat.slug ? 'btn-primary' : 'btn-outline-secondary'" @click="activeCategory = cat.slug; filterFaqs()" x-text="cat.name"></button>
+                </template>
+            </div>
+
+            <!-- FAQ Sections -->
+            <template x-for="cat in filteredCategories" :key="cat.slug">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-white">
+                        <h2 class="h5 mb-0" x-text="cat.name"></h2>
+                    </div>
+                    <div class="card-body p-0">
+                        <template x-for="(faq, idx) in cat.faqs" :key="idx">
+                            <div class="border-bottom" x-show="faq.visible !== false">
+                                <button class="w-100 text-start p-3 d-flex justify-content-between align-items-center bg-transparent border-0" @click="faq.open = !faq.open" style="cursor:pointer">
+                                    <span class="fw-medium" x-text="faq.q"></span>
+                                    <span x-text="faq.open ? '−' : '+'" class="fs-5 text-muted ms-2"></span>
+                                </button>
+                                <div x-show="faq.open" x-collapse class="px-3 pb-3">
+                                    <p class="text-muted mb-0" x-html="faq.a"></p>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </template>
+
+            <!-- No Results -->
+            <div x-show="filteredCategories.length === 0" class="text-center py-5">
+                <p class="text-muted">No results found. Try a different search term.</p>
+            </div>
+
+            <!-- Contact CTA -->
+            <div class="card shadow-sm mt-4">
+                <div class="card-body text-center py-4">
+                    <h3 class="h5 mb-2">Still need help?</h3>
+                    <p class="text-muted mb-3">Can't find what you're looking for? Our support team is here to help.</p>
+                    <a href="/contact/" class="btn btn-primary">Contact Support</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function helpCenter() {
+    return {
+        searchQuery: '',
+        activeCategory: 'all',
+        categories: [
+            {
+                slug: 'getting-started',
+                name: 'Getting Started',
+                faqs: [
+                    {q: 'What is {{ g.project_name }}?', a: '{{ g.project_name }} is an AI-powered writing assistant platform. We offer paraphrasing, grammar checking, AI content detection, summarization, translation, citation generation, and 100+ AI writing tools.', open: false},
+                    {q: 'Is {{ g.project_name }} free to use?', a: 'Yes! {{ g.project_name }} offers a generous free tier for all tools. Free users get 500 words for paraphrasing, 50 AI tool generations per day, and access to grammar checking, summarization, translation, and more. Premium unlocks unlimited usage.', open: false},
+                    {q: 'Do I need an account to use the tools?', a: 'Most tools work without an account. However, creating a free account gives you higher usage limits, history tracking, and access to features like Flow (Co-Writer) and document saving.', open: false},
+                    {q: 'How do I upgrade to Premium?', a: 'Visit the <a href="/pricing/">Pricing page</a> to see our plans. You can pay with credit card (Stripe), PayPal, or Square. Annual plans offer the best value.', open: false},
+                ]
+            },
+            {
+                slug: 'tools',
+                name: 'Writing Tools',
+                faqs: [
+                    {q: 'What paraphrasing modes are available?', a: '{{ g.project_name }} offers 10 paraphrasing modes: Standard, Fluency, Formal, Academic, Simple, Creative, Expand, Shorten, Custom, and Humanizer. Free users can access Standard and Fluency modes. Premium unlocks all modes.', open: false},
+                    {q: 'How does the Grammar Checker work?', a: 'Paste your text and our AI analyzes it for spelling, grammar, punctuation, and style errors. You get a writing score across multiple dimensions and one-click fixes for each issue.', open: false},
+                    {q: 'What is the AI Content Detector?', a: 'Our AI Detector analyzes text to determine if it was written by AI (ChatGPT, Claude, Gemini, etc.) or a human. It provides sentence-level scoring with color-coded highlights.', open: false},
+                    {q: 'How does the Plagiarism Checker work?', a: 'The Plagiarism Checker (Premium only) scans your text against web pages and published content, returning a similarity percentage with highlighted matching passages and source links.', open: false},
+                    {q: 'What citation styles are supported?', a: 'Our Citation Generator supports 1,000+ citation styles including APA, MLA, Chicago, Harvard, IEEE, and more. You can auto-cite from URLs or manually enter source details.', open: false},
+                    {q: 'What languages does the Translator support?', a: 'Our translator supports 52+ languages including English, Spanish, French, German, Chinese, Arabic, Japanese, Korean, Portuguese, Hindi, and many more.', open: false},
+                ]
+            },
+            {
+                slug: 'ai-tools',
+                name: 'AI Writing Generators',
+                faqs: [
+                    {q: 'What AI writing tools are available?', a: '{{ g.project_name }} offers 89+ AI writing generators across 8 categories: Academic Writing, Business, Marketing & Sales, Social Media, Creative Writing, Professional Communication, Content & SEO, and General Utility.', open: false},
+                    {q: 'How many AI generations can I do per day?', a: 'Free users get 50 AI tool generations per day. Premium users have unlimited generations.', open: false},
+                    {q: 'Can I customize the AI output?', a: 'Yes, each generator has customizable fields like tone, length, audience, and format. You can regenerate content until you get the result you want.', open: false},
+                ]
+            },
+            {
+                slug: 'flow',
+                name: 'Flow (Co-Writer)',
+                faqs: [
+                    {q: 'What is Flow?', a: 'Flow is our all-in-one writing workspace. It combines a document editor with AI assistance including Smart Start (outline generation), next-sentence suggestions, AI Review, and all writing tools in one place.', open: false},
+                    {q: 'Can I share Flow documents?', a: 'Yes, you can generate a share link for any document. Recipients can view the document without needing an account.', open: false},
+                    {q: 'Does Flow auto-save my work?', a: 'Yes, Flow automatically saves your documents as you type. You can also access document version history.', open: false},
+                ]
+            },
+            {
+                slug: 'pdf-tools',
+                name: 'PDF & Media Tools',
+                faqs: [
+                    {q: 'What PDF tools are available?', a: 'We offer 16 PDF tools: Merge, Split, Edit, Compress, Rotate, Remove Pages, Reorder Pages, and conversions between PDF and Word, JPG, PNG, PowerPoint. Plus Chat with PDF for AI-powered Q&A.', open: false},
+                    {q: 'What media tools are available?', a: 'We offer Image Converter (7+ formats), Background Remover, AI Image Generator, QR Code Generator, AI Voice Generator (Text-to-Speech), Logo Generator, Word Cloud Generator, and more.', open: false},
+                    {q: 'Are file uploads secure?', a: 'Yes, uploaded files are processed in memory and not stored on our servers. Files are automatically deleted after processing.', open: false},
+                ]
+            },
+            {
+                slug: 'account',
+                name: 'Account & Billing',
+                faqs: [
+                    {q: 'How do I cancel my subscription?', a: 'Go to your <a href="/account/">Account page</a> and click "Cancel Subscription." Your premium features will remain active until the end of your billing period.', open: false},
+                    {q: 'What is the refund policy?', a: 'We offer a 7-day money-back guarantee on all premium plans. Visit the <a href="/refund/">Refund Policy page</a> for details.', open: false},
+                    {q: 'How do I delete my account?', a: 'Go to <a href="/account/">Account Settings</a> and click "Delete Account." This action is permanent and cannot be undone.', open: false},
+                    {q: 'What payment methods do you accept?', a: 'We accept credit/debit cards (Visa, Mastercard, Amex) via Stripe, PayPal, and Square.', open: false},
+                ]
+            },
+            {
+                slug: 'api',
+                name: 'API Access',
+                faqs: [
+                    {q: 'Do you offer an API?', a: 'Yes! {{ g.project_name }} offers a public REST API (v1) for paraphrasing, grammar checking, summarization, AI detection, and translation. Visit the <a href="/api/docs/">API Documentation</a> for details.', open: false},
+                    {q: 'How do I get an API key?', a: 'Create an account and visit your Account page to generate an API key. Free tier API access has rate limits; premium users get higher limits.', open: false},
+                ]
+            },
+        ],
+        filteredCategories: [],
+
+        init() {
+            this.filteredCategories = this.categories;
+        },
+
+        filterFaqs() {
+            const query = this.searchQuery.toLowerCase();
+            const cat = this.activeCategory;
+
+            this.filteredCategories = this.categories
+                .filter(c => cat === 'all' || c.slug === cat)
+                .map(c => ({
+                    ...c,
+                    faqs: c.faqs.map(f => ({
+                        ...f,
+                        visible: !query || f.q.toLowerCase().includes(query) || f.a.toLowerCase().includes(query),
+                        open: query ? (f.q.toLowerCase().includes(query) || f.a.toLowerCase().includes(query)) : f.open,
+                    })).filter(f => f.visible)
+                }))
+                .filter(c => c.faqs.length > 0);
+        }
+    };
+}
+</script>
+{% endblock %}

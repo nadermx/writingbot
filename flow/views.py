@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.views import GlobalVars
+from app.utils import Utils
 from flow.models import Document, DocumentVersion, Note
 from flow.services import FlowService
 import config
@@ -400,3 +401,179 @@ class SharedDocumentPage(View):
                 'is_shared_view': True,
             }
         )
+
+
+# ======================================================================
+# AI Chat
+# ======================================================================
+
+class AIChatPage(View):
+    """GET /ai-chat/ - Renders the AI Chat page."""
+
+    def get(self, request):
+        g = GlobalVars.get_globals(request)
+        is_premium = (
+            request.user.is_authenticated
+            and getattr(request.user, 'is_plan_active', False)
+        )
+
+        ip = Utils.get_ip(request)
+        user_agent = request.META.get('HTTP_USER_AGENT', '')
+        allowed, remaining, limit = FlowService.check_daily_limit(
+            'ai_chat', request.user, ip, user_agent,
+        )
+
+        return render(
+            request,
+            'tools/ai-chat.html',
+            {
+                'title': f'AI Chat | {config.PROJECT_NAME}',
+                'description': 'Chat with an AI writing assistant. Get help with brainstorming, grammar, outlines, and more.',
+                'page': 'ai-chat',
+                'g': g,
+                'is_premium': is_premium,
+                'remaining': remaining,
+                'limit': limit,
+            }
+        )
+
+
+class AIChatAPI(APIView):
+    """POST /api/ai-chat/ - Send a message and get an AI response."""
+
+    def post(self, request):
+        message = request.data.get('message', '').strip()
+        history = request.data.get('history', [])
+
+        if not message:
+            return Response(
+                {'error': 'Please enter a message.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Rate limiting
+        ip = Utils.get_ip(request)
+        user_agent = request.META.get('HTTP_USER_AGENT', '')
+        allowed, remaining, limit = FlowService.check_daily_limit(
+            'ai_chat', request.user, ip, user_agent,
+        )
+
+        if not allowed:
+            return Response(
+                {
+                    'error': f'Daily limit of {limit} messages reached. Upgrade to Premium for unlimited chat.',
+                    'upgrade': True,
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        # Call the chat service
+        reply, error = FlowService.chat(message, history)
+
+        if error:
+            return Response(
+                {'error': error},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        # Increment usage counter
+        FlowService.increment_daily_usage('ai_chat', request.user, ip, user_agent)
+
+        # Re-check remaining
+        _, remaining, limit = FlowService.check_daily_limit(
+            'ai_chat', request.user, ip, user_agent,
+        )
+
+        return Response({
+            'reply': reply,
+            'remaining': remaining,
+            'limit': limit,
+        })
+
+
+# ======================================================================
+# AI Search
+# ======================================================================
+
+class AISearchPage(View):
+    """GET /ai-search/ - Renders the AI Search page."""
+
+    def get(self, request):
+        g = GlobalVars.get_globals(request)
+        is_premium = (
+            request.user.is_authenticated
+            and getattr(request.user, 'is_plan_active', False)
+        )
+
+        ip = Utils.get_ip(request)
+        user_agent = request.META.get('HTTP_USER_AGENT', '')
+        allowed, remaining, limit = FlowService.check_daily_limit(
+            'ai_search', request.user, ip, user_agent,
+        )
+
+        return render(
+            request,
+            'tools/ai-search.html',
+            {
+                'title': f'AI Search | {config.PROJECT_NAME}',
+                'description': 'AI-powered research search. Get comprehensive, synthesized answers to your questions with source references.',
+                'page': 'ai-search',
+                'g': g,
+                'is_premium': is_premium,
+                'remaining': remaining,
+                'limit': limit,
+            }
+        )
+
+
+class AISearchAPI(APIView):
+    """POST /api/ai-search/ - Perform an AI-powered search."""
+
+    def post(self, request):
+        query = request.data.get('query', '').strip()
+
+        if not query:
+            return Response(
+                {'error': 'Please enter a search query.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Rate limiting
+        ip = Utils.get_ip(request)
+        user_agent = request.META.get('HTTP_USER_AGENT', '')
+        allowed, remaining, limit = FlowService.check_daily_limit(
+            'ai_search', request.user, ip, user_agent,
+        )
+
+        if not allowed:
+            return Response(
+                {
+                    'error': f'Daily limit of {limit} searches reached. Upgrade to Premium for unlimited searches.',
+                    'upgrade': True,
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        # Call the search service
+        result, error = FlowService.search(query)
+
+        if error:
+            return Response(
+                {'error': error},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        # Increment usage counter
+        FlowService.increment_daily_usage('ai_search', request.user, ip, user_agent)
+
+        # Re-check remaining
+        _, remaining, limit = FlowService.check_daily_limit(
+            'ai_search', request.user, ip, user_agent,
+        )
+
+        return Response({
+            'answer': result['answer'],
+            'sources': result['sources'],
+            'remaining': remaining,
+            'limit': limit,
+        })

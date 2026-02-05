@@ -21,9 +21,6 @@
 #   - db_name, db_user, db_password: PostgreSQL credentials
 
 - hosts: all
-  vars:
-    deploy_user: "{{ deploy_user | default(ansible_user) }}"
-
   tasks:
     # =========================================================================
     # System Updates and Package Installation
@@ -91,7 +88,7 @@
       community.postgresql.postgresql_db:
         name: "{{ db_name }}"
         state: present
-      tags: [first_run]
+      tags: [first_run, never]
 
     - name: Create PostgreSQL user
       become: true
@@ -99,10 +96,19 @@
       community.postgresql.postgresql_user:
         name: "{{ db_user }}"
         password: "{{ db_password }}"
-        db: "{{ db_name }}"
-        priv: "ALL"
         state: present
-      tags: [first_run]
+      tags: [first_run, never]
+
+    - name: Grant database privileges
+      become: true
+      become_user: postgres
+      community.postgresql.postgresql_privs:
+        database: "{{ db_name }}"
+        roles: "{{ db_user }}"
+        type: database
+        privs: ALL
+        state: present
+      tags: [first_run, never]
 
     # =========================================================================
     # Project Directory Setup

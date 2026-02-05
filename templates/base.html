@@ -253,6 +253,15 @@
                                         <div class="text-xs text-gray-500">{{ g.i18n.ai_chat_desc|default:"Chat with an AI writing assistant" }}</div>
                                     </div>
                                 </a>
+                                <a href="/ai-search/?lang={{ g.lang.iso }}" class="flex items-start gap-3 p-3 rounded-lg hover:bg-brand-50 transition-colors group">
+                                    <div class="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                                        <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm font-semibold text-gray-900 group-hover:text-brand-600">{{ g.i18n.ai_search|default:"AI Search" }}</div>
+                                        <div class="text-xs text-gray-500">{{ g.i18n.ai_search_desc|default:"AI-powered research and answers" }}</div>
+                                    </div>
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -404,6 +413,7 @@
                         <a href="/ai-writing-tools/?lang={{ g.lang.iso }}" class="block px-3 py-2 text-sm text-gray-600 hover:text-brand-600 rounded-lg hover:bg-brand-50">{{ g.i18n.ai_writing_tools|default:"AI Writing Tools" }}</a>
                         <a href="/flow/?lang={{ g.lang.iso }}" class="block px-3 py-2 text-sm text-gray-600 hover:text-brand-600 rounded-lg hover:bg-brand-50">{{ g.i18n.flow|default:"Flow (Co-Writer)" }}</a>
                         <a href="/ai-chat/?lang={{ g.lang.iso }}" class="block px-3 py-2 text-sm text-gray-600 hover:text-brand-600 rounded-lg hover:bg-brand-50">{{ g.i18n.ai_chat|default:"AI Chat" }}</a>
+                        <a href="/ai-search/?lang={{ g.lang.iso }}" class="block px-3 py-2 text-sm text-gray-600 hover:text-brand-600 rounded-lg hover:bg-brand-50">{{ g.i18n.ai_search|default:"AI Search" }}</a>
                     </div>
                 </div>
 

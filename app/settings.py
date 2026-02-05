@@ -188,6 +188,8 @@ TOOL_LIMITS = {
     'ai_tools': {'free_daily': 50},
     'pdf_tools': {'free_daily': 3},
     'plagiarism': {'premium_monthly_words': 30000},
+    'ai_chat': {'free_daily': 20},
+    'ai_search': {'free_daily': 10},
 }
 
 # Logging

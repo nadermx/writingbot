@@ -31,17 +31,31 @@
     </div>
 
     <!-- Category Sections -->
-    {% for category, tools in categories.items %}
-    <div class="mb-5 tool-category" data-category="{{ category }}">
-        <h2 class="h4 fw-bold mb-3 pb-2 border-bottom">{{ category }}</h2>
+    {% for cat_key, cat_data in categories.items %}
+    <div class="mb-5 tool-category" data-category="{{ cat_key }}">
+        <h2 class="h4 fw-bold mb-3 pb-2 border-bottom">{{ cat_data.name }}</h2>
         <div class="row g-3">
-            {% for tool in tools %}
-            <div class="col-xl-3 col-lg-4 col-md-6 tool-card" data-name="{{ tool.name|lower }}" data-slug="{{ tool.slug }}">
-                <a href="/ai-tools/{{ tool.slug }}/" class="text-decoration-none">
+            {% for tool in cat_data.generators %}
+            <div class="col-xl-3 col-lg-4 col-md-6 tool-card"
+                 data-name="{{ tool.name|lower }}"
+                 data-desc="{{ tool.description|lower }}"
+                 data-slug="{{ tool.slug }}">
+                <a href="/ai-writing-tools/{{ tool.slug }}/?lang={{ g.lang.iso }}" class="text-decoration-none">
                     <div class="card h-100 shadow-sm border-0 hover-shadow transition-all">
                         <div class="card-body p-3">
-                            <h5 class="card-title h6 fw-semibold text-dark mb-1">{{ tool.name }}</h5>
-                            <p class="card-text small text-muted mb-0 line-clamp-2">{{ tool.description }}</p>
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center me-2 flex-shrink-0"
+                                     style="width: 32px; height: 32px;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+                                         fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                         stroke-width="2" class="text-primary">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="{{ tool.icon }}"/>
+                                    </svg>
+                                </div>
+                                <h5 class="card-title h6 fw-semibold text-dark mb-0">{{ tool.name }}</h5>
+                            </div>
+                            <p class="card-text small text-muted mb-2 line-clamp-2">{{ tool.description }}</p>
+                            <span class="badge bg-primary bg-opacity-10 text-primary small">Try Free</span>
                         </div>
                     </div>
                 </a>
@@ -59,11 +73,11 @@
     <!-- CTA -->
     <div class="row mt-5 mb-4">
         <div class="col-12">
-            <div class="card border-0 shadow-sm bg-brand-50 text-center">
+            <div class="card border-0 shadow-sm bg-light text-center">
                 <div class="card-body py-5">
                     <h3 class="fw-bold mb-2">Need Unlimited Access?</h3>
                     <p class="text-muted mb-3">Free users get 50 generations per day. Upgrade to Premium for unlimited access to all {{ total_tools }}+ tools.</p>
-                    <a href="/pricing/" class="btn btn-primary btn-lg">View Plans</a>
+                    <a href="/pricing/?lang={{ g.lang.iso }}" class="btn btn-primary btn-lg">View Plans</a>
                 </div>
             </div>
         </div>
@@ -95,8 +109,9 @@ function filterTools(query) {
 
     cards.forEach(card => {
         const name = card.dataset.name || '';
+        const desc = card.dataset.desc || '';
         const slug = card.dataset.slug || '';
-        const match = !query || name.includes(query) || slug.includes(query);
+        const match = !query || name.includes(query) || desc.includes(query) || slug.includes(query);
         card.style.display = match ? '' : 'none';
         if (match) anyVisible = true;
     });
@@ -110,4 +125,7 @@ function filterTools(query) {
     document.getElementById('no-results').classList.toggle('d-none', anyVisible);
 }
 </script>
+
+<!-- Alpine.js -->
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 {% endblock %}

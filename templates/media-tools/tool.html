@@ -86,6 +86,297 @@
                         <button class="btn btn-sm btn-outline-primary" @click="copyPrompt()">Copy to Clipboard</button>
                     </div>
 
+                    {% elif tool_type == 'transcription' %}
+                    <!-- Transcription (Speech to Text) -->
+                    <div x-show="!fileUploaded" class="text-center py-5"
+                         @dragover.prevent="dragging = true"
+                         @dragleave.prevent="dragging = false"
+                         @drop.prevent="handleDrop($event)"
+                         :class="dragging ? 'border-primary bg-light' : 'border-secondary'"
+                         style="border: 2px dashed #dee2e6; border-radius: 12px; cursor: pointer;"
+                         @click="$refs.fileInput.click()">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="#6c757d" viewBox="0 0 24 24" class="mb-3">
+                            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5z"/>
+                            <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                        </svg>
+                        <p class="mb-1 fw-semibold">Drop your audio file here or click to browse</p>
+                        <p class="text-muted small mb-0">Supports MP3, WAV, OGG, FLAC, M4A, WebM (max 25MB)</p>
+                        <input type="file" x-ref="fileInput" @change="handleFileSelect($event)" accept="{{ accept }}" class="d-none">
+                    </div>
+
+                    <div x-show="fileUploaded">
+                        <div class="d-flex align-items-center justify-content-between mb-3 pb-3 border-bottom">
+                            <span class="fw-semibold" x-text="fileName"></span>
+                            <button class="btn btn-sm btn-outline-secondary" @click="resetTool()">Change</button>
+                        </div>
+                        <button class="btn btn-primary btn-lg w-100" @click="transcribeAudio()" :disabled="processing">
+                            <span x-show="!processing">Transcribe Audio</span>
+                            <span x-show="processing"><span class="spinner-border spinner-border-sm me-2"></span>Transcribing...</span>
+                        </button>
+                    </div>
+
+                    <!-- Transcription Result -->
+                    <div x-show="aiResult" class="mt-4 p-3 bg-light rounded-3">
+                        <label class="form-label fw-semibold">Transcription</label>
+                        <div class="mb-2" x-html="formatMarkdown(aiResult)" style="white-space: pre-wrap;"></div>
+                        <button class="btn btn-sm btn-outline-primary" @click="copyResult()">Copy to Clipboard</button>
+                    </div>
+
+                    {% elif tool_type == 'logo-generator' %}
+                    <!-- AI Logo Generator -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Business Name *</label>
+                        <input type="text" class="form-control" x-model="logoBusinessName" placeholder="e.g. TechVision Solutions">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Industry</label>
+                        <input type="text" class="form-control" x-model="logoIndustry" placeholder="e.g. Technology, Healthcare, Food...">
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Style</label>
+                            <select class="form-select" x-model="logoStyle">
+                                {% for key, label in logo_styles.items %}
+                                <option value="{{ key }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Preferred Colors</label>
+                            <input type="text" class="form-control" x-model="logoColors" placeholder="e.g. Blue, Gold, White">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Additional Notes</label>
+                        <textarea class="form-control" rows="2" x-model="logoAdditional" placeholder="Any specific requirements or preferences..."></textarea>
+                    </div>
+                    <button class="btn btn-primary btn-lg w-100" @click="generateLogo()" :disabled="processing || !logoBusinessName.trim()">
+                        <span x-show="!processing">Generate Logo Design</span>
+                        <span x-show="processing"><span class="spinner-border spinner-border-sm me-2"></span>Generating...</span>
+                    </button>
+
+                    <!-- Logo Result -->
+                    <div x-show="aiResult" class="mt-4 p-3 bg-light rounded-3">
+                        <label class="form-label fw-semibold">Logo Design Brief</label>
+                        <div class="mb-2" x-html="formatMarkdown(aiResult)"></div>
+                        <button class="btn btn-sm btn-outline-primary" @click="copyResult()">Copy to Clipboard</button>
+                    </div>
+
+                    {% elif tool_type == 'character-generator' %}
+                    <!-- AI Character Generator -->
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Character Name</label>
+                            <input type="text" class="form-control" x-model="charName" placeholder="e.g. Luna Shadowmere">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Art Style</label>
+                            <select class="form-select" x-model="charStyle">
+                                {% for key, label in character_styles.items %}
+                                <option value="{{ key }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Traits & Description *</label>
+                        <textarea class="form-control" rows="3" x-model="charTraits" placeholder="e.g. Brave warrior, scar on left cheek, red hair, wields a flaming sword..."></textarea>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Gender</label>
+                            <select class="form-select" x-model="charGender">
+                                <option value="">Not specified</option>
+                                <option value="female">Female</option>
+                                <option value="male">Male</option>
+                                <option value="non-binary">Non-binary</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Age Range</label>
+                            <select class="form-select" x-model="charAge">
+                                <option value="">Not specified</option>
+                                <option value="child">Child (5-12)</option>
+                                <option value="teen">Teenager (13-17)</option>
+                                <option value="young-adult">Young Adult (18-25)</option>
+                                <option value="adult">Adult (26-45)</option>
+                                <option value="middle-aged">Middle-aged (46-65)</option>
+                                <option value="elderly">Elderly (65+)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Additional Details</label>
+                        <textarea class="form-control" rows="2" x-model="charAdditional" placeholder="Background story, special powers, equipment..."></textarea>
+                    </div>
+                    <button class="btn btn-primary btn-lg w-100" @click="generateCharacter()" :disabled="processing || !charTraits.trim()">
+                        <span x-show="!processing">Generate Character</span>
+                        <span x-show="processing"><span class="spinner-border spinner-border-sm me-2"></span>Generating...</span>
+                    </button>
+
+                    <!-- Character Result -->
+                    <div x-show="aiResult" class="mt-4 p-3 bg-light rounded-3">
+                        <label class="form-label fw-semibold">Character Sheet</label>
+                        <div class="mb-2" x-html="formatMarkdown(aiResult)"></div>
+                        <button class="btn btn-sm btn-outline-primary" @click="copyResult()">Copy to Clipboard</button>
+                    </div>
+
+                    {% elif tool_type == 'word-cloud' %}
+                    <!-- Word Cloud Generator -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Text *</label>
+                        <textarea class="form-control" rows="6" x-model="wcText" placeholder="Paste your text here... The more text, the better the word cloud."></textarea>
+                        <div class="form-text"><span x-text="wcText.length"></span> characters</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-4">
+                            <label class="form-label fw-semibold">Width</label>
+                            <select class="form-select" x-model="wcWidth">
+                                <option value="400">400px</option>
+                                <option value="600">600px</option>
+                                <option value="800" selected>800px</option>
+                                <option value="1200">1200px</option>
+                                <option value="1600">1600px</option>
+                            </select>
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label fw-semibold">Height</label>
+                            <select class="form-select" x-model="wcHeight">
+                                <option value="300">300px</option>
+                                <option value="400" selected>400px</option>
+                                <option value="600">600px</option>
+                                <option value="800">800px</option>
+                                <option value="1000">1000px</option>
+                            </select>
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label fw-semibold">Max Words</label>
+                            <select class="form-select" x-model="wcMaxWords">
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                                <option value="200" selected>200</option>
+                                <option value="300">300</option>
+                                <option value="500">500</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Color Scheme</label>
+                            <select class="form-select" x-model="wcColormap">
+                                {% for key, label in colormaps.items %}
+                                <option value="{{ key }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Background</label>
+                            <select class="form-select" x-model="wcBgColor">
+                                <option value="white">White</option>
+                                <option value="black">Black</option>
+                                <option value="#f8f9fa">Light Gray</option>
+                                <option value="#1a1a2e">Dark Navy</option>
+                                <option value="#0f3460">Deep Blue</option>
+                                <option value="transparent">Transparent</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary btn-lg w-100" @click="generateWordCloud()" :disabled="processing || !wcText.trim()">
+                        <span x-show="!processing">Generate Word Cloud</span>
+                        <span x-show="processing"><span class="spinner-border spinner-border-sm me-2"></span>Generating...</span>
+                    </button>
+
+                    {% elif tool_type == 'banner-generator' %}
+                    <!-- AI Banner Generator -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Banner Title *</label>
+                        <input type="text" class="form-control" x-model="bannerTitle" placeholder="e.g. Summer Sale - Up to 50% Off">
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Subtitle</label>
+                            <input type="text" class="form-control" x-model="bannerSubtitle" placeholder="e.g. Limited time offer">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Call to Action</label>
+                            <input type="text" class="form-control" x-model="bannerCta" placeholder="e.g. Shop Now, Learn More">
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Banner Size</label>
+                            <select class="form-select" x-model="bannerSize">
+                                {% for key, label in banner_sizes.items %}
+                                <option value="{{ key }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Brand Colors</label>
+                            <input type="text" class="form-control" x-model="bannerColors" placeholder="e.g. #FF5733, #3498DB">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Style</label>
+                        <input type="text" class="form-control" x-model="bannerStyle" placeholder="e.g. Modern, Playful, Corporate, Bold...">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Additional Notes</label>
+                        <textarea class="form-control" rows="2" x-model="bannerAdditional" placeholder="Any specific requirements..."></textarea>
+                    </div>
+                    <button class="btn btn-primary btn-lg w-100" @click="generateBanner()" :disabled="processing || !bannerTitle.trim()">
+                        <span x-show="!processing">Generate Banner Design</span>
+                        <span x-show="processing"><span class="spinner-border spinner-border-sm me-2"></span>Generating...</span>
+                    </button>
+
+                    <!-- Banner Result -->
+                    <div x-show="aiResult" class="mt-4 p-3 bg-light rounded-3">
+                        <label class="form-label fw-semibold">Banner Design Brief</label>
+                        <div class="mb-2" x-html="formatMarkdown(aiResult)"></div>
+                        <button class="btn btn-sm btn-outline-primary" @click="copyResult()">Copy to Clipboard</button>
+                    </div>
+
+                    {% elif tool_type == 'presentation-maker' %}
+                    <!-- AI Presentation Maker -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Presentation Topic *</label>
+                        <input type="text" class="form-control" x-model="presTopic" placeholder="e.g. The Future of Artificial Intelligence in Healthcare">
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-4">
+                            <label class="form-label fw-semibold">Number of Slides</label>
+                            <input type="number" class="form-control" x-model="presSlides" min="3" max="30" value="10">
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label fw-semibold">Style</label>
+                            <select class="form-select" x-model="presStyle">
+                                {% for key, label in presentation_styles.items %}
+                                <option value="{{ key }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label fw-semibold">Target Audience</label>
+                            <input type="text" class="form-control" x-model="presAudience" placeholder="e.g. Executives">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Additional Requirements</label>
+                        <textarea class="form-control" rows="2" x-model="presAdditional" placeholder="Key points to cover, specific data to include..."></textarea>
+                    </div>
+                    <button class="btn btn-primary btn-lg w-100" @click="generatePresentation()" :disabled="processing || !presTopic.trim()">
+                        <span x-show="!processing">Generate Presentation</span>
+                        <span x-show="processing"><span class="spinner-border spinner-border-sm me-2"></span>Generating...</span>
+                    </button>
+
+                    <!-- Presentation Result -->
+                    <div x-show="aiResult" class="mt-4 p-3 bg-light rounded-3">
+                        <label class="form-label fw-semibold">Presentation Content</label>
+                        <div class="mb-2" x-html="formatMarkdown(aiResult)"></div>
+                        <button class="btn btn-sm btn-outline-primary" @click="copyResult()">Copy to Clipboard</button>
+                    </div>
+
                     {% else %}
                     <!-- Image upload tools (converter, bg remover) -->
                     <div x-show="!fileUploaded" class="text-center py-5"

@@ -1,0 +1,266 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-6">
+    <!-- Header -->
+    <div class="text-center mb-6">
+        <h1 class="text-3xl sm:text-4xl font-bold text-gray-900">AI Chat</h1>
+        <p class="mt-2 text-gray-500">Chat with an AI writing assistant. Get help with brainstorming, grammar, outlines, and more.</p>
+    </div>
+
+    {% csrf_token %}
+
+    <div x-data="aiChat()" x-cloak>
+
+        <!-- Usage Badge -->
+        <div class="flex justify-center mb-4">
+            {% if not is_premium %}
+            <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-full text-sm text-gray-600">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                <span x-text="remaining >= 0 ? remaining + ' / {{ limit }} messages today' : 'Unlimited'"></span>
+            </div>
+            {% else %}
+            <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-brand-50 rounded-full text-sm text-brand-700">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                Premium - Unlimited messages
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Chat Container -->
+        <div class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden flex flex-col" style="height: 600px;">
+
+            <!-- Messages Area -->
+            <div class="flex-1 overflow-y-auto p-4 space-y-4" id="chat-messages" x-ref="messagesContainer">
+
+                <!-- Welcome Message -->
+                <div x-show="messages.length === 0" class="flex flex-col items-center justify-center h-full text-center px-4">
+                    <div class="w-16 h-16 bg-brand-100 rounded-2xl flex items-center justify-center mb-4">
+                        <svg class="w-8 h-8 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">How can I help you write today?</h3>
+                    <p class="text-gray-500 text-sm max-w-md mb-6">Ask me to brainstorm ideas, improve your writing, explain grammar rules, create outlines, or anything else writing-related.</p>
+
+                    <!-- Suggestion Chips -->
+                    <div class="flex flex-wrap justify-center gap-2">
+                        <button @click="sendSuggestion('Help me brainstorm ideas for a blog post about productivity')"
+                                class="px-3 py-2 text-sm bg-gray-100 hover:bg-brand-50 hover:text-brand-700 text-gray-700 rounded-lg transition-colors">
+                            Brainstorm blog ideas
+                        </button>
+                        <button @click="sendSuggestion('Explain the difference between active and passive voice')"
+                                class="px-3 py-2 text-sm bg-gray-100 hover:bg-brand-50 hover:text-brand-700 text-gray-700 rounded-lg transition-colors">
+                            Grammar help
+                        </button>
+                        <button @click="sendSuggestion('Create an outline for a research paper about climate change')"
+                                class="px-3 py-2 text-sm bg-gray-100 hover:bg-brand-50 hover:text-brand-700 text-gray-700 rounded-lg transition-colors">
+                            Create an outline
+                        </button>
+                        <button @click="sendSuggestion('How can I make my writing more engaging and less boring?')"
+                                class="px-3 py-2 text-sm bg-gray-100 hover:bg-brand-50 hover:text-brand-700 text-gray-700 rounded-lg transition-colors">
+                            Improve my writing
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Message Bubbles -->
+                <template x-for="(msg, index) in messages" :key="index">
+                    <div :class="msg.role === 'user' ? 'flex justify-end' : 'flex justify-start'">
+                        <div :class="msg.role === 'user'
+                            ? 'bg-brand-600 text-white rounded-2xl rounded-br-md px-4 py-3 max-w-[80%]'
+                            : 'bg-gray-100 text-gray-900 rounded-2xl rounded-bl-md px-4 py-3 max-w-[80%]'">
+                            <!-- User messages: plain text -->
+                            <div x-show="msg.role === 'user'" class="text-sm leading-relaxed whitespace-pre-wrap" x-text="msg.content"></div>
+                            <!-- Assistant messages: rendered markdown -->
+                            <div x-show="msg.role === 'assistant'" class="text-sm leading-relaxed prose prose-sm max-w-none prose-headings:mt-3 prose-headings:mb-1 prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5" x-html="renderMarkdown(msg.content)"></div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Typing Indicator -->
+                <div x-show="loading" class="flex justify-start">
+                    <div class="bg-gray-100 rounded-2xl rounded-bl-md px-4 py-3">
+                        <div class="flex gap-1.5 items-center">
+                            <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0ms;"></div>
+                            <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 150ms;"></div>
+                            <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 300ms;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error Message -->
+            <div x-show="error" class="px-4 py-2 bg-red-50 border-t border-red-100">
+                <p class="text-sm text-red-600" x-text="error"></p>
+            </div>
+
+            <!-- Input Area -->
+            <div class="border-t border-gray-200 p-4 bg-gray-50">
+                <div class="flex gap-3 items-end">
+                    <div class="flex-1 relative">
+                        <textarea
+                            x-model="inputMessage"
+                            @keydown.enter.prevent="if (!$event.shiftKey) sendMessage()"
+                            @input="autoResize($event.target)"
+                            placeholder="Type your message... (Shift+Enter for new line)"
+                            rows="1"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent resize-none overflow-hidden"
+                            style="max-height: 120px;"
+                            :disabled="loading"
+                        ></textarea>
+                    </div>
+                    <button
+                        @click="sendMessage()"
+                        :disabled="loading || !inputMessage.trim()"
+                        class="flex-shrink-0 w-11 h-11 bg-brand-600 hover:bg-brand-700 disabled:bg-gray-300 text-white rounded-xl flex items-center justify-center transition-colors"
+                    >
+                        <svg x-show="!loading" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                        <svg x-show="loading" class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    </button>
+                </div>
+                <div class="flex justify-between items-center mt-2">
+                    <button @click="clearChat()" x-show="messages.length > 0"
+                            class="text-xs text-gray-400 hover:text-gray-600 transition-colors">
+                        Clear conversation
+                    </button>
+                    <span class="text-xs text-gray-400">Press Enter to send</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Marked.js for Markdown rendering -->
+<script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
+<script>
+function aiChat() {
+    return {
+        inputMessage: '',
+        messages: [],
+        loading: false,
+        error: '',
+        remaining: {{ remaining }},
+
+        init() {
+            // Restore conversation from localStorage
+            var saved = localStorage.getItem('writingbot_ai_chat');
+            if (saved) {
+                try {
+                    this.messages = JSON.parse(saved);
+                } catch (e) {
+                    this.messages = [];
+                }
+            }
+            this.$nextTick(() => { this.scrollToBottom(); });
+        },
+
+        saveMessages() {
+            try {
+                // Keep only last 50 messages in storage
+                var toSave = this.messages.slice(-50);
+                localStorage.setItem('writingbot_ai_chat', JSON.stringify(toSave));
+            } catch (e) {
+                // Storage full, clear old data
+                localStorage.removeItem('writingbot_ai_chat');
+            }
+        },
+
+        scrollToBottom() {
+            var container = this.$refs.messagesContainer;
+            if (container) {
+                container.scrollTop = container.scrollHeight;
+            }
+        },
+
+        autoResize(el) {
+            el.style.height = 'auto';
+            el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+        },
+
+        renderMarkdown(text) {
+            if (!text) return '';
+            try {
+                if (typeof marked !== 'undefined') {
+                    return marked.parse(text);
+                }
+            } catch (e) {}
+            // Fallback: escape HTML and convert newlines to <br>
+            return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+        },
+
+        sendSuggestion(text) {
+            this.inputMessage = text;
+            this.sendMessage();
+        },
+
+        sendMessage() {
+            var message = this.inputMessage.trim();
+            if (!message || this.loading) return;
+
+            this.error = '';
+            this.inputMessage = '';
+
+            // Add user message
+            this.messages.push({ role: 'user', content: message });
+            this.saveMessages();
+            this.$nextTick(() => { this.scrollToBottom(); });
+
+            this.loading = true;
+
+            var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            var self = this;
+
+            // Build history from existing messages (exclude the one we just pushed)
+            var history = this.messages.slice(0, -1).map(function(m) {
+                return { role: m.role, content: m.content };
+            });
+
+            fetch('/api/ai-chat/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({
+                    message: message,
+                    history: history
+                })
+            })
+            .then(function(response) {
+                return response.json().then(function(data) {
+                    return { ok: response.ok, data: data };
+                });
+            })
+            .then(function(result) {
+                self.loading = false;
+                if (!result.ok) {
+                    self.error = result.data.error || 'An error occurred.';
+                    if (result.data.upgrade) {
+                        self.error = result.data.error;
+                    }
+                    return;
+                }
+
+                // Add assistant reply
+                self.messages.push({ role: 'assistant', content: result.data.reply });
+                self.remaining = result.data.remaining;
+                self.saveMessages();
+                self.$nextTick(function() { self.scrollToBottom(); });
+            })
+            .catch(function(err) {
+                self.loading = false;
+                self.error = 'Network error. Please check your connection and try again.';
+            });
+        },
+
+        clearChat() {
+            this.messages = [];
+            this.error = '';
+            localStorage.removeItem('writingbot_ai_chat');
+        }
+    };
+}
+</script>
+{% endblock %}

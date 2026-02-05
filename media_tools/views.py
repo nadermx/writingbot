@@ -9,7 +9,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.views import GlobalVars
-from media_tools.services import ImageService, VoiceService, QRService, AIImageService
+from media_tools.services import (
+    ImageService, VoiceService, QRService, AIImageService,
+    TranscriptionService, LogoService, CharacterService,
+    WordCloudService, BannerService, PresentationService,
+)
 import config
 
 logger = logging.getLogger('app')
@@ -55,6 +59,54 @@ MEDIA_TOOLS = [
         'category': 'audio',
         'icon': 'voice',
         'url': '/tools/ai-voice-generator/',
+    },
+    {
+        'slug': 'transcription',
+        'name': 'Transcription (Speech to Text)',
+        'description': 'Upload audio files and extract text using AI-powered transcription.',
+        'category': 'audio',
+        'icon': 'transcription',
+        'url': '/tools/transcription/',
+    },
+    {
+        'slug': 'logo-generator',
+        'name': 'AI Logo Generator',
+        'description': 'Generate professional logo design concepts and AI prompts for your brand.',
+        'category': 'ai',
+        'icon': 'logo',
+        'url': '/tools/logo-generator/',
+    },
+    {
+        'slug': 'character-generator',
+        'name': 'AI Character Generator',
+        'description': 'Create detailed character designs with AI for games, stories, and art.',
+        'category': 'ai',
+        'icon': 'character',
+        'url': '/tools/character-generator/',
+    },
+    {
+        'slug': 'word-cloud',
+        'name': 'Word Cloud Generator',
+        'description': 'Turn any text into a beautiful word cloud image. Free and instant.',
+        'category': 'utility',
+        'icon': 'wordcloud',
+        'url': '/tools/word-cloud/',
+    },
+    {
+        'slug': 'banner-generator',
+        'name': 'AI Banner Generator',
+        'description': 'Create banner ad designs with AI for social media and display ads.',
+        'category': 'ai',
+        'icon': 'banner',
+        'url': '/tools/banner-generator/',
+    },
+    {
+        'slug': 'presentation-maker',
+        'name': 'AI Presentation Maker',
+        'description': 'Generate complete slide-by-slide presentations with AI in seconds.',
+        'category': 'ai',
+        'icon': 'presentation',
+        'url': '/tools/presentation-maker/',
     },
 ]
 
@@ -157,6 +209,113 @@ class VoiceGeneratorPage(View):
             'tool_description': 'Convert text to natural-sounding speech with multiple AI voices.',
             'accept': '',
             'voices': VoiceService.VOICES,
+        })
+
+
+class TranscriptionPage(View):
+    """Transcription (speech-to-text) tool page."""
+
+    def get(self, request):
+        g = GlobalVars.get_globals(request)
+        return render(request, 'media-tools/tool.html', {
+            'title': f'Free Audio Transcription - Speech to Text | {config.PROJECT_NAME}',
+            'description': 'Convert audio files to text with AI-powered transcription. Supports MP3, WAV, OGG, FLAC, and more.',
+            'page': 'transcription',
+            'g': g,
+            'tool_type': 'transcription',
+            'tool_name': 'Transcription (Speech to Text)',
+            'tool_description': 'Upload an audio file and get an accurate text transcription using AI.',
+            'accept': 'audio/*,.mp3,.wav,.ogg,.flac,.m4a,.webm',
+        })
+
+
+class LogoGeneratorPage(View):
+    """AI logo generator tool page."""
+
+    def get(self, request):
+        g = GlobalVars.get_globals(request)
+        return render(request, 'media-tools/tool.html', {
+            'title': f'AI Logo Generator | {config.PROJECT_NAME}',
+            'description': 'Generate professional logo design concepts and AI-ready prompts for your brand identity.',
+            'page': 'logo-generator',
+            'g': g,
+            'tool_type': 'logo-generator',
+            'tool_name': 'AI Logo Generator',
+            'tool_description': 'Enter your business details and get a detailed logo design brief with AI image generation prompts.',
+            'accept': '',
+            'logo_styles': LogoService.STYLES,
+        })
+
+
+class CharacterGeneratorPage(View):
+    """AI character generator tool page."""
+
+    def get(self, request):
+        g = GlobalVars.get_globals(request)
+        return render(request, 'media-tools/tool.html', {
+            'title': f'AI Character Generator | {config.PROJECT_NAME}',
+            'description': 'Create detailed character designs with AI for games, stories, animation, and concept art.',
+            'page': 'character-generator',
+            'g': g,
+            'tool_type': 'character-generator',
+            'tool_name': 'AI Character Generator',
+            'tool_description': 'Describe your character and get a complete character sheet with AI image generation prompts.',
+            'accept': '',
+            'character_styles': CharacterService.STYLES,
+        })
+
+
+class WordCloudPage(View):
+    """Word cloud generator tool page."""
+
+    def get(self, request):
+        g = GlobalVars.get_globals(request)
+        return render(request, 'media-tools/tool.html', {
+            'title': f'Free Word Cloud Generator | {config.PROJECT_NAME}',
+            'description': 'Create beautiful word cloud images from any text. Free online word cloud maker.',
+            'page': 'word-cloud',
+            'g': g,
+            'tool_type': 'word-cloud',
+            'tool_name': 'Word Cloud Generator',
+            'tool_description': 'Paste your text and generate a stunning word cloud image instantly.',
+            'accept': '',
+            'colormaps': WordCloudService.COLORMAPS,
+        })
+
+
+class BannerGeneratorPage(View):
+    """AI banner generator tool page."""
+
+    def get(self, request):
+        g = GlobalVars.get_globals(request)
+        return render(request, 'media-tools/tool.html', {
+            'title': f'AI Banner Generator | {config.PROJECT_NAME}',
+            'description': 'Generate professional banner ad designs with AI for social media and display advertising.',
+            'page': 'banner-generator',
+            'g': g,
+            'tool_type': 'banner-generator',
+            'tool_name': 'AI Banner Generator',
+            'tool_description': 'Enter your banner details and get a complete design brief with AI image generation prompts.',
+            'accept': '',
+            'banner_sizes': BannerService.SIZES,
+        })
+
+
+class PresentationMakerPage(View):
+    """AI presentation maker tool page."""
+
+    def get(self, request):
+        g = GlobalVars.get_globals(request)
+        return render(request, 'media-tools/tool.html', {
+            'title': f'AI Presentation Maker | {config.PROJECT_NAME}',
+            'description': 'Generate complete slide-by-slide presentations with AI. Free online presentation creator.',
+            'page': 'presentation-maker',
+            'g': g,
+            'tool_type': 'presentation-maker',
+            'tool_name': 'AI Presentation Maker',
+            'tool_description': 'Enter your topic and get a complete presentation with slide content, speaker notes, and visual suggestions.',
+            'accept': '',
+            'presentation_styles': PresentationService.STYLES,
         })
 
 
@@ -280,3 +439,154 @@ class AIImagePromptAPI(APIView):
             return Response({'error': error}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response({'prompt': prompt})
+
+
+class TranscribeAPI(APIView):
+    """POST /api/media/transcribe/ - Transcribe audio to text."""
+    parser_classes = [MultiPartParser]
+
+    def post(self, request):
+        file = request.FILES.get('file')
+
+        if not file:
+            return Response(
+                {'error': 'Please upload an audio file.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        result, error = TranscriptionService.transcribe(file)
+        if error:
+            return Response({'error': error}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response({'result': result})
+
+
+class LogoGenerateAPI(APIView):
+    """POST /api/media/logo/ - Generate logo design prompt."""
+
+    def post(self, request):
+        business_name = request.data.get('business_name', '').strip()
+        industry = request.data.get('industry', '').strip()
+        style = request.data.get('style', 'modern')
+        colors = request.data.get('colors', '').strip()
+        additional = request.data.get('additional', '').strip()
+
+        if not business_name:
+            return Response(
+                {'error': 'Please enter a business name.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        result, error = LogoService.generate_logo_prompt(
+            business_name, industry, style, colors, additional
+        )
+        if error:
+            return Response({'error': error}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response({'result': result})
+
+
+class CharacterGenerateAPI(APIView):
+    """POST /api/media/character/ - Generate character description."""
+
+    def post(self, request):
+        name = request.data.get('name', '').strip()
+        traits = request.data.get('traits', '').strip()
+        style = request.data.get('style', 'concept')
+        gender = request.data.get('gender', '').strip()
+        age = request.data.get('age', '').strip()
+        additional = request.data.get('additional', '').strip()
+
+        if not traits:
+            return Response(
+                {'error': 'Please describe your character traits or features.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        result, error = CharacterService.generate_character(
+            name, traits, style, gender, age, additional
+        )
+        if error:
+            return Response({'error': error}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response({'result': result})
+
+
+class WordCloudAPI(APIView):
+    """POST /api/media/word-cloud/ - Generate word cloud image."""
+
+    def post(self, request):
+        text = request.data.get('text', '').strip()
+        width = int(request.data.get('width', 800))
+        height = int(request.data.get('height', 400))
+        bg_color = request.data.get('bg_color', 'white')
+        colormap = request.data.get('colormap', 'viridis')
+        max_words = int(request.data.get('max_words', 200))
+
+        if not text:
+            return Response(
+                {'error': 'Please enter some text.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        output, error = WordCloudService.generate_word_cloud(
+            text, width, height, bg_color, colormap, max_words
+        )
+        if error:
+            return Response({'error': error}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        response = HttpResponse(output.read(), content_type='image/png')
+        response['Content-Disposition'] = 'attachment; filename="wordcloud.png"'
+        return response
+
+
+class BannerGenerateAPI(APIView):
+    """POST /api/media/banner/ - Generate banner design prompt."""
+
+    def post(self, request):
+        title = request.data.get('title', '').strip()
+        subtitle = request.data.get('subtitle', '').strip()
+        cta = request.data.get('cta', '').strip()
+        size = request.data.get('size', '1200x628')
+        style = request.data.get('style', '').strip()
+        brand_colors = request.data.get('brand_colors', '').strip()
+        additional = request.data.get('additional', '').strip()
+
+        if not title:
+            return Response(
+                {'error': 'Please enter a banner title.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        result, error = BannerService.generate_banner(
+            title, subtitle, cta, size, style, brand_colors, additional
+        )
+        if error:
+            return Response({'error': error}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response({'result': result})
+
+
+class PresentationGenerateAPI(APIView):
+    """POST /api/media/presentation/ - Generate presentation content."""
+
+    def post(self, request):
+        topic = request.data.get('topic', '').strip()
+        num_slides = int(request.data.get('num_slides', 10))
+        style = request.data.get('style', 'professional')
+        audience = request.data.get('audience', '').strip()
+        additional = request.data.get('additional', '').strip()
+
+        if not topic:
+            return Response(
+                {'error': 'Please enter a presentation topic.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        result, error = PresentationService.generate_presentation(
+            topic, num_slides, style, audience, additional
+        )
+        if error:
+            return Response({'error': error}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response({'result': result})

@@ -492,6 +492,66 @@ class RefundPage(View):
         )
 
 
+class HelpCenterPage(View):
+    def get(self, request):
+        settings = GlobalVars.get_globals(request)
+        return render(
+            request,
+            'help.html',
+            {
+                'title': f"Help Center | {config.PROJECT_NAME}",
+                'description': f'Find answers to frequently asked questions about {config.PROJECT_NAME}.',
+                'page': 'help',
+                'g': settings
+            }
+        )
+
+
+class TrustCenterPage(View):
+    def get(self, request):
+        settings = GlobalVars.get_globals(request)
+        return render(
+            request,
+            'trust.html',
+            {
+                'title': f"Trust Center | {config.PROJECT_NAME}",
+                'description': f'Learn about our security practices, data protection, and privacy commitments.',
+                'page': 'trust',
+                'g': settings
+            }
+        )
+
+
+class StudentResourcesPage(View):
+    def get(self, request):
+        settings = GlobalVars.get_globals(request)
+        return render(
+            request,
+            'student-resources.html',
+            {
+                'title': f"Student Resources | {config.PROJECT_NAME}",
+                'description': f'Free writing tools and resources for students. Paraphraser, grammar checker, citation generator, and more.',
+                'page': 'student-resources',
+                'g': settings
+            }
+        )
+
+
+class ProfessionalsPage(View):
+    def get(self, request):
+        settings = GlobalVars.get_globals(request)
+        return render(
+            request,
+            'professionals.html',
+            {
+                'title': f"AI Writing Tools for Professionals | {config.PROJECT_NAME}",
+                'description': f'Professional AI writing tools for business. Paraphraser, grammar checker, email writer, and more.',
+                'page': 'professionals',
+                'g': settings
+            }
+        )
+
+
 class CancelSubscriptionPage(View):
     def get(self, request):
         if not request.user.is_authenticated:

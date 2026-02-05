@@ -5,6 +5,15 @@
 <div class="container-fluid px-4 py-4" x-data="aiToolApp()" x-init="init()">
     {% csrf_token %}
 
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb small">
+            <li class="breadcrumb-item"><a href="/?lang={{ g.lang.iso }}">Home</a></li>
+            <li class="breadcrumb-item"><a href="/ai-writing-tools/?lang={{ g.lang.iso }}">AI Writing Tools</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ tool.name }}</li>
+        </ol>
+    </nav>
+
     <!-- Header -->
     <div class="row mb-4">
         <div class="col-12 text-center">
@@ -78,6 +87,24 @@
                         </div>
                         {% endfor %}
 
+                        <!-- Tone Selector -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small" for="field_tone">Tone (optional)</label>
+                            <select id="field_tone" name="tone" class="form-select" x-model="params.tone">
+                                <option value="">Default</option>
+                                <option value="Professional">Professional</option>
+                                <option value="Casual">Casual</option>
+                                <option value="Friendly">Friendly</option>
+                                <option value="Formal">Formal</option>
+                                <option value="Persuasive">Persuasive</option>
+                                <option value="Informative">Informative</option>
+                                <option value="Humorous">Humorous</option>
+                                <option value="Empathetic">Empathetic</option>
+                                <option value="Authoritative">Authoritative</option>
+                                <option value="Conversational">Conversational</option>
+                            </select>
+                        </div>
+
                         <!-- Generate Button -->
                         <div class="d-flex align-items-center justify-content-between mt-4">
                             <button
@@ -101,7 +128,12 @@
                     </form>
 
                     <!-- Error Message -->
-                    <div x-show="error" x-cloak class="alert alert-danger mt-3" x-text="error"></div>
+                    <div x-show="error" x-cloak class="alert alert-danger mt-3">
+                        <span x-text="error"></span>
+                        <template x-if="showUpgrade">
+                            <a href="/pricing/?lang={{ g.lang.iso }}" class="alert-link ms-1">Upgrade to Premium</a>
+                        </template>
+                    </div>
 
                     <!-- Output -->
                     <div x-show="output" x-cloak class="mt-4">
@@ -140,7 +172,7 @@
             <div class="row g-3">
                 {% for related in related_tools %}
                 <div class="col-md-4 col-6">
-                    <a href="/ai-tools/{{ related.slug }}/" class="text-decoration-none">
+                    <a href="/ai-writing-tools/{{ related.slug }}/?lang={{ g.lang.iso }}" class="text-decoration-none">
                         <div class="card h-100 shadow-sm border-0 hover-shadow transition-all">
                             <div class="card-body p-3">
                                 <h6 class="card-title fw-semibold text-dark mb-1">{{ related.name }}</h6>
@@ -152,7 +184,7 @@
                 {% endfor %}
             </div>
             <div class="text-center mt-3">
-                <a href="/ai-tools/" class="btn btn-outline-primary btn-sm">View All AI Tools</a>
+                <a href="/ai-writing-tools/?lang={{ g.lang.iso }}" class="btn btn-outline-primary btn-sm">View All AI Tools</a>
             </div>
         </div>
     </div>
@@ -162,11 +194,11 @@
     <!-- Upgrade CTA -->
     <div class="row justify-content-center mt-4 mb-4">
         <div class="col-lg-8 col-md-10">
-            <div class="card border-0 shadow-sm bg-brand-50 text-center">
+            <div class="card border-0 shadow-sm bg-light text-center">
                 <div class="card-body py-4">
                     <h4 class="fw-bold mb-2">Unlimited AI Writing Tools</h4>
                     <p class="text-muted mb-3">Upgrade to Premium for unlimited access to all our AI writing tools, plus paraphrasing, grammar checking, and more.</p>
-                    <a href="/pricing/" class="btn btn-primary">Upgrade to Premium</a>
+                    <a href="/pricing/?lang={{ g.lang.iso }}" class="btn btn-primary">Upgrade to Premium</a>
                 </div>
             </div>
         </div>
@@ -183,5 +215,7 @@
 [x-cloak] { display: none !important; }
 </style>
 
-<script src="{% static 'js/ai-tools.js' %}"></script>
+<!-- Alpine.js -->
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<script src="{% static 'js/ai-tools.js' %}?v={{ g.scripts_version }}"></script>
 {% endblock %}
