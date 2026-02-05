@@ -1,11 +1,5 @@
 """
-Django settings for app project.
-
-For more information on this file, see
-https://docs.djangoproject.com/en/5.1/topics/settings/
-
-For the full list of settings and their values, see
-https://docs.djangoproject.com/en/5.1/ref/settings/
+Django settings for WritingBot.ai project.
 """
 
 from pathlib import Path
@@ -18,17 +12,12 @@ TEMPLATES_DIR = os.path.join(BASE_DIR, 'templates')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Security
-# https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
-
 SECRET_KEY = config.SECRET_KEY
 DEBUG = config.DEBUG
 ALLOWED_HOSTS = getattr(config, 'ALLOWED_HOSTS', ['*'])
-
-# CSRF settings (Django 4+ requirement - fixes 403 errors)
 CSRF_TRUSTED_ORIGINS = getattr(config, 'CSRF_TRUSTED_ORIGINS', [])
 
 # Application definition
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.contenttypes',
@@ -40,11 +29,30 @@ INSTALLED_APPS = [
     'django_rq',
     'django_select2',
     'captcha',
+    # Core apps (from djangobase)
     'translations',
     'accounts',
     'contact_messages',
     'finances',
     'core',
+    # WritingBot tool apps
+    'paraphraser',
+    'grammar',
+    'summarizer',
+    'ai_detector',
+    'humanizer',
+    'plagiarism',
+    'translator',
+    'citations',
+    'flow',
+    'ai_tools',
+    'word_counter',
+    'pdf_tools',
+    'media_tools',
+    'courses',
+    'blog',
+    'seo',
+    'api',
 ]
 
 MIDDLEWARE = [
@@ -77,43 +85,26 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'app.wsgi.application'
 
-
 # Database
-# https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-
 DATABASES = DATABASE
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 10240
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10MB
 
 # Password validation
-# https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
-
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-
 # Internationalization
-# https://docs.djangoproject.com/en/5.1/topics/i18n/
-
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
 # Cache
-# https://docs.djangoproject.com/en/5.1/topics/cache/
-
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
@@ -130,9 +121,7 @@ CACHES = {
 
 SELECT2_CACHE_BACKEND = 'select2'
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.1/howto/static-files/
-
+# Static files
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
@@ -162,11 +151,44 @@ RQ_QUEUES = {
     }
 }
 
+# REST Framework
+REST_FRAMEWORK = {
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle'
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '60/hour',
+        'user': '1000/hour'
+    }
+}
+
 # Custom User Model
 AUTH_USER_MODEL = 'accounts.CustomUser'
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
 ]
+
+# File upload limits
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5242880  # 5MB
+
+# AI Service Configuration
+ANTHROPIC_API_KEY = getattr(config, 'ANTHROPIC_API_KEY', '')
+ANTHROPIC_MODEL = getattr(config, 'ANTHROPIC_MODEL', 'claude-sonnet-4-5-20250929')
+TRANSLATEAPI_KEY = getattr(config, 'TRANSLATEAPI_KEY', '')
+
+# Tool Limits (free tier)
+TOOL_LIMITS = {
+    'paraphraser': {'free_words': 500, 'free_modes': ['standard', 'fluency']},
+    'grammar': {'free_words': 5000},
+    'summarizer': {'free_words': 1200, 'premium_words': 6000},
+    'ai_detector': {'free_words': 1200},
+    'humanizer': {'free_words': 500},
+    'translator': {'free_chars': 5000},
+    'ai_tools': {'free_daily': 50},
+    'pdf_tools': {'free_daily': 3},
+    'plagiarism': {'premium_monthly_words': 30000},
+}
 
 # Logging
 LOGGING = config.LOGGING

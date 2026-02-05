@@ -1,0 +1,301 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<input type="hidden" id="isPremium" value="{{ is_premium|yesno:'true,false' }}">
+<input type="hidden" id="freeWordLimit" value="{{ free_word_limit }}">
+<input type="hidden" id="freeModes" value='{{ free_modes|join:"," }}'>
+{% csrf_token %}
+
+<div class="container-fluid px-3 px-md-5 py-4" x-data="paraphraser()" x-init="init()">
+
+    <!-- Header -->
+    <div class="row mb-3">
+        <div class="col">
+            <h1 class="h3 fw-bold mb-1">{{ g.i18n.paraphraser_title|default:"Paraphrasing Tool" }}</h1>
+            <p class="text-muted mb-0">{{ g.i18n.paraphraser_subtitle|default:"Rewrite and rephrase your text with AI-powered modes." }}</p>
+        </div>
+    </div>
+
+    <!-- Mode Selector Tabs -->
+    <div class="row mb-3">
+        <div class="col">
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+                {% for m in all_modes %}
+                <button
+                    type="button"
+                    class="btn btn-sm"
+                    :class="mode === '{{ m }}' ? 'btn-primary' : (freeModes.includes('{{ m }}') || isPremium ? 'btn-outline-secondary' : 'btn-outline-secondary opacity-50')"
+                    @click="selectMode('{{ m }}')"
+                    {% if m not in free_modes and not is_premium %}
+                    title="Premium only"
+                    {% endif %}
+                >
+                    {% if m not in free_modes and not is_premium %}
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="me-1" viewBox="0 0 16 16"><path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/></svg>
+                    {% endif %}
+                    {{ m|title }}
+                </button>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Synonym Slider + Settings Row -->
+    <div class="row mb-3">
+        <div class="col-auto d-flex align-items-center gap-2">
+            <label class="form-label mb-0 fw-semibold small">Synonyms:</label>
+            <input
+                type="range"
+                class="form-range"
+                min="1" max="5" step="1"
+                x-model="synonymLevel"
+                style="width: 140px;"
+            >
+            <span class="badge bg-secondary" x-text="synonymLevel"></span>
+        </div>
+        <div class="col-auto ms-auto d-flex align-items-center gap-2">
+            <!-- Settings Gear -->
+            <div class="dropdown">
+                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/><path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115l.094-.319z"/></svg>
+                    Settings
+                </button>
+                <div class="dropdown-menu p-3" style="min-width: 260px;">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="settContractions" x-model="paraphraseSettings.use_contractions">
+                        <label class="form-check-label small" for="settContractions">Use contractions</label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="settActiveVoice" x-model="paraphraseSettings.active_voice">
+                        <label class="form-check-label small" for="settActiveVoice">Prefer active voice</label>
+                    </div>
+                    <hr class="my-2">
+                    <div class="mb-2" x-show="mode === 'custom'">
+                        <label class="form-label small fw-semibold mb-1">Custom instructions:</label>
+                        <textarea class="form-control form-control-sm" rows="3" x-model="paraphraseSettings.custom_instructions" placeholder="e.g., Make it sound like a news article..."></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upload Button -->
+            <label class="btn btn-sm btn-outline-secondary mb-0" for="fileUpload">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="me-1" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/></svg>
+                Upload
+            </label>
+            <input type="file" id="fileUpload" class="d-none" accept=".txt,.docx" @change="handleFileUpload($event)">
+        </div>
+    </div>
+
+    <!-- Split Pane Editor -->
+    <div class="row g-3 mb-3">
+        <!-- Input Pane -->
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center py-2">
+                    <span class="fw-semibold small">Original Text</span>
+                    <span class="text-muted small"><span x-text="inputWordCount"></span> words</span>
+                </div>
+                <div class="card-body p-0">
+                    <textarea
+                        class="form-control border-0 rounded-0"
+                        style="min-height: 400px; resize: vertical; font-size: 0.95rem;"
+                        placeholder="Enter or paste your text here..."
+                        x-model="inputText"
+                        @input="updateInputWordCount()"
+                    ></textarea>
+                </div>
+                <div class="card-footer d-flex justify-content-between align-items-center py-2">
+                    <button class="btn btn-sm btn-outline-danger" @click="inputText = ''; outputHtml = ''; outputText = ''; updateInputWordCount(); frozenWords = [];" x-show="inputText.length > 0">
+                        Clear
+                    </button>
+                    <div class="d-flex align-items-center gap-2">
+                        <small class="text-muted" x-show="!isPremium && inputWordCount > freeWordLimit" style="color: #dc3545 !important;">
+                            Exceeds free limit of <span x-text="freeWordLimit"></span> words
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Output Pane -->
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center py-2">
+                    <span class="fw-semibold small">Paraphrased Text</span>
+                    <span class="text-muted small"><span x-text="outputWordCount"></span> words</span>
+                </div>
+                <div class="card-body p-0 position-relative">
+                    <!-- Loading overlay -->
+                    <div x-show="isLoading" class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background: rgba(255,255,255,0.85); z-index: 10;">
+                        <div class="text-center">
+                            <div class="spinner-border text-primary mb-2" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <div class="small text-muted">Paraphrasing...</div>
+                        </div>
+                    </div>
+
+                    <!-- Output with diff highlighting -->
+                    <div
+                        class="p-3"
+                        style="min-height: 400px; font-size: 0.95rem; line-height: 1.7; overflow-y: auto; cursor: default;"
+                        x-html="outputHtml || '<span class=\'text-muted\'>Your paraphrased text will appear here...</span>'"
+                        @click="handleOutputClick($event)"
+                    ></div>
+
+                    <!-- Synonym Popup -->
+                    <div
+                        x-show="synonymPopup.visible"
+                        x-transition
+                        class="position-absolute bg-white border rounded shadow-sm p-2"
+                        :style="'left:' + synonymPopup.x + 'px; top:' + synonymPopup.y + 'px; z-index: 20; min-width: 150px;'"
+                        @click.outside="synonymPopup.visible = false"
+                    >
+                        <div class="small fw-semibold mb-1 text-muted" x-text="'Synonyms for: ' + synonymPopup.word"></div>
+                        <div x-show="synonymPopup.loading" class="text-center py-2">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                        </div>
+                        <template x-for="syn in synonymPopup.synonyms" :key="syn">
+                            <button class="btn btn-sm btn-outline-primary d-block w-100 text-start mb-1" @click="replaceSynonym(syn)" x-text="syn"></button>
+                        </template>
+                        <div x-show="!synonymPopup.loading && synonymPopup.synonyms.length === 0" class="small text-muted">No synonyms found.</div>
+                    </div>
+                </div>
+                <div class="card-footer d-flex justify-content-between align-items-center py-2">
+                    <span></span>
+                    <button class="btn btn-sm btn-outline-secondary" @click="copyOutput()" x-show="outputText.length > 0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="me-1" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/></svg>
+                        <span x-text="copyLabel">Copy</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Freeze Words UI -->
+    <div class="row mb-3" x-show="inputText.length > 0">
+        <div class="col">
+            <div class="card">
+                <div class="card-header py-2 d-flex justify-content-between align-items-center">
+                    <span class="fw-semibold small">Freeze Words <span class="text-muted fw-normal">(click words to lock them from being changed)</span></span>
+                    <button class="btn btn-sm btn-outline-secondary" @click="frozenWords = []" x-show="frozenWords.length > 0">Clear All</button>
+                </div>
+                <div class="card-body py-2" style="max-height: 120px; overflow-y: auto;">
+                    <div class="d-flex flex-wrap gap-1">
+                        <template x-for="word in uniqueInputWords" :key="word">
+                            <span
+                                class="badge cursor-pointer user-select-none"
+                                :class="frozenWords.includes(word) ? 'bg-primary' : 'bg-light text-dark border'"
+                                @click="toggleFreezeWord(word)"
+                                x-text="word"
+                                style="cursor: pointer; font-size: 0.8rem;"
+                            ></span>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Paraphrase Button -->
+    <div class="row mb-4">
+        <div class="col text-center">
+            <button
+                class="btn btn-primary btn-lg px-5"
+                @click="paraphrase()"
+                :disabled="isLoading || inputText.trim().length === 0"
+            >
+                <span x-show="isLoading" class="spinner-border spinner-border-sm me-2" role="status"></span>
+                <span x-text="isLoading ? 'Paraphrasing...' : 'Paraphrase'"></span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Error Alert -->
+    <div class="row mb-3" x-show="errorMessage" x-transition>
+        <div class="col-md-8 mx-auto">
+            <div class="alert alert-danger d-flex align-items-center" role="alert">
+                <div class="flex-grow-1" x-text="errorMessage"></div>
+                <template x-if="showUpgrade">
+                    <a href="/pricing/" class="btn btn-sm btn-warning ms-3">Upgrade</a>
+                </template>
+                <button type="button" class="btn-close ms-2" @click="errorMessage = ''; showUpgrade = false;"></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Premium History Section -->
+    {% if is_premium %}
+    <div class="row mt-4" x-show="historyItems.length > 0">
+        <div class="col">
+            <div class="card">
+                <div class="card-header py-2 d-flex justify-content-between align-items-center">
+                    <span class="fw-semibold small">Recent History</span>
+                    <button class="btn btn-sm btn-outline-secondary" @click="loadHistory()">Refresh</button>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th class="small">Date</th>
+                                    <th class="small">Mode</th>
+                                    <th class="small">Words</th>
+                                    <th class="small">Input Preview</th>
+                                    <th class="small">Output Preview</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="item in historyItems" :key="item.id">
+                                    <tr style="cursor: pointer;" @click="loadFromHistory(item)">
+                                        <td class="small text-muted" x-text="new Date(item.created_at).toLocaleDateString()"></td>
+                                        <td><span class="badge bg-secondary" x-text="item.mode"></span></td>
+                                        <td class="small" x-text="item.word_count"></td>
+                                        <td class="small text-truncate" style="max-width: 250px;" x-text="item.input_text"></td>
+                                        <td class="small text-truncate" style="max-width: 250px;" x-text="item.output_text"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+
+<style>
+    .diff-added {
+        background-color: #d4edda;
+        border-radius: 2px;
+        padding: 0 2px;
+    }
+    .diff-removed {
+        background-color: #f8d7da;
+        text-decoration: line-through;
+        border-radius: 2px;
+        padding: 0 2px;
+        opacity: 0.6;
+    }
+    .diff-unchanged {
+        padding: 0 1px;
+    }
+    .output-word {
+        cursor: pointer;
+        border-radius: 2px;
+        padding: 0 1px;
+        transition: background-color 0.15s;
+    }
+    .output-word:hover {
+        background-color: #e2e6ea;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/paraphraser.js' %}?v={{ g.scripts_version }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js" defer></script>
+{% endblock %}

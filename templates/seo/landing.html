@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<!-- SEO Hero Section -->
+<div class="bg-light py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 text-center">
+                <h1 class="display-5 fw-bold mb-3">{{ seo.h1 }}</h1>
+                <p class="lead text-muted mb-0">{{ seo.subtitle }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Embedded Paraphraser Tool -->
+<div class="container py-5" x-data="seoParaphraser()">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <div class="row g-4">
+                        <!-- Input -->
+                        <div class="col-md-6">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label fw-semibold mb-0">Original Text</label>
+                                <span class="text-muted small"><span x-text="wordCount"></span> words</span>
+                            </div>
+                            <textarea class="form-control" rows="10" x-model="inputText"
+                                      @input="updateWordCount()"
+                                      placeholder="Paste or type your text here..."
+                                      style="resize: none;"></textarea>
+                        </div>
+                        <!-- Output -->
+                        <div class="col-md-6">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label fw-semibold mb-0">Rewritten Text</label>
+                                <button class="btn btn-sm btn-outline-secondary" x-show="outputText"
+                                        @click="copyOutput()">Copy</button>
+                            </div>
+                            <textarea class="form-control" rows="10" x-model="outputText" readonly
+                                      placeholder="Your rewritten text will appear here..."
+                                      style="resize: none; background-color: #f8f9fa;"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Controls -->
+                    <div class="row mt-3 align-items-end g-3">
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Mode</label>
+                            <select class="form-select" x-model="mode">
+                                {% for m in all_modes %}
+                                <option value="{{ m }}" {% if m not in free_modes %}{% if not is_premium %}disabled{% endif %}{% endif %}>
+                                    {{ m|title }}{% if m not in free_modes %}{% if not is_premium %} (Premium){% endif %}{% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Synonym Level</label>
+                            <input type="range" class="form-range" x-model="synonymLevel" min="1" max="5" step="1">
+                            <div class="d-flex justify-content-between">
+                                <span class="small text-muted">Less</span>
+                                <span class="small text-muted">More</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-primary btn-lg w-100" @click="paraphrase()" :disabled="processing || !inputText.trim()">
+                                <span x-show="!processing">Rewrite Text</span>
+                                <span x-show="processing">
+                                    <span class="spinner-border spinner-border-sm me-2"></span>Processing...
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Error -->
+                    <div x-show="error" class="alert alert-danger mt-3" x-text="error"></div>
+
+                    {% if not is_premium %}
+                    <div class="text-center mt-3">
+                        <small class="text-muted">Free: {{ free_word_limit }} words, 2 modes. <a href="/pricing/">Upgrade for unlimited access</a>.</small>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Features Section -->
+<div class="bg-light py-5">
+    <div class="container">
+        <h2 class="text-center fw-bold mb-5">Why Choose Our {{ seo.h1 }}?</h2>
+        <div class="row g-4">
+            {% for feature in seo.features %}
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm p-4">
+                    <h5 class="fw-semibold mb-3">{{ feature.title }}</h5>
+                    <p class="text-muted mb-0">{{ feature.text }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Comparison Table -->
+<div class="container py-5">
+    <h2 class="text-center fw-bold mb-5">Free vs Premium</h2>
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Feature</th>
+                            <th class="text-center">Free</th>
+                            <th class="text-center bg-primary bg-opacity-10">Premium</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Word Limit</td>
+                            <td class="text-center">500 words</td>
+                            <td class="text-center">Unlimited</td>
+                        </tr>
+                        <tr>
+                            <td>Rewriting Modes</td>
+                            <td class="text-center">2 modes</td>
+                            <td class="text-center">10 modes</td>
+                        </tr>
+                        <tr>
+                            <td>Synonym Control</td>
+                            <td class="text-center">Yes</td>
+                            <td class="text-center">Yes</td>
+                        </tr>
+                        <tr>
+                            <td>Freeze Words</td>
+                            <td class="text-center">No</td>
+                            <td class="text-center">Yes</td>
+                        </tr>
+                        <tr>
+                            <td>History</td>
+                            <td class="text-center">No</td>
+                            <td class="text-center">Yes</td>
+                        </tr>
+                        <tr>
+                            <td>Priority Processing</td>
+                            <td class="text-center">No</td>
+                            <td class="text-center">Yes</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="text-center mt-3">
+                <a href="/pricing/" class="btn btn-primary">View Pricing</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- FAQ Section -->
+<div class="bg-light py-5">
+    <div class="container">
+        <h2 class="text-center fw-bold mb-5">Frequently Asked Questions</h2>
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="accordion" id="faqAccordion">
+                    {% for faq in seo.faqs %}
+                    <div class="accordion-item border-0 mb-2">
+                        <h3 class="accordion-header">
+                            <button class="accordion-button {% if not forloop.first %}collapsed{% endif %} fw-semibold"
+                                    type="button" data-bs-toggle="collapse"
+                                    data-bs-target="#faq{{ forloop.counter }}">
+                                {{ faq.q }}
+                            </button>
+                        </h3>
+                        <div id="faq{{ forloop.counter }}"
+                             class="accordion-collapse collapse {% if forloop.first %}show{% endif %}"
+                             data-bs-parent="#faqAccordion">
+                            <div class="accordion-body text-muted">
+                                {{ faq.a }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js" defer></script>
+<script src="{% static 'js/seo.js' %}?v={{ g.scripts_version }}"></script>
+{% endblock %}

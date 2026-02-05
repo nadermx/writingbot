@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <!-- Page Header -->
+            <div class="mb-4">
+                {% if current_category %}
+                <h1 class="display-6 fw-bold">{{ current_category.name }}</h1>
+                {% if current_category.description %}
+                <p class="text-muted">{{ current_category.description }}</p>
+                {% endif %}
+                {% elif current_tag %}
+                <h1 class="display-6 fw-bold">#{{ current_tag.name }}</h1>
+                {% else %}
+                <h1 class="display-6 fw-bold">Blog</h1>
+                <p class="text-muted">Writing tips, AI tools guides, and productivity articles.</p>
+                {% endif %}
+            </div>
+
+            <!-- Featured Post -->
+            {% if featured_post and not current_category and not current_tag %}
+            <div class="card border-0 shadow-sm mb-4 overflow-hidden">
+                {% if featured_post.featured_image %}
+                <img src="{{ featured_post.featured_image.url }}" class="card-img-top" alt="{{ featured_post.title }}" style="height: 300px; object-fit: cover;">
+                {% endif %}
+                <div class="card-body p-4">
+                    {% if featured_post.category %}
+                    <a href="/blog/category/{{ featured_post.category.slug }}/" class="badge bg-primary text-decoration-none mb-2">{{ featured_post.category.name }}</a>
+                    {% endif %}
+                    <h2 class="fw-bold mb-2">
+                        <a href="/blog/{{ featured_post.slug }}/" class="text-decoration-none text-dark">{{ featured_post.title }}</a>
+                    </h2>
+                    <p class="text-muted mb-3">{{ featured_post.excerpt|truncatewords:40 }}</p>
+                    <div class="d-flex align-items-center text-muted small">
+                        {% if featured_post.published_at %}
+                        <span>{{ featured_post.published_at|date:"M d, Y" }}</span>
+                        <span class="mx-2">&middot;</span>
+                        {% endif %}
+                        <span>{{ featured_post.reading_time }} min read</span>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Post Grid -->
+            <div class="row g-4">
+                {% for post in posts %}
+                <div class="col-md-6">
+                    <div class="card h-100 border-0 shadow-sm">
+                        {% if post.featured_image %}
+                        <img src="{{ post.featured_image.url }}" class="card-img-top" alt="{{ post.title }}" style="height: 180px; object-fit: cover;">
+                        {% endif %}
+                        <div class="card-body p-3">
+                            {% if post.category %}
+                            <a href="/blog/category/{{ post.category.slug }}/" class="badge bg-light text-primary text-decoration-none mb-2">{{ post.category.name }}</a>
+                            {% endif %}
+                            <h5 class="fw-semibold mb-2">
+                                <a href="/blog/{{ post.slug }}/" class="text-decoration-none text-dark">{{ post.title }}</a>
+                            </h5>
+                            <p class="text-muted small mb-2">{{ post.excerpt|truncatewords:20 }}</p>
+                            <div class="text-muted small">
+                                {% if post.published_at %}
+                                <span>{{ post.published_at|date:"M d, Y" }}</span>
+                                <span class="mx-1">&middot;</span>
+                                {% endif %}
+                                <span>{{ post.reading_time }} min read</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12">
+                    <p class="text-muted text-center py-5">No posts found.</p>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Pagination -->
+            {% if posts.has_other_pages %}
+            <nav class="mt-5">
+                <ul class="pagination justify-content-center">
+                    {% if posts.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ posts.previous_page_number }}">Previous</a>
+                    </li>
+                    {% endif %}
+
+                    {% for num in posts.paginator.page_range %}
+                    {% if posts.number == num %}
+                    <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                    {% elif num > posts.number|add:"-3" and num < posts.number|add:"3" %}
+                    <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+                    {% endif %}
+                    {% endfor %}
+
+                    {% if posts.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ posts.next_page_number }}">Next</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Categories -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <h5 class="fw-semibold mb-3">Categories</h5>
+                    <ul class="list-unstyled mb-0">
+                        {% for cat in categories %}
+                        <li class="mb-2">
+                            <a href="/blog/category/{{ cat.slug }}/"
+                               class="text-decoration-none {% if current_category.slug == cat.slug %}fw-bold text-primary{% else %}text-dark{% endif %}">
+                                {{ cat.name }}
+                                <span class="text-muted small">({{ cat.published_posts_count }})</span>
+                            </a>
+                        </li>
+                        {% empty %}
+                        <li class="text-muted small">No categories yet.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Tags -->
+            {% if tags %}
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <h5 class="fw-semibold mb-3">Popular Tags</h5>
+                    <div>
+                        {% for tag in tags %}
+                        <a href="/blog/tag/{{ tag.slug }}/"
+                           class="badge bg-light text-dark text-decoration-none me-1 mb-1 {% if current_tag.slug == tag.slug %}border border-primary{% endif %}">
+                            #{{ tag.name }}
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- CTA -->
+            <div class="card border-0 shadow-sm bg-primary text-white">
+                <div class="card-body text-center p-4">
+                    <h5 class="fw-semibold mb-2">Try Our Writing Tools</h5>
+                    <p class="small mb-3 opacity-75">Paraphrase, check grammar, detect AI, and more -- all for free.</p>
+                    <a href="/paraphrasing-tool/" class="btn btn-light btn-sm">Get Started</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

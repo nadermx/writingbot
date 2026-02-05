@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container py-5" x-data="pdfTool()" x-init="init()">
+    <div class="text-center mb-4">
+        <h1 class="display-6 fw-bold mb-2">{{ tool.name }}</h1>
+        <p class="text-muted">{{ tool.description }}</p>
+    </div>
+
+    {% if tool.slug == 'chat-pdf' %}
+    <!-- Chat with PDF layout -->
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <!-- File Upload -->
+                    <div x-show="!fileUploaded" class="text-center py-5"
+                         @dragover.prevent="dragging = true"
+                         @dragleave.prevent="dragging = false"
+                         @drop.prevent="handleDrop($event)"
+                         :class="dragging ? 'border-primary bg-light' : 'border-secondary'"
+                         style="border: 2px dashed #dee2e6; border-radius: 12px; cursor: pointer;"
+                         @click="$refs.fileInput.click()">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="#6c757d" viewBox="0 0 24 24" class="mb-3">
+                            <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/>
+                        </svg>
+                        <p class="mb-1 fw-semibold">Drop your PDF here or click to browse</p>
+                        <p class="text-muted small mb-0">Max file size: 10MB</p>
+                        <input type="file" x-ref="fileInput" @change="handleFileSelect($event)" accept="{{ tool.accept }}" class="d-none" {% if tool.accepts_multiple %}multiple{% endif %}>
+                    </div>
+
+                    <!-- Chat Interface -->
+                    <div x-show="fileUploaded">
+                        <div class="d-flex align-items-center justify-content-between mb-3 pb-3 border-bottom">
+                            <div class="d-flex align-items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#6366f1" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"/></svg>
+                                <span class="fw-semibold" x-text="fileName"></span>
+                                <span class="badge bg-light text-muted" x-text="pageCount + ' pages'"></span>
+                            </div>
+                            <button class="btn btn-sm btn-outline-secondary" @click="resetTool()">Change File</button>
+                        </div>
+
+                        <!-- Messages -->
+                        <div class="mb-3" style="max-height: 400px; overflow-y: auto;" x-ref="chatMessages">
+                            <template x-for="(msg, i) in messages" :key="i">
+                                <div class="mb-3" :class="msg.role === 'user' ? 'text-end' : ''">
+                                    <div class="d-inline-block p-3 rounded-3" style="max-width: 80%;"
+                                         :class="msg.role === 'user' ? 'bg-primary text-white' : 'bg-light'">
+                                        <p class="mb-0 small" x-text="msg.content" style="white-space: pre-wrap;"></p>
+                                    </div>
+                                </div>
+                            </template>
+                            <div x-show="processing" class="mb-3">
+                                <div class="d-inline-block p-3 rounded-3 bg-light">
+                                    <div class="spinner-border spinner-border-sm" role="status"></div>
+                                    <span class="ms-2 small">Analyzing document...</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Question Input -->
+                        <form @submit.prevent="askQuestion()" class="d-flex gap-2">
+                            <input type="text" class="form-control" x-model="question"
+                                   placeholder="Ask a question about your PDF..." :disabled="processing">
+                            <button type="submit" class="btn btn-primary" :disabled="processing || !question.trim()">
+                                Ask
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% else %}
+    <!-- Standard tool layout -->
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <!-- File Upload Area -->
+                    <div x-show="!fileUploaded" class="text-center py-5"
+                         @dragover.prevent="dragging = true"
+                         @dragleave.prevent="dragging = false"
+                         @drop.prevent="handleDrop($event)"
+                         :class="dragging ? 'border-primary bg-light' : 'border-secondary'"
+                         style="border: 2px dashed #dee2e6; border-radius: 12px; cursor: pointer;"
+                         @click="$refs.fileInput.click()">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="#6c757d" viewBox="0 0 24 24" class="mb-3">
+                            <path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/>
+                        </svg>
+                        <p class="mb-1 fw-semibold">Drop your file{% if tool.accepts_multiple %}s{% endif %} here or click to browse</p>
+                        <p class="text-muted small mb-0">Accepted: {{ tool.accept }} &middot; Max: 10MB</p>
+                        <input type="file" x-ref="fileInput" @change="handleFileSelect($event)" accept="{{ tool.accept }}" class="d-none" {% if tool.accepts_multiple %}multiple{% endif %}>
+                    </div>
+
+                    <!-- File Preview & Options -->
+                    <div x-show="fileUploaded">
+                        <div class="d-flex align-items-center justify-content-between mb-3 pb-3 border-bottom">
+                            <div>
+                                <template x-for="(f, i) in fileNames" :key="i">
+                                    <span class="badge bg-light text-dark me-1 mb-1" x-text="f"></span>
+                                </template>
+                            </div>
+                            <button class="btn btn-sm btn-outline-secondary" @click="resetTool()">Change</button>
+                        </div>
+
+                        {% if tool.slug == 'split-pdf' or tool.slug == 'remove-pages' %}
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Pages</label>
+                            <input type="text" class="form-control" x-model="pageSelection"
+                                   placeholder="e.g. 1,3,5-7 or leave empty for all">
+                            <div class="form-text">Enter page numbers separated by commas, or ranges with dashes.</div>
+                        </div>
+                        {% endif %}
+
+                        {% if tool.slug == 'rotate-pdf' %}
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <label class="form-label fw-semibold">Page Number</label>
+                                <input type="number" class="form-control" x-model="rotatePageNum" min="1" value="1">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fw-semibold">Angle</label>
+                                <select class="form-select" x-model="rotateAngle">
+                                    <option value="90">90 degrees</option>
+                                    <option value="180">180 degrees</option>
+                                    <option value="270">270 degrees</option>
+                                </select>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if tool.slug == 'compress-pdf' %}
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Compression Level</label>
+                            <select class="form-select" x-model="compressionQuality">
+                                <option value="low">Low (smaller file, lower quality)</option>
+                                <option value="medium" selected>Medium (balanced)</option>
+                                <option value="high">High (larger file, better quality)</option>
+                            </select>
+                        </div>
+                        {% endif %}
+
+                        {% if tool.slug == 'reorder-pages' %}
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">New Page Order</label>
+                            <input type="text" class="form-control" x-model="pageOrder"
+                                   placeholder="e.g. 3,1,2,4">
+                            <div class="form-text">Enter all page numbers in the desired order.</div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Error Display -->
+                        <div x-show="error" class="alert alert-danger" x-text="error"></div>
+
+                        <!-- Process Button -->
+                        <button class="btn btn-primary btn-lg w-100" @click="processFile()" :disabled="processing">
+                            <span x-show="!processing">
+                                {% if tool.slug == 'merge-pdf' %}Merge PDFs
+                                {% elif tool.slug == 'split-pdf' %}Split PDF
+                                {% elif tool.slug == 'compress-pdf' %}Compress PDF
+                                {% elif tool.slug == 'rotate-pdf' %}Rotate Page
+                                {% elif tool.slug == 'remove-pages' %}Remove Pages
+                                {% elif tool.slug == 'reorder-pages' %}Reorder Pages
+                                {% else %}Convert File
+                                {% endif %}
+                            </span>
+                            <span x-show="processing">
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>Processing...
+                            </span>
+                        </button>
+                    </div>
+
+                    <!-- Download Result -->
+                    <div x-show="downloadReady" class="text-center mt-4 pt-4 border-top">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="#198754" viewBox="0 0 24 24" class="mb-3">
+                            <path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/>
+                        </svg>
+                        <p class="fw-semibold mb-1">Your file is ready!</p>
+                        <p x-show="savingsPercent" class="text-muted small" x-text="'Reduced by ' + savingsPercent + '%'"></p>
+                        <a :href="downloadUrl" class="btn btn-success btn-lg" download>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 24 24" class="me-2"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                            Download
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Features -->
+    <div class="row mt-5 pt-4 g-4">
+        <div class="col-md-4 text-center">
+            <div class="mb-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="#6366f1" viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+            </div>
+            <h5 class="fw-semibold">Secure Processing</h5>
+            <p class="text-muted small">Your files are processed securely and deleted automatically after download.</p>
+        </div>
+        <div class="col-md-4 text-center">
+            <div class="mb-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="#6366f1" viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+            </div>
+            <h5 class="fw-semibold">Fast & Free</h5>
+            <p class="text-muted small">Process your files instantly with no registration required.</p>
+        </div>
+        <div class="col-md-4 text-center">
+            <div class="mb-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="#6366f1" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+            </div>
+            <h5 class="fw-semibold">High Quality</h5>
+            <p class="text-muted small">Maintain original quality in all conversions and transformations.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js" defer></script>
+<script src="{% static 'js/pdf-tools.js' %}?v={{ g.scripts_version }}"></script>
+{% endblock %}

@@ -1,0 +1,212 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4" x-data="summarizerApp()" x-init="init()">
+    {% csrf_token %}
+
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12 text-center">
+            <h1 class="h2 fw-bold">{{ g.i18n.summarizer|default:"Summarizer" }}</h1>
+            <p class="text-muted">{{ g.i18n.summarizer_desc|default:"Condense articles, papers, and documents into concise summaries" }}</p>
+        </div>
+    </div>
+
+    <!-- Controls Bar -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body py-2 d-flex flex-wrap align-items-center justify-content-between gap-3">
+                    <!-- Mode toggle -->
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="small text-muted mb-0">Mode:</label>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button
+                                type="button"
+                                class="btn"
+                                :class="mode === 'key_sentences' ? 'btn-primary' : 'btn-outline-secondary'"
+                                @click="mode = 'key_sentences'"
+                            >
+                                Key Sentences
+                            </button>
+                            <button
+                                type="button"
+                                class="btn"
+                                :class="mode === 'paragraph' ? 'btn-primary' : 'btn-outline-secondary'"
+                                @click="mode = 'paragraph'"
+                            >
+                                Paragraph
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Summary length slider -->
+                    <div class="d-flex align-items-center gap-2 flex-grow-1" style="max-width: 300px;">
+                        <label class="small text-muted mb-0 text-nowrap">Length:</label>
+                        <span class="small text-muted">Short</span>
+                        <input
+                            type="range"
+                            class="form-range flex-grow-1"
+                            min="1" max="5" step="1"
+                            x-model="summaryLength"
+                            style="max-width: 150px;"
+                        >
+                        <span class="small text-muted">Long</span>
+                        <span class="badge bg-light text-dark" x-text="summaryLength"></span>
+                    </div>
+
+                    <!-- Bullet toggle (key_sentences mode) -->
+                    <div class="d-flex align-items-center gap-2" x-show="mode === 'key_sentences'">
+                        <label class="small text-muted mb-0">Bullets:</label>
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" x-model="showBullets" id="bulletToggle">
+                        </div>
+                    </div>
+
+                    <!-- Word limit -->
+                    <div class="text-end">
+                        <span class="text-muted small" x-text="inputWordCount + ' / {{ word_limit }} words'"></span>
+                        {% if not is_premium %}
+                        <a href="/pricing/" class="btn btn-sm btn-outline-primary ms-2">Upgrade</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Two-panel layout -->
+    <div class="row">
+        <!-- Input Panel -->
+        <div class="col-12 col-lg-6 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <span class="fw-semibold">{{ g.i18n.original_text|default:"Original Text" }}</span>
+                    <button
+                        @click="clearInput()"
+                        class="btn btn-sm btn-outline-secondary"
+                        x-show="text.length > 0"
+                    >Clear</button>
+                </div>
+                <div class="card-body p-0">
+                    <textarea
+                        x-model="text"
+                        @input="updateWordCount()"
+                        class="form-control border-0"
+                        style="min-height: 400px; resize: vertical; font-size: 1rem; line-height: 1.6;"
+                        :placeholder="'{{ g.i18n.summarizer_placeholder|default:"Paste the text you want to summarize here..." }}'"
+                    ></textarea>
+                </div>
+                <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center">
+                    <span class="small text-muted" x-text="inputWordCount + ' words'"></span>
+                    <button
+                        @click="summarize()"
+                        :disabled="loading || !text.trim()"
+                        class="btn btn-primary"
+                    >
+                        <span x-show="loading" class="spinner-border spinner-border-sm me-1"></span>
+                        <span x-text="loading ? 'Summarizing...' : '{{ g.i18n.summarize|default:"Summarize" }}'"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Output Panel -->
+        <div class="col-12 col-lg-6 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <span class="fw-semibold">{{ g.i18n.summary|default:"Summary" }}</span>
+                    <button
+                        @click="copySummary()"
+                        class="btn btn-sm btn-outline-secondary"
+                        x-show="summary.length > 0"
+                    >
+                        <span x-text="copied ? 'Copied!' : 'Copy'"></span>
+                    </button>
+                </div>
+                <div class="card-body" style="min-height: 400px;">
+                    <template x-if="!summary && !loading">
+                        <div class="d-flex align-items-center justify-content-center h-100 text-muted">
+                            <p>Your summary will appear here</p>
+                        </div>
+                    </template>
+
+                    <template x-if="loading">
+                        <div class="d-flex align-items-center justify-content-center h-100">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- Key sentences output -->
+                    <template x-if="summary && mode === 'key_sentences' && sentences.length > 0">
+                        <div>
+                            <template x-if="showBullets">
+                                <ul class="mb-0" style="line-height: 1.8;">
+                                    <template x-for="(sentence, idx) in sentences" :key="idx">
+                                        <li class="mb-2" x-text="sentence"></li>
+                                    </template>
+                                </ul>
+                            </template>
+                            <template x-if="!showBullets">
+                                <div style="line-height: 1.8;">
+                                    <template x-for="(sentence, idx) in sentences" :key="idx">
+                                        <p class="mb-2">
+                                            <span class="badge bg-primary me-1" x-text="idx + 1"></span>
+                                            <span x-text="sentence"></span>
+                                        </p>
+                                    </template>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+
+                    <!-- Paragraph output -->
+                    <template x-if="summary && (mode === 'paragraph' || sentences.length === 0)">
+                        <div style="line-height: 1.8; white-space: pre-wrap;" x-text="summary"></div>
+                    </template>
+                </div>
+                <div class="card-footer bg-white border-top" x-show="stats.original_words > 0">
+                    <div class="d-flex flex-wrap justify-content-between gap-2">
+                        <div class="text-center">
+                            <div class="small text-muted">Original</div>
+                            <div class="fw-bold" x-text="stats.original_words + ' words'"></div>
+                        </div>
+                        <div class="text-center">
+                            <div class="small text-muted">Summary</div>
+                            <div class="fw-bold" x-text="stats.summary_words + ' words'"></div>
+                        </div>
+                        <div class="text-center">
+                            <div class="small text-muted">Reduction</div>
+                            <div class="fw-bold text-success" x-text="stats.reduction_percent + '%'"></div>
+                        </div>
+                        <div class="text-center">
+                            <div class="small text-muted">Sentences</div>
+                            <div class="fw-bold" x-text="stats.sentence_count"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error alert -->
+    <template x-if="errorMessage">
+        <div class="row">
+            <div class="col-12">
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <span x-text="errorMessage"></span>
+                    <button type="button" class="btn-close" @click="errorMessage = null"></button>
+                </div>
+            </div>
+        </div>
+    </template>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+<script src="{% static 'js/summarizer.js' %}?v={{ g.scripts_version }}"></script>
+{% endblock %}

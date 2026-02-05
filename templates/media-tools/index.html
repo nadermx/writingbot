@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="text-center mb-5">
+        <h1 class="display-5 fw-bold mb-3">Free Online Media Tools</h1>
+        <p class="lead text-muted mx-auto" style="max-width:640px;">
+            Convert images, remove backgrounds, generate QR codes, and create AI voices -- all for free, right in your browser.
+        </p>
+    </div>
+
+    <div class="row g-4">
+        {% for tool in tools %}
+        <div class="col-6 col-md-4 col-lg-4">
+            <a href="{{ tool.url }}" class="text-decoration-none">
+                <div class="card h-100 border-0 shadow-sm text-center p-4 tool-card">
+                    <div class="mb-3">
+                        {% if tool.icon == 'image' %}
+                        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="#6366f1" viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+                        {% elif tool.icon == 'bg-remove' %}
+                        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="#6366f1" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm-5-9h10v2H7z"/></svg>
+                        {% elif tool.icon == 'ai' %}
+                        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="#6366f1" viewBox="0 0 24 24"><path d="M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25L19 9zm-7.5.5L9 4 6.5 9.5 1 12l5.5 2.5L9 20l2.5-5.5L17 12l-5.5-2.5z"/></svg>
+                        {% elif tool.icon == 'qr' %}
+                        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="#6366f1" viewBox="0 0 24 24"><path d="M3 11h8V3H3v8zm2-6h4v4H5V5zm8-2v8h8V3h-8zm6 6h-4V5h4v4zM3 21h8v-8H3v8zm2-6h4v4H5v-4zm13-2h-2v4h-4v2h4v4h2v-4h4v-2h-4v-4z"/></svg>
+                        {% elif tool.icon == 'voice' %}
+                        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="#6366f1" viewBox="0 0 24 24"><path d="M12 15c1.66 0 2.99-1.34 2.99-3L15 6c0-1.66-1.34-3-3-3S9 4.34 9 6v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 15 6.7 12H5c0 3.42 2.72 6.23 6 6.72V22h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></svg>
+                        {% endif %}
+                    </div>
+                    <h5 class="fw-semibold mb-2">{{ tool.name }}</h5>
+                    <p class="text-muted small mb-0">{{ tool.description }}</p>
+                </div>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<style>
+.tool-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border-radius: 12px;
+}
+.tool-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12) !important;
+}
+</style>
+{% endblock %}

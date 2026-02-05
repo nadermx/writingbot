@@ -1,0 +1,165 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="text-center mb-4">
+        <h1 class="display-5 fw-bold">Translator</h1>
+        <p class="lead text-muted">Translate text between 60+ languages instantly</p>
+    </div>
+
+    {% csrf_token %}
+
+    <div x-data="translator({{ languages_json|safe }})" x-cloak>
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <!-- Language Selection Bar -->
+                <div class="card shadow-sm mb-0" style="border-bottom: 0; border-radius: 0.375rem 0.375rem 0 0;">
+                    <div class="card-body py-2">
+                        <div class="row align-items-center">
+                            <div class="col-5">
+                                <select
+                                    class="form-select form-select-sm border-0 fw-semibold"
+                                    x-model="sourceLang"
+                                    style="background-color: transparent;"
+                                >
+                                    <option value="auto">Auto-Detect</option>
+                                    <template x-for="lang in languages" :key="'src-' + lang.code">
+                                        <option :value="lang.code" x-text="lang.name"></option>
+                                    </template>
+                                </select>
+                            </div>
+                            <div class="col-2 text-center">
+                                <button
+                                    class="btn btn-sm btn-outline-secondary rounded-circle"
+                                    @click="swapLanguages()"
+                                    :disabled="sourceLang === 'auto'"
+                                    title="Swap languages"
+                                    style="width: 36px; height: 36px;"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                        <path fill-rule="evenodd" d="M1 11.5a.5.5 0 0 0 .5.5h11.793l-3.147 3.146a.5.5 0 0 0 .708.708l4-4a.5.5 0 0 0 0-.708l-4-4a.5.5 0 0 0-.708.708L13.293 11H1.5a.5.5 0 0 0-.5.5zm14-7a.5.5 0 0 1-.5.5H2.707l3.147 3.146a.5.5 0 1 1-.708.708l-4-4a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 4H14.5a.5.5 0 0 1 .5.5z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="col-5">
+                                <select
+                                    class="form-select form-select-sm border-0 fw-semibold"
+                                    x-model="targetLang"
+                                    style="background-color: transparent;"
+                                >
+                                    <option value="" disabled>Select language</option>
+                                    <template x-for="lang in languages" :key="'tgt-' + lang.code">
+                                        <option :value="lang.code" x-text="lang.name"></option>
+                                    </template>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Split Pane -->
+                <div class="row g-0">
+                    <!-- Source -->
+                    <div class="col-md-6">
+                        <div class="card shadow-sm h-100" style="border-radius: 0 0 0 0.375rem; border-right: 0;">
+                            <div class="card-body p-0 position-relative">
+                                <textarea
+                                    class="form-control border-0"
+                                    rows="10"
+                                    x-model="inputText"
+                                    @input="updateCharCount()"
+                                    placeholder="Enter text to translate..."
+                                    style="resize: none; font-size: 15px; line-height: 1.7; border-radius: 0;"
+                                ></textarea>
+                                <button
+                                    class="btn btn-sm btn-link text-muted position-absolute"
+                                    style="top: 8px; right: 8px;"
+                                    @click="clearInput()"
+                                    x-show="inputText.length > 0"
+                                    title="Clear"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                                        <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="card-footer bg-white d-flex justify-content-between align-items-center" style="border-radius: 0 0 0 0.375rem;">
+                                <small class="text-muted">
+                                    <span x-text="charCount"></span> characters
+                                    {% if not is_premium %}
+                                    <span class="text-muted">/ 5,000 max</span>
+                                    {% endif %}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Target -->
+                    <div class="col-md-6">
+                        <div class="card shadow-sm h-100" style="border-radius: 0 0 0.375rem 0;">
+                            <div class="card-body" style="min-height: 230px; border-radius: 0;">
+                                <div x-show="!translatedText && !loading" class="text-muted text-center py-5">
+                                    <p>Translation will appear here</p>
+                                </div>
+                                <div x-show="loading" class="text-center py-5">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Translating...</span>
+                                    </div>
+                                    <p class="text-muted mt-2">Translating...</p>
+                                </div>
+                                <div x-show="translatedText && !loading" style="font-size: 15px; line-height: 1.7; white-space: pre-wrap;" x-text="translatedText"></div>
+                            </div>
+                            <div class="card-footer bg-white d-flex justify-content-between align-items-center" style="border-radius: 0 0 0.375rem 0;">
+                                <small class="text-muted" x-show="detectedLang">
+                                    Detected: <span class="fw-semibold" x-text="getLanguageName(detectedLang)"></span>
+                                </small>
+                                <small x-show="!detectedLang">&nbsp;</small>
+                                <button
+                                    class="btn btn-sm btn-outline-secondary"
+                                    @click="copyTranslation()"
+                                    x-show="translatedText.length > 0"
+                                    :title="copied ? 'Copied!' : 'Copy translation'"
+                                >
+                                    <span x-show="!copied">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V2zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H6zM2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1h1v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1v1H2z"/></svg>
+                                        Copy
+                                    </span>
+                                    <span x-show="copied">Copied!</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Bar -->
+        <div class="row justify-content-center mt-3">
+            <div class="col-lg-10">
+                <div class="d-flex justify-content-between align-items-center">
+                    <button
+                        class="btn btn-primary btn-lg px-5"
+                        @click="translate()"
+                        :disabled="loading || charCount === 0 || !targetLang"
+                    >
+                        <span x-show="!loading">Translate</span>
+                        <span x-show="loading">
+                            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                            Translating...
+                        </span>
+                    </button>
+                </div>
+
+                <!-- Error -->
+                <div x-show="error" class="alert alert-danger mt-3 mb-0" x-text="error"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js" defer></script>
+<script src="{% static 'js/translator.js' %}?v={{ g.scripts_version }}"></script>
+{% endblock %}

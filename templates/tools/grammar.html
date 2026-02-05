@@ -1,0 +1,214 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4" x-data="grammarChecker()" x-init="init()">
+    {% csrf_token %}
+
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12 text-center">
+            <h1 class="h2 fw-bold">{{ g.i18n.grammar_checker|default:"Grammar Checker" }}</h1>
+            <p class="text-muted">{{ g.i18n.grammar_checker_desc|default:"Fix grammar, spelling, and punctuation errors with AI-powered analysis" }}</p>
+        </div>
+    </div>
+
+    <!-- Dialect Selector -->
+    <div class="row mb-3">
+        <div class="col-12 col-md-6">
+            <div class="d-flex align-items-center gap-2">
+                <label class="form-label mb-0 text-muted small">Dialect:</label>
+                <select x-model="dialect" class="form-select form-select-sm" style="width: auto;">
+                    <option value="en-us">English (US)</option>
+                    <option value="en-gb">English (UK)</option>
+                    <option value="en-au">English (AU)</option>
+                    <option value="en-ca">English (CA)</option>
+                </select>
+            </div>
+        </div>
+        <div class="col-12 col-md-6 text-end">
+            <span class="text-muted small" x-text="wordCount + ' / {{ word_limit }} words'"></span>
+            {% if not is_premium %}
+            <a href="/pricing/" class="btn btn-sm btn-outline-primary ms-2">Upgrade</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Main Editor Area -->
+    <div class="row">
+        <!-- Text Editor -->
+        <div class="col-12 col-lg-8 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body p-0">
+                    <!-- Editor with highlighted errors -->
+                    <div class="position-relative" style="min-height: 400px;">
+                        <!-- Highlight layer (behind textarea) -->
+                        <div
+                            class="position-absolute top-0 start-0 w-100 h-100 p-3"
+                            style="pointer-events: none; white-space: pre-wrap; word-wrap: break-word; font-family: inherit; font-size: 1rem; line-height: 1.6; color: transparent; overflow: auto;"
+                            x-html="highlightedHtml"
+                        ></div>
+                        <!-- Textarea -->
+                        <textarea
+                            x-model="text"
+                            @input="onTextInput()"
+                            class="form-control border-0 h-100"
+                            style="min-height: 400px; resize: vertical; background: transparent; position: relative; z-index: 1; font-size: 1rem; line-height: 1.6;"
+                            :placeholder="'{{ g.i18n.grammar_placeholder|default:"Paste or type your text here to check for grammar errors..." }}'"
+                        ></textarea>
+                    </div>
+                </div>
+                <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div class="d-flex gap-2 align-items-center">
+                        <span class="badge bg-light text-dark" x-text="wordCount + ' words'"></span>
+                        <span class="badge bg-light text-dark" x-text="charCount + ' characters'"></span>
+                        <template x-if="readabilityScore !== null">
+                            <span class="badge bg-light text-dark" x-text="'Readability: ' + readabilityScore"></span>
+                        </template>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button
+                            @click="checkGrammar()"
+                            :disabled="loading || !text.trim()"
+                            class="btn btn-primary"
+                        >
+                            <span x-show="loading" class="spinner-border spinner-border-sm me-1"></span>
+                            <span x-text="loading ? 'Checking...' : '{{ g.i18n.check_grammar|default:"Check Grammar" }}'"></span>
+                        </button>
+                        <template x-if="corrections.length > 0">
+                            <button
+                                @click="fixAll()"
+                                :disabled="fixingAll"
+                                class="btn btn-success"
+                            >
+                                <span x-show="fixingAll" class="spinner-border spinner-border-sm me-1"></span>
+                                <span x-text="fixingAll ? 'Fixing...' : '{{ g.i18n.fix_all_errors|default:"Fix All Errors" }} (' + corrections.length + ')'"></span>
+                            </button>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar: Scores + Corrections -->
+        <div class="col-12 col-lg-4 mb-4">
+            <!-- Writing Scores -->
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-white fw-semibold">
+                    <span>{{ g.i18n.writing_score|default:"Writing Score" }}</span>
+                </div>
+                <div class="card-body">
+                    <template x-if="!hasScores">
+                        <p class="text-muted text-center small mb-0">Check your text to see writing scores</p>
+                    </template>
+                    <template x-if="hasScores">
+                        <div>
+                            <!-- Score circles -->
+                            <div class="d-flex flex-wrap justify-content-center gap-3 mb-3">
+                                <template x-for="(label, key) in scoreLabels" :key="key">
+                                    <div class="text-center">
+                                        <div class="position-relative d-inline-flex align-items-center justify-content-center" style="width: 64px; height: 64px;">
+                                            <svg width="64" height="64" viewBox="0 0 64 64">
+                                                <circle cx="32" cy="32" r="28" fill="none" stroke="#e9ecef" stroke-width="4"/>
+                                                <circle
+                                                    cx="32" cy="32" r="28" fill="none"
+                                                    :stroke="getScoreColor(scores[key])"
+                                                    stroke-width="4"
+                                                    stroke-linecap="round"
+                                                    :stroke-dasharray="(2 * Math.PI * 28)"
+                                                    :stroke-dashoffset="(2 * Math.PI * 28) * (1 - (scores[key] || 0) / 100)"
+                                                    transform="rotate(-90 32 32)"
+                                                    style="transition: stroke-dashoffset 0.6s ease;"
+                                                />
+                                            </svg>
+                                            <span class="position-absolute fw-bold small" x-text="scores[key] || 0"></span>
+                                        </div>
+                                        <div class="small text-muted mt-1" x-text="label"></div>
+                                    </div>
+                                </template>
+                            </div>
+
+                            <!-- Tone indicator -->
+                            <div class="mb-2">
+                                <label class="small text-muted mb-1 d-block">Tone</label>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="small">Formal</span>
+                                    <div class="flex-grow-1 position-relative" style="height: 8px; background: linear-gradient(to right, #3b82f6, #8b5cf6, #f59e0b); border-radius: 4px;">
+                                        <div
+                                            class="position-absolute bg-white border border-2 rounded-circle"
+                                            style="width: 16px; height: 16px; top: -4px; transition: left 0.3s ease;"
+                                            :style="'left: ' + tonePosition + '%'"
+                                        ></div>
+                                    </div>
+                                    <span class="small">Casual</span>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Error List -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-white fw-semibold d-flex justify-content-between align-items-center">
+                    <span>{{ g.i18n.corrections|default:"Corrections" }}</span>
+                    <span class="badge bg-danger rounded-pill" x-show="corrections.length > 0" x-text="corrections.length"></span>
+                </div>
+                <div class="card-body p-0" style="max-height: 500px; overflow-y: auto;">
+                    <template x-if="corrections.length === 0 && !loading">
+                        <p class="text-muted text-center small p-3 mb-0">
+                            <span x-show="!hasChecked">Check your text to see corrections</span>
+                            <span x-show="hasChecked">No errors found. Great writing!</span>
+                        </p>
+                    </template>
+
+                    <!-- Grouped by type -->
+                    <template x-for="(group, gIdx) in groupedCorrections" :key="gIdx">
+                        <div class="border-bottom">
+                            <div class="px-3 py-2 bg-light d-flex justify-content-between align-items-center">
+                                <span class="small fw-semibold text-capitalize" x-text="formatType(group.type)"></span>
+                                <span class="badge rounded-pill" :class="getTypeBadgeClass(group.type)" x-text="group.items.length"></span>
+                            </div>
+                            <template x-for="(correction, cIdx) in group.items" :key="cIdx">
+                                <div class="px-3 py-2 border-top correction-item" style="cursor: pointer;" @click="scrollToError(correction)">
+                                    <div class="d-flex justify-content-between align-items-start mb-1">
+                                        <span class="text-decoration-line-through text-danger small" x-text="correction.original"></span>
+                                        <button
+                                            @click.stop="applySingle(correction)"
+                                            class="btn btn-sm btn-outline-success ms-2 py-0 px-1"
+                                            title="Apply fix"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                                                <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <div class="text-success small fw-semibold" x-text="correction.suggestion"></div>
+                                    <div class="text-muted small mt-1" x-text="correction.explanation"></div>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error alert -->
+    <template x-if="errorMessage">
+        <div class="row">
+            <div class="col-12">
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <span x-text="errorMessage"></span>
+                    <button type="button" class="btn-close" @click="errorMessage = null"></button>
+                </div>
+            </div>
+        </div>
+    </template>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+<script src="{% static 'js/grammar.js' %}?v={{ g.scripts_version }}"></script>
+{% endblock %}

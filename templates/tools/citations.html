@@ -1,0 +1,254 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container py-4" x-data="citationApp()" x-cloak>
+    {% csrf_token %}
+
+    <!-- Header -->
+    <div class="text-center mb-4">
+        <h1 class="fw-bold mb-2">Free Citation Generator</h1>
+        <p class="text-muted">Generate accurate citations in APA, MLA, Chicago, Harvard, and more styles instantly.</p>
+    </div>
+
+    <!-- Style Selector -->
+    <div class="row justify-content-center mb-4">
+        <div class="col-md-6">
+            <label class="form-label fw-semibold">Citation Style</label>
+            <select class="form-select form-select-lg" x-model="selectedStyle" @change="onStyleChange()">
+                {% for style in styles %}
+                <option value="{{ style.code }}">{{ style.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <!-- Source Type Tabs -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white p-0">
+            <ul class="nav nav-tabs border-bottom-0">
+                <template x-for="st in sourceTypes" :key="st.code">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#"
+                           :class="{ 'active fw-semibold': sourceType === st.code }"
+                           @click.prevent="sourceType = st.code; resetForm();"
+                           x-text="st.label"></a>
+                    </li>
+                </template>
+            </ul>
+        </div>
+
+        <div class="card-body">
+            <!-- Autocite (for website/article source types) -->
+            <div x-show="sourceType === 'website' || sourceType === 'article'" class="mb-4">
+                <label class="form-label fw-semibold">Autocite from URL</label>
+                <div class="input-group">
+                    <input type="url" class="form-control" placeholder="https://example.com/article"
+                           x-model="autociteUrl" @keydown.enter.prevent="autocite()">
+                    <button class="btn btn-primary" @click="autocite()" :disabled="autociting">
+                        <span x-show="!autociting">Cite</span>
+                        <span x-show="autociting">
+                            <span class="spinner-border spinner-border-sm me-1" role="status"></span>Fetching...
+                        </span>
+                    </button>
+                </div>
+                <small class="text-muted">Paste a URL to automatically fill citation details</small>
+            </div>
+
+            <!-- Error message -->
+            <div x-show="errorMsg" class="alert alert-danger alert-dismissible" role="alert">
+                <span x-text="errorMsg"></span>
+                <button type="button" class="btn-close" @click="errorMsg = ''"></button>
+            </div>
+
+            <!-- Manual Entry Form -->
+            <div class="row g-3">
+                <!-- Author -->
+                <div class="col-md-6">
+                    <label class="form-label">Author(s)</label>
+                    <input type="text" class="form-control" placeholder="John Smith" x-model="form.author">
+                    <small class="text-muted">First Last or Last, First</small>
+                </div>
+
+                <!-- Title -->
+                <div class="col-md-6">
+                    <label class="form-label">Title <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" placeholder="Title of the work" x-model="form.title">
+                </div>
+
+                <!-- Date -->
+                <div class="col-md-6">
+                    <label class="form-label">Date Published</label>
+                    <input type="date" class="form-control" x-model="form.date">
+                </div>
+
+                <!-- Publisher / Website Name -->
+                <div class="col-md-6">
+                    <label class="form-label" x-text="sourceType === 'journal' ? 'Journal Name' : 'Publisher / Website'"></label>
+                    <input type="text" class="form-control" placeholder="Publisher name" x-model="form.publisher">
+                </div>
+
+                <!-- URL (website, article, video, podcast) -->
+                <div class="col-md-12" x-show="['website', 'article', 'video', 'podcast'].includes(sourceType)">
+                    <label class="form-label">URL</label>
+                    <input type="url" class="form-control" placeholder="https://..." x-model="form.url">
+                </div>
+
+                <!-- Journal / Book specific fields -->
+                <template x-if="sourceType === 'journal'">
+                    <div class="col-12">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label">Volume</label>
+                                <input type="text" class="form-control" placeholder="12" x-model="form.volume">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Issue</label>
+                                <input type="text" class="form-control" placeholder="3" x-model="form.issue">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Pages</label>
+                                <input type="text" class="form-control" placeholder="45-67" x-model="form.pages">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">DOI</label>
+                                <input type="text" class="form-control" placeholder="10.1000/xyz" x-model="form.doi">
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <template x-if="sourceType === 'book'">
+                    <div class="col-12">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">ISBN</label>
+                                <input type="text" class="form-control" placeholder="978-3-16-148410-0" x-model="form.isbn">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">DOI</label>
+                                <input type="text" class="form-control" placeholder="10.1000/xyz" x-model="form.doi">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Pages</label>
+                                <input type="text" class="form-control" placeholder="45-67" x-model="form.pages">
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Generate Button -->
+            <div class="mt-4 text-center">
+                <button class="btn btn-primary btn-lg px-5" @click="generateCitation()" :disabled="generating || !form.title">
+                    <span x-show="!generating">Generate Citation</span>
+                    <span x-show="generating">
+                        <span class="spinner-border spinner-border-sm me-1" role="status"></span>Generating...
+                    </span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Generated Citation Result -->
+    <div x-show="result" class="card shadow-sm mb-4" x-transition>
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Generated Citation</h5>
+            <span class="badge bg-primary text-uppercase" x-text="selectedStyle"></span>
+        </div>
+        <div class="card-body">
+            <!-- Full Citation -->
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Reference / Bibliography Entry</label>
+                <div class="bg-light rounded p-3 position-relative" style="min-height: 60px;">
+                    <div x-html="result?.formatted_text || ''"></div>
+                    <button class="btn btn-sm btn-outline-secondary position-absolute top-0 end-0 m-2"
+                            @click="copyText(result?.formatted_text)" title="Copy citation">
+                        <span x-text="copied === 'ref' ? 'Copied!' : 'Copy'"></span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- In-text Citation -->
+            <div class="mb-3">
+                <label class="form-label fw-semibold">In-text Citation</label>
+                <div class="bg-light rounded p-3 position-relative">
+                    <span x-text="result?.in_text_citation || ''"></span>
+                    <button class="btn btn-sm btn-outline-secondary position-absolute top-0 end-0 m-2"
+                            @click="copyInText()" title="Copy in-text citation">
+                        <span x-text="copied === 'intext' ? 'Copied!' : 'Copy'"></span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Add to list button -->
+            <div class="text-center">
+                <button class="btn btn-outline-primary" @click="addToList()">
+                    + Add to Citation List
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Citation List -->
+    <div x-show="citationList.length > 0" class="card shadow-sm mb-4" x-transition>
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Citation List (<span x-text="citationList.length"></span>)</h5>
+            <div>
+                <button class="btn btn-sm btn-outline-primary me-2" @click="copyAllCitations()">
+                    <span x-text="copied === 'all' ? 'Copied!' : 'Copy All'"></span>
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" @click="exportCitations()">Export</button>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <ul class="list-group list-group-flush">
+                <template x-for="(citation, index) in citationList" :key="index">
+                    <li class="list-group-item d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1 me-3">
+                            <div class="mb-1" x-html="citation.formatted_text"></div>
+                            <small class="text-muted">
+                                In-text: <span x-text="citation.in_text_citation"></span>
+                            </small>
+                        </div>
+                        <div class="d-flex flex-column gap-1">
+                            <button class="btn btn-sm btn-outline-secondary" @click="copySingleCitation(index)" title="Copy">
+                                Copy
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" @click="removeCitation(index)" title="Remove">
+                                &times;
+                            </button>
+                        </div>
+                    </li>
+                </template>
+            </ul>
+        </div>
+    </div>
+
+    <!-- How It Works -->
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h5 class="fw-bold mb-3">How to Use the Citation Generator</h5>
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <h6 class="fw-semibold">1. Choose Your Style</h6>
+                    <p class="text-muted mb-0">Select from APA, MLA, Chicago, Harvard, IEEE, AMA, Vancouver, or Turabian formats.</p>
+                </div>
+                <div class="col-md-4">
+                    <h6 class="fw-semibold">2. Enter Source Details</h6>
+                    <p class="text-muted mb-0">Use Autocite to grab details from a URL, or manually enter the author, title, date, and other info.</p>
+                </div>
+                <div class="col-md-4">
+                    <h6 class="fw-semibold">3. Generate &amp; Copy</h6>
+                    <p class="text-muted mb-0">Get your perfectly formatted citation and in-text reference. Add to your list and export when ready.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js" defer></script>
+<script src="{% static 'js/citations.js' %}?v={{ g.scripts_version }}"></script>
+{% endblock %}

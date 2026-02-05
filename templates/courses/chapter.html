@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <!-- Sidebar Navigation -->
+        <div class="col-lg-3 d-none d-lg-block">
+            <div class="position-sticky" style="top: 80px;">
+                <h6 class="text-muted text-uppercase small fw-semibold mb-3">{{ course.title }}</h6>
+                <nav class="nav flex-column">
+                    {% for ch in chapters %}
+                    <a href="/courses/{{ course.slug }}/{{ ch.slug }}/"
+                       class="nav-link px-3 py-2 rounded-2 mb-1 {% if ch.pk == chapter.pk %}bg-primary bg-opacity-10 text-primary fw-semibold{% else %}text-dark{% endif %}">
+                        <small class="text-muted me-2">{{ forloop.counter }}.</small>
+                        {{ ch.title }}
+                    </a>
+                    {% endfor %}
+                </nav>
+                <hr class="my-3">
+                <a href="/courses/{{ course.slug }}/" class="btn btn-sm btn-outline-secondary w-100">
+                    Back to Course
+                </a>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-lg-9">
+            <!-- Mobile breadcrumb -->
+            <nav aria-label="breadcrumb" class="mb-3">
+                <ol class="breadcrumb small">
+                    <li class="breadcrumb-item"><a href="/courses/" class="text-decoration-none">Courses</a></li>
+                    <li class="breadcrumb-item"><a href="/courses/{{ course.slug }}/" class="text-decoration-none">{{ course.title|truncatewords:4 }}</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ chapter.title|truncatewords:5 }}</li>
+                </ol>
+            </nav>
+
+            <!-- Progress -->
+            {% if total_chapters > 0 and current_index is not None %}
+            <div class="mb-4">
+                <div class="d-flex justify-content-between small text-muted mb-1">
+                    <span>Chapter {{ current_index|add:1 }} of {{ total_chapters }}</span>
+                    {% widthratio current_index|add:1 total_chapters 100 as progress %}
+                    <span>{{ progress }}% complete</span>
+                </div>
+                <div class="progress" style="height: 6px;">
+                    <div class="progress-bar bg-primary" style="width: {{ progress }}%;"></div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Chapter Content -->
+            <article>
+                <h1 class="display-6 fw-bold mb-2">{{ chapter.title }}</h1>
+                <div class="text-muted small mb-4">
+                    {{ chapter.reading_time }} min read
+                </div>
+
+                <div class="chapter-content" style="font-size: 1.1rem; line-height: 1.8;">
+                    {{ chapter.content|safe|linebreaksbr }}
+                </div>
+            </article>
+
+            <!-- Navigation -->
+            <div class="d-flex justify-content-between align-items-center mt-5 pt-4 border-top">
+                {% with prev=chapter.previous_chapter %}
+                {% if prev %}
+                <a href="/courses/{{ course.slug }}/{{ prev.slug }}/" class="btn btn-outline-primary">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 24 24" class="me-1"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+                    Previous: {{ prev.title|truncatewords:5 }}
+                </a>
+                {% else %}
+                <div></div>
+                {% endif %}
+                {% endwith %}
+
+                {% with next=chapter.next_chapter %}
+                {% if next %}
+                <a href="/courses/{{ course.slug }}/{{ next.slug }}/" class="btn btn-primary">
+                    Next: {{ next.title|truncatewords:5 }}
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 24 24" class="ms-1"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+                </a>
+                {% else %}
+                <a href="/courses/{{ course.slug }}/" class="btn btn-success">
+                    Course Complete!
+                </a>
+                {% endif %}
+                {% endwith %}
+            </div>
+
+            <!-- Mobile Chapter List -->
+            <div class="d-lg-none mt-4">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <h6 class="fw-semibold mb-3">All Chapters</h6>
+                        <div class="list-group list-group-flush">
+                            {% for ch in chapters %}
+                            <a href="/courses/{{ course.slug }}/{{ ch.slug }}/"
+                               class="list-group-item list-group-item-action border-0 py-2 {% if ch.pk == chapter.pk %}fw-bold text-primary{% endif %}">
+                                <small class="text-muted me-2">{{ forloop.counter }}.</small>
+                                {{ ch.title }}
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.chapter-content h2, .chapter-content h3, .chapter-content h4 {
+    margin-top: 1.5em;
+    margin-bottom: 0.75em;
+    font-weight: 600;
+}
+.chapter-content p {
+    margin-bottom: 1.25em;
+}
+.chapter-content ul, .chapter-content ol {
+    margin-bottom: 1.25em;
+    padding-left: 1.5em;
+}
+.chapter-content blockquote {
+    border-left: 4px solid #6366f1;
+    padding-left: 1em;
+    margin: 1.5em 0;
+    color: #6c757d;
+    font-style: italic;
+}
+.chapter-content code {
+    background: #f1f3f5;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+.chapter-content pre {
+    background: #1e1e2e;
+    color: #cdd6f4;
+    padding: 1em;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin-bottom: 1.25em;
+}
+</style>
+{% endblock %}

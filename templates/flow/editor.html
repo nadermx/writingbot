@@ -1,0 +1,514 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div x-data="flowEditor()" x-init="init()" class="tw-h-[calc(100vh-140px)] tw-flex tw-flex-col tw-bg-gray-50" x-cloak>
+    {% csrf_token %}
+
+    {% if is_shared_view %}
+    <!-- Shared Document Read-Only Banner -->
+    <div class="tw-bg-blue-50 tw-border-b tw-border-blue-200 tw-px-4 tw-py-2 tw-text-center tw-text-sm tw-text-blue-700">
+        You are viewing a shared document. This is read-only.
+    </div>
+    {% endif %}
+
+    <!-- Top Toolbar -->
+    <div class="tw-bg-white tw-border-b tw-border-gray-200 tw-px-4 tw-py-2 tw-flex tw-items-center tw-gap-3 tw-flex-shrink-0">
+        <!-- Document list toggle -->
+        {% if not is_shared_view %}
+        <button @click="showDocList = !showDocList" class="tw-p-2 tw-rounded tw-hover:tw-bg-gray-100 tw-text-gray-600" title="Documents">
+            <svg class="tw-w-5 tw-h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"></path>
+            </svg>
+        </button>
+        {% endif %}
+
+        <!-- Document Title -->
+        <input
+            x-model="currentDoc.title"
+            @blur="saveDocument()"
+            @keydown.enter="$event.target.blur()"
+            class="tw-text-lg tw-font-semibold tw-bg-transparent tw-border-0 tw-border-b tw-border-transparent hover:tw-border-gray-300 focus:tw-border-blue-500 focus:tw-outline-none tw-px-1 tw-py-0.5 tw-flex-1 tw-min-w-0"
+            placeholder="Untitled Document"
+            {% if is_shared_view %}disabled{% endif %}
+        >
+
+        <!-- Save Status -->
+        <span class="tw-text-xs tw-text-gray-400 tw-whitespace-nowrap" x-text="saveStatus"></span>
+
+        <!-- Word Count -->
+        <span class="tw-text-xs tw-text-gray-500 tw-whitespace-nowrap tw-bg-gray-100 tw-px-2 tw-py-1 tw-rounded">
+            <span x-text="wordCount"></span> words
+        </span>
+
+        {% if not is_shared_view %}
+        <!-- Smart Start -->
+        <button @click="showSmartStart = true" class="tw-px-3 tw-py-1.5 tw-text-xs tw-bg-purple-50 tw-text-purple-700 tw-rounded tw-hover:tw-bg-purple-100 tw-font-medium tw-whitespace-nowrap" title="Smart Start">
+            <svg class="tw-w-4 tw-h-4 tw-inline tw-mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+            Smart Start
+        </button>
+
+        <!-- Export Dropdown -->
+        <div class="tw-relative" x-data="{ showExport: false }">
+            <button @click="showExport = !showExport" class="tw-px-3 tw-py-1.5 tw-text-xs tw-bg-gray-100 tw-text-gray-700 tw-rounded tw-hover:tw-bg-gray-200 tw-font-medium">
+                Export
+                <svg class="tw-w-3 tw-h-3 tw-inline tw-ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+            </button>
+            <div x-show="showExport" @click.away="showExport = false" x-transition class="tw-absolute tw-right-0 tw-mt-1 tw-bg-white tw-border tw-border-gray-200 tw-rounded-lg tw-shadow-lg tw-py-1 tw-z-50 tw-min-w-[120px]">
+                <button @click="exportDoc('txt'); showExport = false" class="tw-block tw-w-full tw-text-left tw-px-4 tw-py-2 tw-text-sm tw-text-gray-700 hover:tw-bg-gray-50">Plain Text (.txt)</button>
+                <button @click="exportDoc('html'); showExport = false" class="tw-block tw-w-full tw-text-left tw-px-4 tw-py-2 tw-text-sm tw-text-gray-700 hover:tw-bg-gray-50">HTML (.html)</button>
+                <button @click="exportDoc('md'); showExport = false" class="tw-block tw-w-full tw-text-left tw-px-4 tw-py-2 tw-text-sm tw-text-gray-700 hover:tw-bg-gray-50">Markdown (.md)</button>
+            </div>
+        </div>
+
+        <!-- Share Button -->
+        <button @click="toggleShare()" class="tw-px-3 tw-py-1.5 tw-text-xs tw-rounded tw-font-medium tw-whitespace-nowrap"
+                :class="currentDoc.is_shared ? 'tw-bg-green-100 tw-text-green-700' : 'tw-bg-blue-50 tw-text-blue-700 tw-hover:tw-bg-blue-100'">
+            <svg class="tw-w-4 tw-h-4 tw-inline tw-mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path>
+            </svg>
+            <span x-text="currentDoc.is_shared ? 'Shared' : 'Share'"></span>
+        </button>
+
+        <!-- Sidebar Toggle -->
+        <button @click="showSidebar = !showSidebar" class="tw-p-2 tw-rounded tw-hover:tw-bg-gray-100 tw-text-gray-600" title="Toggle Sidebar">
+            <svg class="tw-w-5 tw-h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7"></path>
+            </svg>
+        </button>
+        {% endif %}
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="tw-flex tw-flex-1 tw-overflow-hidden">
+
+        <!-- Document List Sidebar -->
+        {% if not is_shared_view %}
+        <div x-show="showDocList" x-transition:enter="tw-transition tw-ease-out tw-duration-200"
+             x-transition:enter-start="tw--translate-x-full" x-transition:enter-end="tw-translate-x-0"
+             class="tw-w-64 tw-bg-white tw-border-r tw-border-gray-200 tw-flex tw-flex-col tw-flex-shrink-0 tw-overflow-hidden">
+            <div class="tw-p-3 tw-border-b tw-border-gray-100 tw-flex tw-items-center tw-justify-between">
+                <h3 class="tw-text-sm tw-font-semibold tw-text-gray-700">My Documents</h3>
+                <button @click="createDocument()" class="tw-text-blue-600 tw-hover:tw-text-blue-800 tw-text-sm tw-font-medium">+ New</button>
+            </div>
+            <div class="tw-flex-1 tw-overflow-y-auto">
+                <template x-for="doc in documents" :key="doc.uuid">
+                    <div @click="loadDocument(doc.uuid)"
+                         class="tw-px-3 tw-py-2.5 tw-cursor-pointer tw-border-b tw-border-gray-50 tw-transition-colors"
+                         :class="currentDoc.uuid === doc.uuid ? 'tw-bg-blue-50 tw-border-l-2 tw-border-l-blue-500' : 'hover:tw-bg-gray-50'">
+                        <div class="tw-text-sm tw-font-medium tw-text-gray-800 tw-truncate" x-text="doc.title"></div>
+                        <div class="tw-text-xs tw-text-gray-400 tw-mt-0.5">
+                            <span x-text="doc.word_count"></span> words &middot; <span x-text="formatDate(doc.updated_at)"></span>
+                        </div>
+                    </div>
+                </template>
+                <div x-show="documents.length === 0" class="tw-p-4 tw-text-center tw-text-sm tw-text-gray-400">
+                    No documents yet. Click "+ New" to start writing.
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Editor Area -->
+        <div class="tw-flex-1 tw-flex tw-flex-col tw-overflow-hidden">
+            {% if not is_shared_view %}
+            <!-- Formatting Toolbar -->
+            <div class="tw-bg-white tw-border-b tw-border-gray-200 tw-px-4 tw-py-1.5 tw-flex tw-items-center tw-gap-1 tw-flex-shrink-0 tw-flex-wrap">
+                <button @click="formatText('bold')" class="tw-p-1.5 tw-rounded tw-hover:tw-bg-gray-100 tw-text-gray-600 tw-font-bold tw-text-sm" title="Bold (Ctrl+B)">B</button>
+                <button @click="formatText('italic')" class="tw-p-1.5 tw-rounded tw-hover:tw-bg-gray-100 tw-text-gray-600 tw-italic tw-text-sm" title="Italic (Ctrl+I)">I</button>
+                <button @click="formatText('underline')" class="tw-p-1.5 tw-rounded tw-hover:tw-bg-gray-100 tw-text-gray-600 tw-underline tw-text-sm" title="Underline (Ctrl+U)">U</button>
+                <button @click="formatText('strikeThrough')" class="tw-p-1.5 tw-rounded tw-hover:tw-bg-gray-100 tw-text-gray-600 tw-line-through tw-text-sm" title="Strikethrough">S</button>
+                <div class="tw-w-px tw-h-5 tw-bg-gray-300 tw-mx-1"></div>
+                <button @click="formatBlock('h1')" class="tw-px-2 tw-py-1 tw-rounded tw-hover:tw-bg-gray-100 tw-text-gray-600 tw-text-xs tw-font-bold" title="Heading 1">H1</button>
+                <button @click="formatBlock('h2')" class="tw-px-2 tw-py-1 tw-rounded tw-hover:tw-bg-gray-100 tw-text-gray-600 tw-text-xs tw-font-bold" title="Heading 2">H2</button>
+                <button @click="formatBlock('h3')" class="tw-px-2 tw-py-1 tw-rounded tw-hover:tw-bg-gray-100 tw-text-gray-600 tw-text-xs tw-font-bold" title="Heading 3">H3</button>
+                <button @click="formatBlock('p')" class="tw-px-2 tw-py-1 tw-rounded tw-hover:tw-bg-gray-100 tw-text-gray-600 tw-text-xs" title="Paragraph">P</button>
+                <div class="tw-w-px tw-h-5 tw-bg-gray-300 tw-mx-1"></div>
+                <button @click="formatText('insertUnorderedList')" class="tw-p-1.5 tw-rounded tw-hover:tw-bg-gray-100 tw-text-gray-600" title="Bullet List">
+                    <svg class="tw-w-4 tw-h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                </button>
+                <button @click="formatText('insertOrderedList')" class="tw-p-1.5 tw-rounded tw-hover:tw-bg-gray-100 tw-text-gray-600" title="Numbered List">
+                    <svg class="tw-w-4 tw-h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"></path>
+                    </svg>
+                </button>
+                <div class="tw-w-px tw-h-5 tw-bg-gray-300 tw-mx-1"></div>
+                <button @click="insertLink()" class="tw-p-1.5 tw-rounded tw-hover:tw-bg-gray-100 tw-text-gray-600" title="Insert Link">
+                    <svg class="tw-w-4 tw-h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                    </svg>
+                </button>
+                <button @click="formatText('removeFormat')" class="tw-p-1.5 tw-rounded tw-hover:tw-bg-gray-100 tw-text-gray-600" title="Clear Formatting">
+                    <svg class="tw-w-4 tw-h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+                <div class="tw-w-px tw-h-5 tw-bg-gray-300 tw-mx-1"></div>
+                <button @click="formatText('undo')" class="tw-p-1.5 tw-rounded tw-hover:tw-bg-gray-100 tw-text-gray-600" title="Undo (Ctrl+Z)">
+                    <svg class="tw-w-4 tw-h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a5 5 0 015 5v2M3 10l4-4M3 10l4 4"></path>
+                    </svg>
+                </button>
+                <button @click="formatText('redo')" class="tw-p-1.5 tw-rounded tw-hover:tw-bg-gray-100 tw-text-gray-600" title="Redo (Ctrl+Y)">
+                    <svg class="tw-w-4 tw-h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 10H11a5 5 0 00-5 5v2M21 10l-4-4M21 10l-4 4"></path>
+                    </svg>
+                </button>
+
+                <!-- AI Suggest Button -->
+                <div class="tw-ml-auto">
+                    <button @click="aiSuggest()" :disabled="aiSuggestLoading"
+                            class="tw-px-3 tw-py-1 tw-rounded tw-text-xs tw-font-medium tw-bg-gradient-to-r tw-from-violet-500 tw-to-purple-600 tw-text-white tw-hover:tw-from-violet-600 tw-hover:tw-to-purple-700 disabled:tw-opacity-50 tw-flex tw-items-center tw-gap-1">
+                        <svg class="tw-w-4 tw-h-4" :class="aiSuggestLoading ? 'tw-animate-spin' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path x-show="!aiSuggestLoading" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
+                            <path x-show="aiSuggestLoading" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                        <span x-text="aiSuggestLoading ? 'Thinking...' : 'AI Suggest'"></span>
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Editor Content -->
+            <div class="tw-flex-1 tw-overflow-y-auto tw-bg-white">
+                <div class="tw-max-w-4xl tw-mx-auto tw-p-8">
+                    {% if is_shared_view %}
+                    <div id="editor" class="tw-prose tw-prose-lg tw-max-w-none tw-min-h-[500px]"></div>
+                    {% else %}
+                    <div id="editor"
+                         contenteditable="true"
+                         @input="onEditorInput()"
+                         @keydown.ctrl.s.prevent="saveDocument()"
+                         @keydown.meta.s.prevent="saveDocument()"
+                         class="tw-prose tw-prose-lg tw-max-w-none tw-min-h-[500px] focus:tw-outline-none"
+                         data-placeholder="Start writing, or use Smart Start to generate an outline..."
+                         style="min-height: 500px;"></div>
+                    {% endif %}
+
+                    <!-- AI Suggestion Display -->
+                    {% if not is_shared_view %}
+                    <div x-show="aiSuggestion" x-transition class="tw-mt-4 tw-p-4 tw-bg-purple-50 tw-border tw-border-purple-200 tw-rounded-lg">
+                        <div class="tw-flex tw-items-start tw-justify-between tw-mb-2">
+                            <span class="tw-text-xs tw-font-medium tw-text-purple-600">AI Suggestion</span>
+                            <button @click="aiSuggestion = ''" class="tw-text-purple-400 tw-hover:tw-text-purple-600">
+                                <svg class="tw-w-4 tw-h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <p class="tw-text-sm tw-text-gray-700 tw-italic" x-text="aiSuggestion"></p>
+                        <div class="tw-mt-2 tw-flex tw-gap-2">
+                            <button @click="acceptSuggestion()" class="tw-px-3 tw-py-1 tw-text-xs tw-bg-purple-600 tw-text-white tw-rounded tw-hover:tw-bg-purple-700">Accept</button>
+                            <button @click="aiSuggestion = ''" class="tw-px-3 tw-py-1 tw-text-xs tw-bg-white tw-text-gray-600 tw-border tw-rounded tw-hover:tw-bg-gray-50">Dismiss</button>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Sidebar -->
+        {% if not is_shared_view %}
+        <div x-show="showSidebar" x-transition:enter="tw-transition tw-ease-out tw-duration-200"
+             x-transition:enter-start="tw-translate-x-full" x-transition:enter-end="tw-translate-x-0"
+             class="tw-w-80 tw-bg-white tw-border-l tw-border-gray-200 tw-flex tw-flex-col tw-flex-shrink-0 tw-overflow-hidden">
+
+            <!-- Sidebar Tabs -->
+            <div class="tw-flex tw-border-b tw-border-gray-200 tw-flex-shrink-0">
+                <button @click="sidebarTab = 'research'" class="tw-flex-1 tw-py-2.5 tw-text-xs tw-font-medium tw-text-center tw-transition-colors"
+                        :class="sidebarTab === 'research' ? 'tw-text-blue-600 tw-border-b-2 tw-border-blue-600 tw-bg-blue-50' : 'tw-text-gray-500 hover:tw-text-gray-700'">
+                    Research
+                </button>
+                <button @click="sidebarTab = 'notes'" class="tw-flex-1 tw-py-2.5 tw-text-xs tw-font-medium tw-text-center tw-transition-colors"
+                        :class="sidebarTab === 'notes' ? 'tw-text-blue-600 tw-border-b-2 tw-border-blue-600 tw-bg-blue-50' : 'tw-text-gray-500 hover:tw-text-gray-700'">
+                    Notes
+                </button>
+                <button @click="sidebarTab = 'review'" class="tw-flex-1 tw-py-2.5 tw-text-xs tw-font-medium tw-text-center tw-transition-colors"
+                        :class="sidebarTab === 'review' ? 'tw-text-blue-600 tw-border-b-2 tw-border-blue-600 tw-bg-blue-50' : 'tw-text-gray-500 hover:tw-text-gray-700'">
+                    AI Review
+                </button>
+                <button @click="sidebarTab = 'citations'" class="tw-flex-1 tw-py-2.5 tw-text-xs tw-font-medium tw-text-center tw-transition-colors"
+                        :class="sidebarTab === 'citations' ? 'tw-text-blue-600 tw-border-b-2 tw-border-blue-600 tw-bg-blue-50' : 'tw-text-gray-500 hover:tw-text-gray-700'">
+                    Cite
+                </button>
+            </div>
+
+            <!-- Sidebar Content -->
+            <div class="tw-flex-1 tw-overflow-y-auto">
+
+                <!-- Research Tab -->
+                <div x-show="sidebarTab === 'research'" class="tw-p-3">
+                    <div class="tw-flex tw-gap-2 tw-mb-3">
+                        <input x-model="researchQuery" @keydown.enter="searchResearch()"
+                               type="text" placeholder="Search the web..."
+                               class="tw-flex-1 tw-px-3 tw-py-2 tw-text-sm tw-border tw-border-gray-300 tw-rounded-lg focus:tw-ring-2 focus:tw-ring-blue-500 focus:tw-border-blue-500 focus:tw-outline-none">
+                        <button @click="searchResearch()" :disabled="researchLoading"
+                                class="tw-px-3 tw-py-2 tw-bg-blue-600 tw-text-white tw-rounded-lg tw-text-sm tw-hover:tw-bg-blue-700 disabled:tw-opacity-50">
+                            <svg class="tw-w-4 tw-h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div x-show="researchLoading" class="tw-text-center tw-py-4">
+                        <div class="tw-animate-spin tw-w-6 tw-h-6 tw-border-2 tw-border-blue-600 tw-border-t-transparent tw-rounded-full tw-mx-auto"></div>
+                        <p class="tw-text-xs tw-text-gray-500 tw-mt-2">Searching...</p>
+                    </div>
+                    <template x-for="(result, idx) in researchResults" :key="idx">
+                        <div class="tw-mb-3 tw-p-3 tw-bg-gray-50 tw-rounded-lg tw-border tw-border-gray-100">
+                            <a :href="result.url" target="_blank" class="tw-text-sm tw-font-medium tw-text-blue-600 hover:tw-underline" x-text="result.title"></a>
+                            <p class="tw-text-xs tw-text-gray-600 tw-mt-1" x-text="result.snippet"></p>
+                        </div>
+                    </template>
+                    <div x-show="researchResults.length === 0 && !researchLoading" class="tw-text-center tw-py-8 tw-text-sm tw-text-gray-400">
+                        Search for topics related to your document.
+                    </div>
+                </div>
+
+                <!-- Notes Tab -->
+                <div x-show="sidebarTab === 'notes'" class="tw-p-3">
+                    <div class="tw-flex tw-items-center tw-justify-between tw-mb-3">
+                        <span class="tw-text-xs tw-font-medium tw-text-gray-500 tw-uppercase">Notes</span>
+                        <button @click="addNote()" class="tw-text-blue-600 tw-hover:tw-text-blue-800 tw-text-xs tw-font-medium">+ Add Note</button>
+                    </div>
+                    <template x-for="(note, idx) in notes" :key="idx">
+                        <div class="tw-mb-2 tw-group">
+                            <div class="tw-relative tw-bg-yellow-50 tw-border tw-border-yellow-200 tw-rounded-lg tw-p-3">
+                                <textarea x-model="notes[idx].content" @input="notesChanged = true"
+                                          rows="3" class="tw-w-full tw-text-sm tw-bg-transparent tw-border-0 tw-resize-none focus:tw-outline-none tw-text-gray-700"
+                                          placeholder="Write a note..."></textarea>
+                                <button @click="deleteNote(idx)" class="tw-absolute tw-top-1 tw-right-1 tw-opacity-0 group-hover:tw-opacity-100 tw-text-red-400 tw-hover:tw-text-red-600 tw-transition-opacity">
+                                    <svg class="tw-w-4 tw-h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </template>
+                    <div x-show="notes.length === 0" class="tw-text-center tw-py-8 tw-text-sm tw-text-gray-400">
+                        Add notes to keep track of ideas and references.
+                    </div>
+                </div>
+
+                <!-- AI Review Tab -->
+                <div x-show="sidebarTab === 'review'" class="tw-p-3">
+                    <button @click="getAIReview()" :disabled="reviewLoading"
+                            class="tw-w-full tw-px-4 tw-py-2.5 tw-bg-gradient-to-r tw-from-blue-600 tw-to-indigo-600 tw-text-white tw-rounded-lg tw-text-sm tw-font-medium tw-hover:tw-from-blue-700 tw-hover:tw-to-indigo-700 disabled:tw-opacity-50 tw-mb-4">
+                        <span x-show="!reviewLoading">Get AI Feedback</span>
+                        <span x-show="reviewLoading" class="tw-flex tw-items-center tw-justify-center tw-gap-2">
+                            <div class="tw-animate-spin tw-w-4 tw-h-4 tw-border-2 tw-border-white tw-border-t-transparent tw-rounded-full"></div>
+                            Analyzing...
+                        </span>
+                    </button>
+                    <div x-show="reviewData">
+                        <!-- Score -->
+                        <div class="tw-text-center tw-mb-4">
+                            <div class="tw-inline-flex tw-items-center tw-justify-center tw-w-16 tw-h-16 tw-rounded-full tw-border-4"
+                                 :class="(reviewData?.score || 0) >= 70 ? 'tw-border-green-400' : (reviewData?.score || 0) >= 40 ? 'tw-border-yellow-400' : 'tw-border-red-400'">
+                                <span class="tw-text-xl tw-font-bold" x-text="reviewData?.score || '-'"></span>
+                            </div>
+                            <p class="tw-text-xs tw-text-gray-500 tw-mt-1">Quality Score</p>
+                        </div>
+                        <!-- Summary -->
+                        <div x-show="reviewData?.summary" class="tw-mb-3 tw-p-3 tw-bg-blue-50 tw-rounded-lg">
+                            <h4 class="tw-text-xs tw-font-semibold tw-text-blue-700 tw-mb-1">Summary</h4>
+                            <p class="tw-text-xs tw-text-gray-700" x-text="reviewData?.summary"></p>
+                        </div>
+                        <!-- Clarity -->
+                        <div x-show="reviewData?.clarity" class="tw-mb-3 tw-p-3 tw-bg-gray-50 tw-rounded-lg">
+                            <h4 class="tw-text-xs tw-font-semibold tw-text-gray-700 tw-mb-1">Clarity</h4>
+                            <p class="tw-text-xs tw-text-gray-600" x-text="reviewData?.clarity"></p>
+                        </div>
+                        <!-- Tone -->
+                        <div x-show="reviewData?.tone" class="tw-mb-3 tw-p-3 tw-bg-gray-50 tw-rounded-lg">
+                            <h4 class="tw-text-xs tw-font-semibold tw-text-gray-700 tw-mb-1">Tone</h4>
+                            <p class="tw-text-xs tw-text-gray-600" x-text="reviewData?.tone"></p>
+                        </div>
+                        <!-- Style -->
+                        <div x-show="reviewData?.style" class="tw-mb-3 tw-p-3 tw-bg-gray-50 tw-rounded-lg">
+                            <h4 class="tw-text-xs tw-font-semibold tw-text-gray-700 tw-mb-1">Style</h4>
+                            <p class="tw-text-xs tw-text-gray-600" x-text="reviewData?.style"></p>
+                        </div>
+                        <!-- Structure -->
+                        <div x-show="reviewData?.structure" class="tw-mb-3 tw-p-3 tw-bg-gray-50 tw-rounded-lg">
+                            <h4 class="tw-text-xs tw-font-semibold tw-text-gray-700 tw-mb-1">Structure</h4>
+                            <p class="tw-text-xs tw-text-gray-600" x-text="reviewData?.structure"></p>
+                        </div>
+                        <!-- Suggestions -->
+                        <div x-show="reviewData?.suggestions?.length" class="tw-mb-3 tw-p-3 tw-bg-green-50 tw-rounded-lg">
+                            <h4 class="tw-text-xs tw-font-semibold tw-text-green-700 tw-mb-2">Suggestions</h4>
+                            <ul class="tw-text-xs tw-text-gray-700 tw-space-y-1.5">
+                                <template x-for="(s, i) in (reviewData?.suggestions || [])" :key="i">
+                                    <li class="tw-flex tw-gap-1.5">
+                                        <span class="tw-text-green-500 tw-flex-shrink-0">&bull;</span>
+                                        <span x-text="s"></span>
+                                    </li>
+                                </template>
+                            </ul>
+                        </div>
+                    </div>
+                    <div x-show="!reviewData && !reviewLoading" class="tw-text-center tw-py-8 tw-text-sm tw-text-gray-400">
+                        Click "Get AI Feedback" to receive a detailed review of your writing.
+                    </div>
+                </div>
+
+                <!-- Citations Tab -->
+                <div x-show="sidebarTab === 'citations'" class="tw-p-3">
+                    <div class="tw-mb-3">
+                        <label class="tw-text-xs tw-font-medium tw-text-gray-500 tw-uppercase tw-block tw-mb-1">Citation Style</label>
+                        <select x-model="citationStyle" class="tw-w-full tw-px-3 tw-py-2 tw-text-sm tw-border tw-border-gray-300 tw-rounded-lg focus:tw-ring-2 focus:tw-ring-blue-500 focus:tw-outline-none">
+                            <option value="apa">APA 7th Edition</option>
+                            <option value="mla">MLA 9th Edition</option>
+                            <option value="chicago">Chicago 17th Edition</option>
+                            <option value="harvard">Harvard</option>
+                            <option value="ieee">IEEE</option>
+                        </select>
+                    </div>
+                    <div class="tw-space-y-2 tw-mb-3">
+                        <input x-model="citationAuthor" type="text" placeholder="Author name" class="tw-w-full tw-px-3 tw-py-2 tw-text-sm tw-border tw-border-gray-300 tw-rounded-lg focus:tw-ring-2 focus:tw-ring-blue-500 focus:tw-outline-none">
+                        <input x-model="citationTitle" type="text" placeholder="Title of work" class="tw-w-full tw-px-3 tw-py-2 tw-text-sm tw-border tw-border-gray-300 tw-rounded-lg focus:tw-ring-2 focus:tw-ring-blue-500 focus:tw-outline-none">
+                        <input x-model="citationYear" type="text" placeholder="Year" class="tw-w-full tw-px-3 tw-py-2 tw-text-sm tw-border tw-border-gray-300 tw-rounded-lg focus:tw-ring-2 focus:tw-ring-blue-500 focus:tw-outline-none">
+                        <input x-model="citationSource" type="text" placeholder="Source / Publisher / URL" class="tw-w-full tw-px-3 tw-py-2 tw-text-sm tw-border tw-border-gray-300 tw-rounded-lg focus:tw-ring-2 focus:tw-ring-blue-500 focus:tw-outline-none">
+                    </div>
+                    <button @click="generateCitation()" class="tw-w-full tw-px-4 tw-py-2 tw-bg-blue-600 tw-text-white tw-rounded-lg tw-text-sm tw-font-medium tw-hover:tw-bg-blue-700">
+                        Generate Citation
+                    </button>
+                    <div x-show="generatedCitation" class="tw-mt-3 tw-p-3 tw-bg-gray-50 tw-rounded-lg tw-border">
+                        <div class="tw-flex tw-items-start tw-justify-between tw-mb-1">
+                            <span class="tw-text-xs tw-font-medium tw-text-gray-500">Generated Citation</span>
+                            <button @click="insertCitation()" class="tw-text-xs tw-text-blue-600 tw-hover:tw-text-blue-800 tw-font-medium">Insert</button>
+                        </div>
+                        <p class="tw-text-xs tw-text-gray-700" x-text="generatedCitation"></p>
+                    </div>
+                    <div x-show="!generatedCitation" class="tw-text-center tw-py-6 tw-text-sm tw-text-gray-400">
+                        Fill in the fields above to generate a formatted citation.
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+
+    <!-- Smart Start Overlay -->
+    {% if not is_shared_view %}
+    <div x-show="showSmartStart" x-transition class="tw-fixed tw-inset-0 tw-bg-black/50 tw-flex tw-items-center tw-justify-center tw-z-50">
+        <div @click.away="showSmartStart = false" class="tw-bg-white tw-rounded-xl tw-shadow-2xl tw-max-w-lg tw-w-full tw-mx-4">
+            <div class="tw-p-6">
+                <div class="tw-flex tw-items-center tw-justify-between tw-mb-4">
+                    <h2 class="tw-text-lg tw-font-bold tw-text-gray-800">
+                        <svg class="tw-w-5 tw-h-5 tw-inline tw-mr-1 tw-text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                        Smart Start
+                    </h2>
+                    <button @click="showSmartStart = false" class="tw-text-gray-400 tw-hover:tw-text-gray-600">
+                        <svg class="tw-w-5 tw-h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                <p class="tw-text-sm tw-text-gray-500 tw-mb-4">Enter keywords or a topic and AI will generate a structured outline to get you started.</p>
+                <textarea x-model="smartStartKeywords" rows="3"
+                          class="tw-w-full tw-px-4 tw-py-3 tw-border tw-border-gray-300 tw-rounded-lg tw-text-sm focus:tw-ring-2 focus:tw-ring-purple-500 focus:tw-border-purple-500 focus:tw-outline-none tw-resize-none"
+                          placeholder="e.g. climate change impact on agriculture, renewable energy solutions"></textarea>
+                <div class="tw-flex tw-justify-end tw-gap-2 tw-mt-4">
+                    <button @click="showSmartStart = false" class="tw-px-4 tw-py-2 tw-text-sm tw-text-gray-600 tw-border tw-border-gray-300 tw-rounded-lg tw-hover:tw-bg-gray-50">Cancel</button>
+                    <button @click="runSmartStart()" :disabled="smartStartLoading"
+                            class="tw-px-4 tw-py-2 tw-text-sm tw-bg-purple-600 tw-text-white tw-rounded-lg tw-hover:tw-bg-purple-700 disabled:tw-opacity-50 tw-font-medium">
+                        <span x-show="!smartStartLoading">Generate Outline</span>
+                        <span x-show="smartStartLoading" class="tw-flex tw-items-center tw-gap-2">
+                            <div class="tw-animate-spin tw-w-4 tw-h-4 tw-border-2 tw-border-white tw-border-t-transparent tw-rounded-full"></div>
+                            Generating...
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Share Link Modal -->
+    {% if not is_shared_view %}
+    <div x-show="showShareModal" x-transition class="tw-fixed tw-inset-0 tw-bg-black/50 tw-flex tw-items-center tw-justify-center tw-z-50">
+        <div @click.away="showShareModal = false" class="tw-bg-white tw-rounded-xl tw-shadow-2xl tw-max-w-md tw-w-full tw-mx-4">
+            <div class="tw-p-6">
+                <h2 class="tw-text-lg tw-font-bold tw-text-gray-800 tw-mb-4">Share Document</h2>
+                <div class="tw-flex tw-items-center tw-gap-2">
+                    <input type="text" :value="shareUrl" readonly class="tw-flex-1 tw-px-3 tw-py-2 tw-text-sm tw-border tw-border-gray-300 tw-rounded-lg tw-bg-gray-50">
+                    <button @click="copyShareLink()" class="tw-px-4 tw-py-2 tw-bg-blue-600 tw-text-white tw-text-sm tw-rounded-lg tw-hover:tw-bg-blue-700 tw-whitespace-nowrap">
+                        <span x-text="shareCopied ? 'Copied!' : 'Copy'"></span>
+                    </button>
+                </div>
+                <p class="tw-text-xs tw-text-gray-500 tw-mt-2">Anyone with this link can view your document.</p>
+                <div class="tw-flex tw-justify-end tw-mt-4">
+                    <button @click="showShareModal = false" class="tw-px-4 tw-py-2 tw-text-sm tw-text-gray-600 tw-border tw-border-gray-300 tw-rounded-lg tw-hover:tw-bg-gray-50">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Error Toast -->
+    <div x-show="errorMsg" x-transition class="tw-fixed tw-bottom-4 tw-right-4 tw-bg-red-600 tw-text-white tw-px-4 tw-py-3 tw-rounded-lg tw-shadow-lg tw-text-sm tw-max-w-sm tw-z-50">
+        <div class="tw-flex tw-items-center tw-gap-2">
+            <span x-text="errorMsg"></span>
+            <button @click="errorMsg = ''" class="tw-ml-2 tw-text-red-200 tw-hover:tw-text-white">
+                <svg class="tw-w-4 tw-h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+</div>
+
+<style>
+[x-cloak] { display: none !important; }
+#editor:empty:before {
+    content: attr(data-placeholder);
+    color: #9ca3af;
+    pointer-events: none;
+}
+#editor:focus:empty:before {
+    color: #d1d5db;
+}
+#editor h1 { font-size: 2em; font-weight: bold; margin-top: 0.5em; margin-bottom: 0.25em; }
+#editor h2 { font-size: 1.5em; font-weight: bold; margin-top: 0.5em; margin-bottom: 0.25em; }
+#editor h3 { font-size: 1.25em; font-weight: bold; margin-top: 0.5em; margin-bottom: 0.25em; }
+#editor p { margin-bottom: 0.75em; }
+#editor ul, #editor ol { margin-left: 1.5em; margin-bottom: 0.75em; }
+#editor ul { list-style-type: disc; }
+#editor ol { list-style-type: decimal; }
+#editor a { color: #2563eb; text-decoration: underline; }
+#editor blockquote { border-left: 3px solid #d1d5db; padding-left: 1em; color: #6b7280; margin-bottom: 0.75em; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+<script src="/static/js/flow.js?v={{ g.scripts_version }}"></script>
+
+{% if is_shared_view %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var sharedContent = {{ shared_document.content|safe|escapejs|default:"" }};
+    try {
+        var editor = document.getElementById('editor');
+        if (editor) {
+            editor.innerHTML = JSON.parse('"' + sharedContent + '"') || '';
+        }
+    } catch(e) {
+        var editor = document.getElementById('editor');
+        if (editor) editor.innerHTML = '';
+    }
+});
+</script>
+{% endif %}
+{% endblock %}

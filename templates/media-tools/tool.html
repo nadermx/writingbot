@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container py-5" x-data="mediaTool()" x-init="init()">
+    <div class="text-center mb-4">
+        <h1 class="display-6 fw-bold mb-2">{{ tool_name }}</h1>
+        <p class="text-muted">{{ tool_description }}</p>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+
+                    {% if tool_type == 'qr-code' %}
+                    <!-- QR Code Generator -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Content</label>
+                        <input type="text" class="form-control" x-model="qrData" placeholder="Enter URL, text, or data...">
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-4">
+                            <label class="form-label fw-semibold">Size</label>
+                            <select class="form-select" x-model="qrSize">
+                                <option value="200">200px</option>
+                                <option value="300" selected>300px</option>
+                                <option value="500">500px</option>
+                                <option value="800">800px</option>
+                            </select>
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label fw-semibold">Color</label>
+                            <input type="color" class="form-control form-control-color w-100" x-model="qrColor" value="#000000">
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label fw-semibold">Background</label>
+                            <input type="color" class="form-control form-control-color w-100" x-model="qrBgColor" value="#FFFFFF">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary btn-lg w-100" @click="generateQR()" :disabled="processing || !qrData.trim()">
+                        <span x-show="!processing">Generate QR Code</span>
+                        <span x-show="processing"><span class="spinner-border spinner-border-sm me-2"></span>Generating...</span>
+                    </button>
+
+                    {% elif tool_type == 'voice-generator' %}
+                    <!-- Voice Generator -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Text</label>
+                        <textarea class="form-control" rows="5" x-model="voiceText" placeholder="Enter text to convert to speech..." maxlength="5000"></textarea>
+                        <div class="form-text"><span x-text="voiceText.length"></span>/5000 characters</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Voice</label>
+                            <select class="form-select" x-model="voiceName">
+                                {% for key, label in voices.items %}
+                                <option value="{{ key }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Speed</label>
+                            <input type="range" class="form-range mt-2" x-model="voiceSpeed" min="0.5" max="2.0" step="0.1">
+                            <div class="form-text text-center" x-text="voiceSpeed + 'x'"></div>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary btn-lg w-100" @click="generateVoice()" :disabled="processing || !voiceText.trim()">
+                        <span x-show="!processing">Generate Voice</span>
+                        <span x-show="processing"><span class="spinner-border spinner-border-sm me-2"></span>Generating...</span>
+                    </button>
+
+                    {% elif tool_type == 'ai-image-generator' %}
+                    <!-- AI Image Prompt Generator -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Describe your image</label>
+                        <textarea class="form-control" rows="4" x-model="imageDescription" placeholder="e.g. A serene mountain lake at sunset with pine trees..."></textarea>
+                    </div>
+                    <button class="btn btn-primary btn-lg w-100" @click="generateImagePrompt()" :disabled="processing || !imageDescription.trim()">
+                        <span x-show="!processing">Generate Prompt</span>
+                        <span x-show="processing"><span class="spinner-border spinner-border-sm me-2"></span>Generating...</span>
+                    </button>
+                    <div x-show="generatedPrompt" class="mt-4 p-3 bg-light rounded-3">
+                        <label class="form-label fw-semibold">Generated Prompt</label>
+                        <p class="mb-2" x-text="generatedPrompt" style="white-space: pre-wrap;"></p>
+                        <button class="btn btn-sm btn-outline-primary" @click="copyPrompt()">Copy to Clipboard</button>
+                    </div>
+
+                    {% else %}
+                    <!-- Image upload tools (converter, bg remover) -->
+                    <div x-show="!fileUploaded" class="text-center py-5"
+                         @dragover.prevent="dragging = true"
+                         @dragleave.prevent="dragging = false"
+                         @drop.prevent="handleDrop($event)"
+                         :class="dragging ? 'border-primary bg-light' : 'border-secondary'"
+                         style="border: 2px dashed #dee2e6; border-radius: 12px; cursor: pointer;"
+                         @click="$refs.fileInput.click()">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="#6c757d" viewBox="0 0 24 24" class="mb-3">
+                            <path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/>
+                        </svg>
+                        <p class="mb-1 fw-semibold">Drop your image here or click to browse</p>
+                        <p class="text-muted small mb-0">Supports JPG, PNG, WebP, GIF, BMP, TIFF</p>
+                        <input type="file" x-ref="fileInput" @change="handleFileSelect($event)" accept="{{ accept }}" class="d-none">
+                    </div>
+
+                    <div x-show="fileUploaded">
+                        <div class="d-flex align-items-center justify-content-between mb-3 pb-3 border-bottom">
+                            <span class="fw-semibold" x-text="fileName"></span>
+                            <button class="btn btn-sm btn-outline-secondary" @click="resetTool()">Change</button>
+                        </div>
+
+                        <!-- Image preview -->
+                        <div x-show="previewUrl" class="text-center mb-3">
+                            <img :src="previewUrl" class="img-fluid rounded" style="max-height: 300px;">
+                        </div>
+
+                        {% if tool_type == 'image-converter' %}
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <label class="form-label fw-semibold">Convert to</label>
+                                <select class="form-select" x-model="targetFormat">
+                                    {% for fmt in formats %}
+                                    <option value="{{ fmt }}">{{ fmt|upper }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fw-semibold">Quality</label>
+                                <input type="range" class="form-range mt-2" x-model="quality" min="10" max="100" step="5">
+                                <div class="form-text text-center" x-text="quality + '%'"></div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <button class="btn btn-primary btn-lg w-100" @click="processImage()" :disabled="processing">
+                            <span x-show="!processing">
+                                {% if tool_type == 'image-converter' %}Convert Image{% elif tool_type == 'background-remover' %}Remove Background{% endif %}
+                            </span>
+                            <span x-show="processing"><span class="spinner-border spinner-border-sm me-2"></span>Processing...</span>
+                        </button>
+                    </div>
+                    {% endif %}
+
+                    <!-- Error -->
+                    <div x-show="error" class="alert alert-danger mt-3" x-text="error"></div>
+
+                    <!-- Download Result -->
+                    <div x-show="downloadReady" class="text-center mt-4 pt-4 border-top">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="#198754" viewBox="0 0 24 24" class="mb-3">
+                            <path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/>
+                        </svg>
+                        <p class="fw-semibold mb-3">Your file is ready!</p>
+
+                        <!-- Preview for images -->
+                        <div x-show="resultPreviewUrl" class="mb-3">
+                            <img :src="resultPreviewUrl" class="img-fluid rounded" style="max-height: 300px;">
+                        </div>
+
+                        <!-- Audio player for voice -->
+                        <div x-show="audioUrl" class="mb-3">
+                            <audio controls :src="audioUrl" class="w-100"></audio>
+                        </div>
+
+                        <a :href="downloadUrl" class="btn btn-success btn-lg" download>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 24 24" class="me-2"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                            Download
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Features -->
+    <div class="row mt-5 pt-4 g-4">
+        <div class="col-md-4 text-center">
+            <h5 class="fw-semibold">100% Free</h5>
+            <p class="text-muted small">No registration or payment required.</p>
+        </div>
+        <div class="col-md-4 text-center">
+            <h5 class="fw-semibold">Browser-Based</h5>
+            <p class="text-muted small">No software to install. Works on any device.</p>
+        </div>
+        <div class="col-md-4 text-center">
+            <h5 class="fw-semibold">Private & Secure</h5>
+            <p class="text-muted small">Files are processed securely and never stored.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js" defer></script>
+<script src="{% static 'js/media-tools.js' %}?v={{ g.scripts_version }}"></script>
+{% endblock %}

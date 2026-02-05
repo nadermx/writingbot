@@ -1,142 +1,80 @@
-var utils = (function () {
+/**
+ * WritingBot.ai - Utility Functions
+ * Common utilities used across all tools.
+ */
+var wb = (function () {
     'use strict';
-    var rateInterval;
 
     return {
+        // API helpers
+        api: api,
+        apiJson: apiJson,
+        getCookie: getCookie,
+        getCSRFToken: getCSRFToken,
+
+        // UI helpers
+        showNotification: showNotification,
+        copyToClipboard: copyToClipboard,
+        countWords: countWords,
+        countChars: countChars,
+        debounce: debounce,
+        formatNumber: formatNumber,
+        secondsToTime: secondsToTime,
+
+        // Legacy compatibility
         showNoCredits: showNoCredits,
         showRateLimitModal: showRateLimitModal,
         showSizeExceededModal: showSizeExceededModal,
-        setInputFilter: setInputFilter,
-        formDataToJSON: formDataToJSON,
-        promiseRequest: promiseRequest
     };
 
-    function showNoCredits(totalSeconds) {
-        $('#nocredits').modal('show');
+    /**
+     * Make an API request using fetch.
+     */
+    function api(endpoint, method, data, options) {
+        var config = {
+            method: method || 'GET',
+            headers: {
+                'X-CSRFToken': getCSRFToken(),
+            },
+            credentials: 'same-origin',
+        };
 
-        if (rateInterval) {
-            clearInterval(rateInterval);
-        }
-
-        if (totalSeconds === '-') {
-            $('.exceeded-wrapper').hide();
-        } else {
-            $('.exceeded-wrapper').show();
-            $('.timer').text(secondsToTime(totalSeconds));
-            rateInterval = setInterval(
-                function () {
-                    totalSeconds--;
-                    $('.timer').text(secondsToTime(totalSeconds));
-
-                    if (totalSeconds < 0) {
-                        clearInterval(rateInterval);
-                        window.location.reload();
-                    }
-                }, 1000
-            );
-        }
-    }
-
-    function showRateLimitModal(totalSeconds) {
-        $('#ratelimit').modal('show');
-
-        if (rateInterval) {
-            clearInterval(rateInterval);
-        }
-
-        if (totalSeconds === '-') {
-            $('.exceeded-wrapper').hide();
-        } else {
-            $('.exceeded-wrapper').show();
-            $('.timer').text(secondsToTime(totalSeconds));
-            rateInterval = setInterval(
-                function () {
-                    totalSeconds--;
-                    $('.timer').text(secondsToTime(totalSeconds));
-
-                    if (totalSeconds < 0) {
-                        clearInterval(rateInterval);
-                        window.location.reload();
-                    }
-                }, 1000
-            );
-        }
-    }
-
-    function showSizeExceededModal() {
-        $('#sizelimit').modal('show');
-    }
-
-    function secondsToTime(totalSeconds) {
-        var sec_num = parseInt(totalSeconds, 10);
-        var hours = Math.floor(sec_num / 3600);
-        var minutes = Math.floor((sec_num - (hours * 3600)) / 60);
-        var seconds = sec_num - (hours * 3600) - (minutes * 60);
-
-        if (hours < 10) {
-            hours = "0" + hours;
-        }
-        if (minutes < 10) {
-            minutes = "0" + minutes;
-        }
-        if (seconds < 10) {
-            seconds = "0" + seconds;
-        }
-        return hours + ':' + minutes + ':' + seconds;
-    }
-
-    function setInputFilter(textbox, inputFilter) {
-        ["input", "keydown", "keyup", "mousedown", "mouseup", "select", "contextmenu", "drop"].forEach(function (event) {
-            textbox.addEventListener(event, function () {
-                if (inputFilter(this.value)) {
-                    this.oldValue = this.value;
-                    this.oldSelectionStart = this.selectionStart;
-                    this.oldSelectionEnd = this.selectionEnd;
-                } else if (this.hasOwnProperty("oldValue")) {
-                    this.value = this.oldValue;
-                    this.setSelectionRange(this.oldSelectionStart, this.oldSelectionEnd);
-                } else {
-                    this.value = "";
-                }
-            });
-        });
-    }
-
-    function formDataToJSON(form) {
-        var data = form.serializeArray();
-        var dataParsed = {};
-
-        for (var i = 0; i < data.length; i++) {
-            var found = data.filter(
-                function (item) {
-                    return item.name === data[i].name;
-                }
-            );
-
-            if (found.length > 1) {
-                if (dataParsed[data[i].name]) {
-                    dataParsed[data[i].name].push(data[i].value);
-                } else {
-                    dataParsed[data[i].name] = [];
-                    dataParsed[data[i].name].push(data[i].value);
-                }
+        if (data) {
+            if (data instanceof FormData) {
+                config.body = data;
             } else {
-                dataParsed[data[i].name] = data[i].value;
+                config.headers['Content-Type'] = 'application/json';
+                config.body = JSON.stringify(data);
             }
         }
 
-        return dataParsed;
+        if (options) {
+            Object.assign(config, options);
+        }
+
+        return fetch(endpoint, config);
+    }
+
+    /**
+     * Make an API request and parse JSON response.
+     */
+    function apiJson(endpoint, method, data) {
+        return api(endpoint, method, data).then(function (response) {
+            if (!response.ok) {
+                return response.json().then(function (err) {
+                    throw err;
+                });
+            }
+            return response.json();
+        });
     }
 
     function getCookie(name) {
         var cookieValue = null;
-
         if (document.cookie && document.cookie !== '') {
             var cookies = document.cookie.split(';');
-
-            for (let i = 0; i < cookies.length; i++) {
+            for (var i = 0; i < cookies.length; i++) {
                 var cookie = cookies[i].trim();
-
                 if (cookie.substring(0, name.length + 1) === (name + '=')) {
                     cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
                     break;
@@ -146,83 +84,96 @@ var utils = (function () {
         return cookieValue;
     }
 
-    /**
-     * DELETE: should pass params as object
-     */
-    function promiseRequest(form, method, endpoint, params, files, xhr, contentType) {
-        var requestParams = {
-            url: endpoint,
-            method: method,
-            contentType: files ? false : 'application/json',
-            dataType: files ? false : 'json',
-            cache: false,
+    function getCSRFToken() {
+        var token = getCookie('csrftoken');
+        if (!token) {
+            var meta = document.querySelector('meta[name="csrf-token"]');
+            if (meta) token = meta.getAttribute('content');
+        }
+        return token || '';
+    }
+
+    function showNotification(message, type) {
+        type = type || 'info';
+        var colors = {
+            success: 'bg-green-500',
+            error: 'bg-red-500',
+            warning: 'bg-yellow-500',
+            info: 'bg-indigo-500',
         };
-        var p;
 
-        if (xhr) {
-            requestParams.xhr = xhr;
+        var toast = document.createElement('div');
+        toast.className = 'fixed top-4 right-4 z-50 px-6 py-3 rounded-lg text-white shadow-lg transition-all transform translate-x-full ' + (colors[type] || colors.info);
+        toast.textContent = message;
+        document.body.appendChild(toast);
+
+        requestAnimationFrame(function () {
+            toast.classList.remove('translate-x-full');
+        });
+
+        setTimeout(function () {
+            toast.classList.add('translate-x-full');
+            setTimeout(function () { toast.remove(); }, 300);
+        }, 3000);
+    }
+
+    function copyToClipboard(text) {
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(text).then(function () {
+                showNotification('Copied to clipboard!', 'success');
+            });
+        } else {
+            var textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            textarea.remove();
+            showNotification('Copied to clipboard!', 'success');
         }
+    }
 
-        if (params) {
-            if (params.csrfmiddlewaretoken) {
-                requestParams.headers = {
-                    "X-CSRFToken": params.csrfmiddlewaretoken
-                };
-                delete params.csrfmiddlewaretoken;
-            } else {
-                requestParams.headers = {
-                    "X-CSRFToken": getCookie('csrftoken')
-                };
-            }
-        }
+    function countWords(text) {
+        if (!text || !text.trim()) return 0;
+        return text.trim().split(/\s+/).length;
+    }
 
-        if (form) {
-            form.find('button').addClass('m-progress').attr('disabled', 'disabled');
-            form.find('.alert').remove();
-            form.find('.error-message').remove();
-            form.find('.error').removeClass('error');
-        }
+    function countChars(text) {
+        if (!text) return 0;
+        return text.length;
+    }
 
-        if (params) {
-            if (method.toLowerCase() === 'get') {
-                requestParams.data = params;
-            } else {
-                if (files !== null && files !== undefined) {
-                    var formData = new FormData();
+    function debounce(func, wait) {
+        var timeout;
+        return function () {
+            var context = this, args = arguments;
+            clearTimeout(timeout);
+            timeout = setTimeout(function () {
+                func.apply(context, args);
+            }, wait);
+        };
+    }
 
-                    $.each(files, function (e, item) {
-                        formData.append('files', item);
-                    });
+    function formatNumber(num) {
+        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
 
-                    formData.append('data', JSON.stringify(params));
-                    requestParams.processData = false;
-                    requestParams.data = formData;
-                } else {
-                    requestParams.data = JSON.stringify(params);
-                }
-            }
-        }
+    function secondsToTime(totalSeconds) {
+        var h = Math.floor(totalSeconds / 3600);
+        var m = Math.floor((totalSeconds - h * 3600) / 60);
+        var s = totalSeconds - h * 3600 - m * 60;
+        return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+    }
 
-        if (method.toLowerCase() === 'delete' && params) {
-            requestParams.url += '?' + $.param(params);
-        }
+    function showNoCredits() {
+        showNotification('No credits remaining. Please upgrade your plan.', 'warning');
+    }
 
-        p = $.ajax(requestParams);
-        p = p.then(
-            function (response) {
-                return response
-            },
-            function (error) {
-                return $.Deferred().reject(error.responseJSON);
-            }
-        ).always(
-            function () {
-                if (form) {
-                    form.find('button').removeClass('m-progress').removeAttr('disabled');
-                }
-            }
-        );
+    function showRateLimitModal() {
+        showNotification('Rate limit reached. Please wait before trying again.', 'warning');
+    }
 
-        return p;
+    function showSizeExceededModal() {
+        showNotification('File size exceeds the maximum allowed limit.', 'error');
     }
 }());

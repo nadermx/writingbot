@@ -1,0 +1,206 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="text-center mb-4">
+        <h1 class="display-5 fw-bold">AI Content Detector</h1>
+        <p class="lead text-muted">Detect AI-generated content with sentence-level analysis</p>
+    </div>
+
+    {% csrf_token %}
+
+    <div x-data="aiDetector()" x-cloak>
+        <!-- Input Area -->
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label fw-semibold mb-0">Paste your text below</label>
+                            <div class="d-flex align-items-center gap-3">
+                                <small class="text-muted">
+                                    <span :class="wordCount < 80 ? 'text-danger' : 'text-success'" x-text="wordCount"></span>
+                                    words
+                                    <span x-show="wordCount < 80" class="text-danger">(min 80)</span>
+                                    {% if not is_premium %}
+                                    <span class="text-muted">/ 1,200 max</span>
+                                    {% endif %}
+                                </small>
+                                <label class="btn btn-sm btn-outline-secondary mb-0">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/></svg>
+                                    Upload
+                                    <input type="file" accept=".txt,.doc,.docx" class="d-none" @change="handleFileUpload($event)">
+                                </label>
+                            </div>
+                        </div>
+                        <textarea
+                            class="form-control"
+                            rows="10"
+                            x-model="inputText"
+                            @input="updateWordCount()"
+                            placeholder="Enter or paste your text here to check if it was written by AI... (minimum 80 words)"
+                            style="resize: vertical; font-size: 15px; line-height: 1.7;"
+                        ></textarea>
+
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <button
+                                class="btn btn-primary btn-lg px-5"
+                                @click="detectAI()"
+                                :disabled="loading || wordCount < 80"
+                            >
+                                <span x-show="!loading">Detect AI</span>
+                                <span x-show="loading">
+                                    <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                    Analyzing...
+                                </span>
+                            </button>
+                            <button
+                                class="btn btn-outline-secondary"
+                                @click="clearAll()"
+                                x-show="inputText.length > 0"
+                            >Clear</button>
+                        </div>
+
+                        <!-- Error Message -->
+                        <div x-show="error" class="alert alert-danger mt-3 mb-0" x-text="error"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div x-show="hasResults" class="row justify-content-center">
+            <div class="col-lg-10">
+                <!-- Overall Score -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body text-center py-4">
+                        <h5 class="fw-semibold mb-3">Detection Result</h5>
+                        <div class="row align-items-center">
+                            <div class="col-md-4">
+                                <!-- Gauge -->
+                                <div class="position-relative d-inline-block" style="width: 160px; height: 160px;">
+                                    <svg viewBox="0 0 120 120" class="w-100 h-100">
+                                        <!-- Background circle -->
+                                        <circle cx="60" cy="60" r="50" fill="none" stroke="#e9ecef" stroke-width="10"
+                                            stroke-dasharray="235.6" stroke-dashoffset="0"
+                                            transform="rotate(-90 60 60)" stroke-linecap="round"/>
+                                        <!-- Progress circle -->
+                                        <circle cx="60" cy="60" r="50" fill="none"
+                                            :stroke="getScoreColor(overallScore)" stroke-width="10"
+                                            stroke-dasharray="235.6"
+                                            :stroke-dashoffset="235.6 - (235.6 * (overallScore / 100))"
+                                            transform="rotate(-90 60 60)" stroke-linecap="round"
+                                            style="transition: stroke-dashoffset 1s ease-in-out;"/>
+                                    </svg>
+                                    <div class="position-absolute top-50 start-50 translate-middle text-center">
+                                        <span class="display-6 fw-bold" :style="'color:' + getScoreColor(overallScore)" x-text="overallScore + '%'"></span>
+                                    </div>
+                                </div>
+                                <p class="text-muted mt-2 mb-0">AI Probability</p>
+                            </div>
+                            <div class="col-md-4">
+                                <!-- Classification Badge -->
+                                <div class="py-3">
+                                    <span class="badge fs-6 px-4 py-2"
+                                        :class="{
+                                            'bg-danger': classification === 'ai_generated',
+                                            'bg-warning text-dark': classification === 'ai_refined',
+                                            'bg-warning bg-opacity-50 text-dark': classification === 'human_refined',
+                                            'bg-success': classification === 'human_written'
+                                        }"
+                                        x-text="classificationLabel">
+                                    </span>
+                                </div>
+                                <p class="text-muted small mb-0" x-text="getClassificationDescription()"></p>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="py-3">
+                                    <p class="mb-1"><strong>Words analyzed:</strong> <span x-text="resultWordCount"></span></p>
+                                    <div class="mt-2">
+                                        <div class="d-flex gap-2 flex-wrap justify-content-center">
+                                            <span class="badge bg-danger">AI Generated</span>
+                                            <span class="badge bg-warning text-dark">AI Refined</span>
+                                            <span class="badge" style="background-color: #ffc10780;">Human Refined</span>
+                                            <span class="badge bg-success">Human Written</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Highlighted Text -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0 fw-semibold">Sentence-by-Sentence Analysis</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="highlighted-text" style="line-height: 2; font-size: 15px;">
+                            <template x-for="(sentence, index) in sentences" :key="index">
+                                <span
+                                    class="highlighted-sentence px-1 rounded"
+                                    :style="'background-color:' + getSentenceBgColor(sentence.color) + '; cursor: pointer;'"
+                                    :title="sentence.label + ' (' + sentence.score + '%)'"
+                                    @click="selectedSentence = index"
+                                    :class="{'border border-2 border-dark': selectedSentence === index}"
+                                    x-text="sentence.text + ' '"
+                                ></span>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sentence Breakdown -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0 fw-semibold">Breakdown</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 50px;">#</th>
+                                        <th>Sentence</th>
+                                        <th style="width: 100px;" class="text-center">Score</th>
+                                        <th style="width: 140px;" class="text-center">Label</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="(sentence, index) in sentences" :key="'row-' + index">
+                                        <tr :class="{'table-active': selectedSentence === index}" @click="selectedSentence = index" style="cursor: pointer;">
+                                            <td class="text-muted" x-text="index + 1"></td>
+                                            <td style="font-size: 14px;" x-text="sentence.text"></td>
+                                            <td class="text-center">
+                                                <span class="fw-bold" :style="'color:' + getScoreColor(sentence.score)" x-text="sentence.score + '%'"></span>
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge"
+                                                    :class="{
+                                                        'bg-danger': sentence.color === 'red',
+                                                        'bg-warning text-dark': sentence.color === 'orange',
+                                                        'bg-warning bg-opacity-50 text-dark': sentence.color === 'yellow',
+                                                        'bg-success': sentence.color === 'green'
+                                                    }"
+                                                    x-text="sentence.label">
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js" defer></script>
+<script src="{% static 'js/ai-detector.js' %}?v={{ g.scripts_version }}"></script>
+{% endblock %}

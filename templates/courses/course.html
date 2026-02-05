@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Breadcrumb -->
+            <nav aria-label="breadcrumb" class="mb-3">
+                <ol class="breadcrumb small">
+                    <li class="breadcrumb-item"><a href="/courses/" class="text-decoration-none">Courses</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ course.title }}</li>
+                </ol>
+            </nav>
+
+            <h1 class="display-6 fw-bold mb-3">{{ course.title }}</h1>
+
+            {% if course.category %}
+            <span class="badge bg-primary bg-opacity-10 text-primary mb-3">{{ course.category }}</span>
+            {% endif %}
+
+            {% if course.description %}
+            <p class="lead text-muted mb-4">{{ course.description }}</p>
+            {% endif %}
+
+            <div class="d-flex gap-3 text-muted small mb-4">
+                <span>{{ course.chapters_count }} chapter{{ course.chapters_count|pluralize }}</span>
+                <span>&middot;</span>
+                <span>Free</span>
+            </div>
+
+            <!-- Chapter List -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <h5 class="fw-semibold mb-0">Course Chapters</h5>
+                </div>
+                <ul class="list-group list-group-flush">
+                    {% for chapter in chapters %}
+                    <li class="list-group-item">
+                        <a href="/courses/{{ course.slug }}/{{ chapter.slug }}/"
+                           class="d-flex align-items-center text-decoration-none text-dark py-2">
+                            <span class="badge bg-light text-muted rounded-circle me-3"
+                                  style="width: 32px; height: 32px; line-height: 32px; text-align: center;">
+                                {{ forloop.counter }}
+                            </span>
+                            <div class="flex-grow-1">
+                                <span class="fw-semibold">{{ chapter.title }}</span>
+                                <br>
+                                <small class="text-muted">{{ chapter.reading_time }} min read</small>
+                            </div>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#6c757d" viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+                        </a>
+                    </li>
+                    {% empty %}
+                    <li class="list-group-item text-center text-muted py-4">
+                        No chapters available yet.
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <!-- Start Button -->
+            {% if chapters %}
+            <div class="text-center mt-4">
+                {% with first=course.first_chapter %}
+                {% if first %}
+                <a href="/courses/{{ course.slug }}/{{ first.slug }}/" class="btn btn-primary btn-lg px-5">
+                    Start Course
+                </a>
+                {% endif %}
+                {% endwith %}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <h5 class="fw-semibold mb-3">Course Info</h5>
+                    <ul class="list-unstyled mb-0">
+                        <li class="d-flex justify-content-between py-2 border-bottom">
+                            <span class="text-muted">Chapters</span>
+                            <span class="fw-semibold">{{ course.chapters_count }}</span>
+                        </li>
+                        <li class="d-flex justify-content-between py-2 border-bottom">
+                            <span class="text-muted">Level</span>
+                            <span class="fw-semibold">All Levels</span>
+                        </li>
+                        <li class="d-flex justify-content-between py-2 border-bottom">
+                            <span class="text-muted">Price</span>
+                            <span class="fw-semibold text-success">Free</span>
+                        </li>
+                        {% if course.category %}
+                        <li class="d-flex justify-content-between py-2">
+                            <span class="text-muted">Category</span>
+                            <span class="fw-semibold">{{ course.category }}</span>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
