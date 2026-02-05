@@ -24,7 +24,7 @@ class QRServiceTests(TestCase):
         result, error = QRService.generate_qr(
             data='https://writingbot.ai',
             size=200,
-            fg_color='#000000',
+            color='#000000',
             bg_color='#FFFFFF',
         )
         self.assertIsNone(error)
