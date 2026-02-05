@@ -6,9 +6,6 @@
 #   ansible-playbook -i servers gitpull.yml
 
 - hosts: all
-  vars:
-    deploy_user: "{{ deploy_user | default(ansible_user) }}"
-
   tasks:
     - name: Pull latest changes
       become: true
