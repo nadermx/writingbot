@@ -21,6 +21,9 @@ urlpatterns = [
     # Payment webhooks
     path('ipns/', include('finances.urls.payment')),
 
+    # Captcha
+    path('captcha/', include('captcha.urls')),
+
     # Tool apps
     path('', include('paraphraser.urls')),
     path('', include('grammar.urls')),
