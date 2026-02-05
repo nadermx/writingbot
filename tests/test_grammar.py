@@ -31,7 +31,7 @@ class GrammarServiceTests(TestCase):
         corrections = [
             {'original': 'teh', 'suggestion': 'the', 'position': {'start': 0, 'end': 3}},
         ]
-        result, error = service.fix_all(corrections, 'teh cat')
+        result, error = service.fix_all('teh cat', corrections)
         self.assertIsNone(error)
         self.assertEqual(result, 'the cat')
 
