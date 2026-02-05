@@ -1,9 +1,63 @@
 /* WritingBot.ai - Custom Styles */
-/* Supplements Tailwind CSS */
+/* Supplements Bootstrap 5 */
+
+/* Brand Colors */
+:root {
+    --brand-600: #1a3fff;
+    --brand-700: #0f2ee6;
+    --brand-50: #f0f5ff;
+    --accent-500: #47a34c;
+    --accent-600: #36853a;
+}
+.text-brand { color: var(--brand-600) !important; }
+.bg-brand { background-color: var(--brand-600) !important; }
+.bg-brand-50 { background-color: var(--brand-50) !important; }
+.btn-brand {
+    background-color: var(--brand-600);
+    border-color: var(--brand-600);
+    color: white;
+}
+.btn-brand:hover {
+    background-color: var(--brand-700);
+    border-color: var(--brand-700);
+    color: white;
+}
+.btn-outline-brand {
+    color: var(--brand-600);
+    border-color: var(--brand-600);
+}
+.btn-outline-brand:hover {
+    background-color: var(--brand-600);
+    color: white;
+}
+.gradient-text-brand {
+    background: linear-gradient(135deg, #1a3fff, #3b66ff, #47a34c);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Dropdown item custom hover */
+.dropdown-item-custom {
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+}
+.dropdown-item-custom:hover {
+    background-color: #f0f5ff;
+    text-decoration: none;
+    color: inherit;
+}
+
+/* Alpine.js cloak */
+[x-cloak] {
+    display: none !important;
+}
 
 /* Base layout */
 html, body {
     min-height: 100vh;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
 body {

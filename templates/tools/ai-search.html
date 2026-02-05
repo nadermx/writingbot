@@ -2,11 +2,11 @@
 {% load static %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto px-4 py-6">
+<div class="container py-4" style="max-width: 896px;">
     <!-- Header -->
-    <div class="text-center mb-6">
-        <h1 class="text-3xl sm:text-4xl font-bold text-gray-900">AI Search</h1>
-        <p class="mt-2 text-gray-500">Get comprehensive, AI-synthesized answers with source references</p>
+    <div class="text-center mb-4">
+        <h1 class="display-5 fw-bold text-dark">AI Search</h1>
+        <p class="mt-2 text-muted">Get comprehensive, AI-synthesized answers with source references</p>
     </div>
 
     {% csrf_token %}
@@ -14,92 +14,93 @@
     <div x-data="aiSearch()" x-cloak>
 
         <!-- Usage Badge -->
-        <div class="flex justify-center mb-6">
+        <div class="d-flex justify-content-center mb-4">
             {% if not is_premium %}
-            <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-full text-sm text-gray-600">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            <div class="d-inline-flex align-items-center gap-2 px-3 py-1 bg-light rounded-pill small text-secondary">
+                <svg style="width:16px;height:16px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                 <span x-text="remaining >= 0 ? remaining + ' / {{ limit }} searches today' : 'Unlimited'"></span>
             </div>
             {% else %}
-            <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-brand-50 rounded-full text-sm text-brand-700">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+            <div class="d-inline-flex align-items-center gap-2 px-3 py-1 bg-brand-50 rounded-pill small text-brand">
+                <svg style="width:16px;height:16px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                 Premium - Unlimited searches
             </div>
             {% endif %}
         </div>
 
         <!-- Search Bar -->
-        <div class="relative mb-8">
-            <div class="flex gap-3">
-                <div class="flex-1 relative">
-                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        <div class="position-relative mb-5">
+            <div class="d-flex gap-3">
+                <div class="flex-grow-1 position-relative">
+                    <div class="position-absolute top-50 translate-middle-y" style="left:16px;pointer-events:none;">
+                        <svg style="width:20px;height:20px" class="text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                     </div>
                     <input
                         type="text"
                         x-model="query"
                         @keydown.enter="search()"
                         placeholder="Ask anything... e.g., 'What are the best practices for writing a cover letter?'"
-                        class="w-full pl-12 pr-4 py-4 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent shadow-sm"
+                        class="form-control form-control-lg rounded-3 shadow-sm"
+                        style="padding-left: 48px;"
                         :disabled="loading"
                     >
                 </div>
                 <button
                     @click="search()"
                     :disabled="loading || !query.trim()"
-                    class="flex-shrink-0 px-6 py-4 bg-brand-600 hover:bg-brand-700 disabled:bg-gray-300 text-white font-medium rounded-xl flex items-center gap-2 transition-colors shadow-sm"
+                    class="btn btn-brand flex-shrink-0 d-flex align-items-center gap-2 rounded-3 shadow-sm fw-medium px-4"
                 >
                     <span x-show="!loading">Search</span>
-                    <span x-show="loading" class="flex items-center gap-2">
-                        <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    <span x-show="loading" class="d-flex align-items-center gap-2">
+                        <svg style="width:16px;height:16px" class="animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                         Researching...
                     </span>
                 </button>
             </div>
 
             <!-- Suggestion Chips -->
-            <div x-show="!hasResult && !loading" class="flex flex-wrap gap-2 mt-4 justify-center">
+            <div x-show="!hasResult && !loading" class="d-flex flex-wrap gap-2 mt-3 justify-content-center">
                 <button @click="searchSuggestion('How to write an effective thesis statement')"
-                        class="px-3 py-1.5 text-xs bg-gray-100 hover:bg-brand-50 hover:text-brand-700 text-gray-600 rounded-lg transition-colors">
+                        class="btn btn-light btn-sm text-secondary" style="font-size:0.75rem;">
                     Thesis statement tips
                 </button>
                 <button @click="searchSuggestion('What is the difference between MLA and APA citation styles?')"
-                        class="px-3 py-1.5 text-xs bg-gray-100 hover:bg-brand-50 hover:text-brand-700 text-gray-600 rounded-lg transition-colors">
+                        class="btn btn-light btn-sm text-secondary" style="font-size:0.75rem;">
                     MLA vs APA
                 </button>
                 <button @click="searchSuggestion('Best strategies for overcoming writer\'s block')"
-                        class="px-3 py-1.5 text-xs bg-gray-100 hover:bg-brand-50 hover:text-brand-700 text-gray-600 rounded-lg transition-colors">
+                        class="btn btn-light btn-sm text-secondary" style="font-size:0.75rem;">
                     Writer's block solutions
                 </button>
                 <button @click="searchSuggestion('How to structure a persuasive essay')"
-                        class="px-3 py-1.5 text-xs bg-gray-100 hover:bg-brand-50 hover:text-brand-700 text-gray-600 rounded-lg transition-colors">
+                        class="btn btn-light btn-sm text-secondary" style="font-size:0.75rem;">
                     Persuasive essay structure
                 </button>
                 <button @click="searchSuggestion('What are common grammar mistakes in English?')"
-                        class="px-3 py-1.5 text-xs bg-gray-100 hover:bg-brand-50 hover:text-brand-700 text-gray-600 rounded-lg transition-colors">
+                        class="btn btn-light btn-sm text-secondary" style="font-size:0.75rem;">
                     Common grammar mistakes
                 </button>
             </div>
         </div>
 
         <!-- Error Message -->
-        <div x-show="error" class="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl">
-            <p class="text-sm text-red-600" x-text="error"></p>
+        <div x-show="error" class="mb-4 p-3 rounded-3" style="background-color:#fef2f2;border:1px solid #fee2e2;">
+            <p class="small text-danger mb-0" x-text="error"></p>
         </div>
 
         <!-- Loading Skeleton -->
-        <div x-show="loading" class="space-y-4">
-            <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-                <div class="animate-pulse space-y-4">
-                    <div class="h-4 bg-gray-200 rounded w-3/4"></div>
-                    <div class="h-4 bg-gray-200 rounded w-full"></div>
-                    <div class="h-4 bg-gray-200 rounded w-5/6"></div>
-                    <div class="h-4 bg-gray-200 rounded w-full"></div>
-                    <div class="h-4 bg-gray-200 rounded w-2/3"></div>
-                    <div class="mt-6 h-3 bg-gray-200 rounded w-full"></div>
-                    <div class="h-3 bg-gray-200 rounded w-4/5"></div>
-                    <div class="h-3 bg-gray-200 rounded w-full"></div>
-                    <div class="h-3 bg-gray-200 rounded w-3/4"></div>
+        <div x-show="loading">
+            <div class="card shadow-sm rounded-4 p-4 mb-3">
+                <div class="placeholder-glow">
+                    <div class="placeholder bg-secondary rounded mb-3" style="width:75%;height:16px;display:block;"></div>
+                    <div class="placeholder bg-secondary rounded mb-3" style="width:100%;height:16px;display:block;"></div>
+                    <div class="placeholder bg-secondary rounded mb-3" style="width:83%;height:16px;display:block;"></div>
+                    <div class="placeholder bg-secondary rounded mb-3" style="width:100%;height:16px;display:block;"></div>
+                    <div class="placeholder bg-secondary rounded mb-4" style="width:66%;height:16px;display:block;"></div>
+                    <div class="placeholder bg-secondary rounded mb-3" style="width:100%;height:12px;display:block;"></div>
+                    <div class="placeholder bg-secondary rounded mb-3" style="width:80%;height:12px;display:block;"></div>
+                    <div class="placeholder bg-secondary rounded mb-3" style="width:100%;height:12px;display:block;"></div>
+                    <div class="placeholder bg-secondary rounded" style="width:75%;height:12px;display:block;"></div>
                 </div>
             </div>
         </div>
@@ -108,50 +109,50 @@
         <div x-show="hasResult && !loading">
 
             <!-- Query Display -->
-            <div class="flex items-center gap-2 mb-4">
-                <span class="text-sm text-gray-500">Results for:</span>
-                <span class="text-sm font-medium text-gray-900" x-text="lastQuery"></span>
+            <div class="d-flex align-items-center gap-2 mb-3">
+                <span class="small text-muted">Results for:</span>
+                <span class="small fw-medium text-dark" x-text="lastQuery"></span>
             </div>
 
             <!-- Answer Card -->
-            <div class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden mb-6">
-                <div class="px-6 py-4 bg-gradient-to-r from-brand-50 to-white border-b border-gray-100">
-                    <div class="flex items-center gap-2">
-                        <div class="w-6 h-6 bg-brand-600 rounded-lg flex items-center justify-center">
-                            <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            <div class="card shadow-sm rounded-4 overflow-hidden mb-4">
+                <div class="px-4 py-3 border-bottom bg-brand-50">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="bg-brand rounded-3 d-flex align-items-center justify-content-center" style="width:24px;height:24px;">
+                            <svg style="width:14px;height:14px" class="text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                         </div>
-                        <span class="text-sm font-semibold text-gray-900">AI-Generated Answer</span>
+                        <span class="small fw-semibold text-dark">AI-Generated Answer</span>
                     </div>
                 </div>
-                <div class="p-6">
-                    <div class="prose prose-sm max-w-none prose-headings:mt-4 prose-headings:mb-2 prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-a:text-brand-600 text-gray-700 leading-relaxed" x-html="renderMarkdown(answer)"></div>
+                <div class="p-4">
+                    <div class="small text-body" style="line-height:1.6;" x-html="renderMarkdown(answer)"></div>
                 </div>
 
                 <!-- Copy Button -->
-                <div class="px-6 py-3 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
-                    <span class="text-xs text-gray-400">AI-generated content. Verify important facts independently.</span>
-                    <button @click="copyAnswer()" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-600 hover:text-brand-600 bg-white border border-gray-200 rounded-lg hover:border-brand-200 transition-colors">
-                        <svg x-show="!copied" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+                <div class="px-4 py-2 bg-light border-top d-flex justify-content-between align-items-center">
+                    <span style="font-size:0.75rem;" class="text-secondary">AI-generated content. Verify important facts independently.</span>
+                    <button @click="copyAnswer()" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1" style="font-size:0.75rem;">
+                        <svg x-show="!copied" style="width:14px;height:14px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
                         <span x-text="copied ? 'Copied!' : 'Copy'"></span>
                     </button>
                 </div>
             </div>
 
             <!-- Sources Section -->
-            <div x-show="sources.length > 0" class="mb-6">
-                <h3 class="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                    <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+            <div x-show="sources.length > 0" class="mb-4">
+                <h3 class="small fw-semibold text-dark mb-3 d-flex align-items-center gap-2">
+                    <svg style="width:16px;height:16px" class="text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
                     References
                 </h3>
-                <div class="grid gap-3">
+                <div class="d-grid gap-3">
                     <template x-for="(source, index) in sources" :key="index">
-                        <div class="flex items-start gap-3 p-4 bg-white border border-gray-200 rounded-xl hover:border-brand-200 transition-colors">
-                            <div class="flex-shrink-0 w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center mt-0.5">
-                                <span class="text-xs font-medium text-gray-500" x-text="index + 1"></span>
+                        <div class="d-flex align-items-start gap-3 p-3 bg-white border rounded-3">
+                            <div class="flex-shrink-0 bg-light rounded-circle d-flex align-items-center justify-content-center" style="width:24px;height:24px;">
+                                <span class="fw-medium text-muted" style="font-size:0.75rem;" x-text="index + 1"></span>
                             </div>
                             <div>
-                                <h4 class="text-sm font-medium text-gray-900" x-text="source.title"></h4>
-                                <p class="text-xs text-gray-500 mt-1" x-text="source.snippet"></p>
+                                <h4 class="small fw-medium text-dark mb-0" x-text="source.title"></h4>
+                                <p class="text-muted mt-1 mb-0" style="font-size:0.75rem;" x-text="source.snippet"></p>
                             </div>
                         </div>
                     </template>
@@ -160,23 +161,23 @@
 
             <!-- Search Again -->
             <div class="text-center">
-                <button @click="clearResults()" class="text-sm text-gray-500 hover:text-brand-600 transition-colors">
+                <button @click="clearResults()" class="btn btn-link btn-sm text-muted text-decoration-none">
                     Search something else
                 </button>
             </div>
         </div>
 
         <!-- Search History -->
-        <div x-show="!hasResult && !loading && searchHistory.length > 0" class="mt-8">
-            <div class="flex items-center justify-between mb-3">
-                <h3 class="text-sm font-semibold text-gray-700">Recent Searches</h3>
-                <button @click="clearHistory()" class="text-xs text-gray-400 hover:text-gray-600 transition-colors">Clear</button>
+        <div x-show="!hasResult && !loading && searchHistory.length > 0" class="mt-5">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h3 class="small fw-semibold text-body mb-0">Recent Searches</h3>
+                <button @click="clearHistory()" class="btn btn-link btn-sm text-secondary text-decoration-none p-0" style="font-size:0.75rem;">Clear</button>
             </div>
-            <div class="space-y-2">
+            <div class="d-grid gap-2">
                 <template x-for="(item, index) in searchHistory.slice(0, 5)" :key="index">
-                    <button @click="searchSuggestion(item)" class="w-full text-left flex items-center gap-3 px-4 py-3 bg-white border border-gray-200 rounded-xl hover:border-brand-200 hover:bg-brand-50 transition-colors group">
-                        <svg class="w-4 h-4 text-gray-400 group-hover:text-brand-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        <span class="text-sm text-gray-700 group-hover:text-brand-700 truncate" x-text="item"></span>
+                    <button @click="searchSuggestion(item)" class="btn btn-outline-light text-start d-flex align-items-center gap-3 px-3 py-2 border rounded-3 text-body">
+                        <svg style="width:16px;height:16px" class="text-secondary flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <span class="small text-body text-truncate" x-text="item"></span>
                     </button>
                 </template>
             </div>
