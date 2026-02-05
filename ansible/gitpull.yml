@@ -1,0 +1,40 @@
+---
+# Quick deploy - Pull latest code and restart
+#
+# USAGE:
+#   cd ansible
+#   ansible-playbook -i servers gitpull.yml
+
+- hosts: all
+  vars:
+    deploy_user: "{{ deploy_user | default(ansible_user) }}"
+
+  tasks:
+    - name: Pull latest changes
+      become: true
+      become_user: "{{ deploy_user }}"
+      git:
+        repo: "{{ githuburl }}"
+        dest: /home/www/{{ location }}
+        version: main
+        update: true
+        accept_hostkey: true
+      environment:
+        GIT_TERMINAL_PROMPT: "0"
+
+    - name: Install any new Python requirements
+      become: true
+      become_user: "{{ deploy_user }}"
+      pip:
+        requirements: /home/www/{{ location }}/requirements.txt
+        virtualenv: /home/www/{{ location }}/venv
+
+    - name: Restart application
+      become: true
+      supervisorctl:
+        name: "{{ projectname }}"
+        state: restarted
+
+    - name: Print status
+      debug:
+        msg: "Deployed latest code to {{ projectname }}"

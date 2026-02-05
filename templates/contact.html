@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <h1 class="h3 mb-4 text-center">{{ g.i18n.contact|default:"Contact Us" }}</h1>
+
+                    <p class="text-muted text-center mb-4">
+                        {{ g.i18n.need_help|default:"Need help?" }}
+                        <a href="/cancel/">{{ g.i18n.cancel_subscription|default:"Cancel Subscription" }}</a> |
+                        <a href="/refund/">{{ g.i18n.request_refund|default:"Request Refund" }}</a>
+                    </p>
+
+                    {% if errors %}
+                    <div class="alert alert-danger">
+                        <ul class="mb-0">
+                            {% for error in errors %}
+                            <li>{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+
+                    {% if success %}
+                    <div class="alert alert-success">
+                        {{ g.i18n.message_sent|default:"Your message has been sent. We'll get back to you soon." }}
+                    </div>
+                    {% else %}
+                    <form action="{{ request.path }}" method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label">{{ g.i18n.email_address|default:"Email Address" }}</label>
+                            <input type="email" name="email" class="form-control"
+                                   value="{{ data.email|default:'' }}" placeholder="john@example.com" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">{{ g.i18n.message|default:"Message" }}</label>
+                            <textarea name="message" rows="5" class="form-control" required>{{ data.message|default:'' }}</textarea>
+                        </div>
+                        <div class="mb-3">
+                            {{ form }}
+                        </div>
+                        <div class="d-grid">
+                            <button class="btn btn-primary btn-lg" type="submit">{{ g.i18n.send|default:"Send" }}</button>
+                        </div>
+                    </form>
+                    {% endif %}
+
+                    <hr>
+
+                    <p class="text-center text-muted mb-0">{{ g.i18n.or_contact|default:"Or email us directly"|safe }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,35 @@
+# Core Django
+Django>=6.0,<7.0
+djangorestframework>=3.16
+gunicorn>=25.0
+
+# Database
+psycopg2-binary>=2.9
+
+# Redis & Task Queue
+redis>=5.2
+django-redis>=5.4
+django-rq>=3.0
+
+# Authentication & Security
+PyJWT>=2.10
+
+# HTTP & Requests
+requests>=2.32
+urllib3>=2.3
+certifi>=2024.12
+
+# Payment Processors
+stripe>=14.0
+squareup>=40.0,<42.0  # v42+ has breaking API changes
+
+# Forms & Captcha
+django-simple-captcha>=0.6
+Pillow>=11.1
+
+# Select2 widget
+django-select2>=8.2
+
+# Utilities
+python-dateutil>=2.9
+pytz>=2024.2

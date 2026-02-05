@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <h1 class="text-center mb-4">{{ g.i18n.about|default:"About Us" }}</h1>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <p class="lead">{{ g.i18n.about_intro|default:"Welcome to our platform." }}</p>
+                    <p>{{ g.i18n.about_mission|default:"Our mission is to provide excellent service to our users." }}</p>
+                    <p>{{ g.i18n.about_team|default:"We are a dedicated team working to improve your experience." }}</p>
+                    <p class="mb-0">{{ g.i18n.about_contact|default:"Feel free to reach out if you have any questions." }}</p>
+                </div>
+            </div>
+
+            <div class="text-center">
+                <a href="/contact/" class="btn btn-primary">{{ g.i18n.contact_us|default:"Contact Us" }}</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

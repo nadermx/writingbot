@@ -1,0 +1,78 @@
+---
+# Copy this file to 'all' and fill in your values
+# cp all.example all
+
+# =============================================================================
+# Deploy User (created during first_run)
+# =============================================================================
+# This user will own the project and run the application
+deploy_user: myproject
+deploy_password: "CHANGE_ME_SECURE_PASSWORD"
+
+# For subsequent runs, ansible connects as this user
+ansible_user: myproject
+ansible_password: "CHANGE_ME_SECURE_PASSWORD"
+ansible_sudo_pass: "CHANGE_ME_SECURE_PASSWORD"
+
+# =============================================================================
+# Project Settings
+# =============================================================================
+# Directory name under /home/www/
+location: myproject
+
+# Used for nginx/supervisor config file names
+projectname: myproject
+
+# Your domain name (without www)
+domain: myproject.com
+
+# =============================================================================
+# GitHub Repository
+# =============================================================================
+githuburl: https://github.com/yourusername/yourproject.git
+
+# For private repos, use a personal access token
+# Create at: https://github.com/settings/tokens
+githubuser: yourusername
+githubpassword: "ghp_your_github_token"
+
+# =============================================================================
+# PostgreSQL Database
+# =============================================================================
+db_name: myproject
+db_user: myproject
+db_password: "CHANGE_ME_DB_PASSWORD"
+
+# =============================================================================
+# FIRST RUN INSTRUCTIONS
+# =============================================================================
+# 1. Get a fresh Ubuntu 24.04 server with root access
+# 2. Add your SSH key to root: ssh-copy-id root@your-server-ip
+# 3. Update this file with your values
+# 4. Update ansible/servers with your server IP
+# 5. Run the first deployment:
+#
+#    cd ansible
+#    ansible-playbook -i servers djangodeployubuntu24.yml -e "first_run=true ansible_user=root"
+#
+# This will:
+#   - Create the deploy user
+#   - Copy your SSH key to the deploy user
+#   - Install all packages
+#   - Set up the database
+#   - Deploy the application
+#   - Configure nginx and supervisor
+#   - Set up the firewall
+#   - DISABLE root login (for security)
+#
+# 6. After first run, subsequent deploys use:
+#
+#    ansible-playbook -i servers djangodeployubuntu24.yml
+#
+# =============================================================================
+# NOTES
+# =============================================================================
+# - After first run, root SSH login is disabled for security
+# - Connect using: ssh deploy_user@your-server-ip
+# - The deploy user has passwordless sudo access
+# - Remember to set up SSL: certbot --nginx -d yourdomain.com
