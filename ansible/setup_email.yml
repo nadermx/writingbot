@@ -1,0 +1,183 @@
+---
+# Ansible playbook to set up self-hosted email on mail.writingbot.ai
+# Uses Postfix for SMTP and OpenDKIM for email signing
+#
+# Usage:
+#   cd ansible
+#   ansible-playbook -i servers setup_email.yml
+#
+# After running:
+#   1. Copy the DKIM public key from output
+#   2. Add DNS records (see bottom of playbook output)
+#   3. Test with: python manage.py shell -c "from django.core.mail import send_mail; send_mail('Test', 'Body', 'noreply@mail.writingbot.ai', ['john@nader.mx'])"
+
+- name: Setup self-hosted email (Postfix + OpenDKIM)
+  hosts: all
+  become: yes
+  vars:
+    mail_domain: mail.writingbot.ai
+    base_domain: writingbot.ai
+    server_ip: 38.248.6.212
+    dkim_selector: mail
+    dkim_key_dir: /etc/opendkim/keys/{{ mail_domain }}
+
+  tasks:
+    - name: Install Postfix and OpenDKIM
+      apt:
+        name:
+          - postfix
+          - opendkim
+          - opendkim-tools
+          - mailutils
+        state: present
+        update_cache: yes
+
+    - name: Deploy Postfix main.cf
+      template:
+        src: files/postfix_main.cf.j2
+        dest: /etc/postfix/main.cf
+        owner: root
+        group: root
+        mode: '0644'
+      notify: restart postfix
+
+    - name: Deploy virtual aliases
+      template:
+        src: files/postfix_virtual.j2
+        dest: /etc/postfix/virtual
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Rebuild virtual alias database
+      command: postmap /etc/postfix/virtual
+      notify: restart postfix
+
+    - name: Deploy OpenDKIM config
+      template:
+        src: files/opendkim.conf.j2
+        dest: /etc/opendkim.conf
+        owner: root
+        group: root
+        mode: '0644'
+      notify: restart opendkim
+
+    - name: Create OpenDKIM directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: opendkim
+        group: opendkim
+        mode: '0750'
+      loop:
+        - /etc/opendkim
+        - /etc/opendkim/keys
+        - "{{ dkim_key_dir }}"
+
+    - name: Deploy OpenDKIM signing table
+      template:
+        src: files/opendkim_signing_table.j2
+        dest: /etc/opendkim/signing.table
+        owner: opendkim
+        group: opendkim
+        mode: '0644'
+      notify: restart opendkim
+
+    - name: Deploy OpenDKIM key table
+      template:
+        src: files/opendkim_key_table.j2
+        dest: /etc/opendkim/key.table
+        owner: opendkim
+        group: opendkim
+        mode: '0644'
+      notify: restart opendkim
+
+    - name: Deploy OpenDKIM trusted hosts
+      template:
+        src: files/opendkim_trusted_hosts.j2
+        dest: /etc/opendkim/trusted.hosts
+        owner: opendkim
+        group: opendkim
+        mode: '0644'
+      notify: restart opendkim
+
+    - name: Check if DKIM key exists
+      stat:
+        path: "{{ dkim_key_dir }}/{{ dkim_selector }}.private"
+      register: dkim_key
+
+    - name: Generate DKIM key pair (2048-bit)
+      command: >
+        opendkim-genkey
+        -b 2048
+        -d {{ mail_domain }}
+        -D {{ dkim_key_dir }}
+        -s {{ dkim_selector }}
+        -v
+      when: not dkim_key.stat.exists
+
+    - name: Set DKIM key ownership
+      file:
+        path: "{{ dkim_key_dir }}/{{ item }}"
+        owner: opendkim
+        group: opendkim
+        mode: '0600'
+      loop:
+        - "{{ dkim_selector }}.private"
+        - "{{ dkim_selector }}.txt"
+
+    - name: Create opendkim socket directory
+      file:
+        path: /run/opendkim
+        state: directory
+        owner: opendkim
+        group: opendkim
+        mode: '0750'
+
+    - name: Add postfix user to opendkim group
+      user:
+        name: postfix
+        groups: opendkim
+        append: yes
+
+    - name: Enable and start OpenDKIM
+      systemd:
+        name: opendkim
+        enabled: yes
+        state: started
+
+    - name: Enable and start Postfix
+      systemd:
+        name: postfix
+        enabled: yes
+        state: started
+
+    - name: Read DKIM public key
+      command: cat {{ dkim_key_dir }}/{{ dkim_selector }}.txt
+      register: dkim_public_key
+      changed_when: false
+
+    - name: Display DKIM public key for DNS setup
+      debug:
+        msg: |
+          === DKIM PUBLIC KEY ===
+          Add this as a TXT record for: {{ dkim_selector }}._domainkey.{{ mail_domain }}
+          {{ dkim_public_key.stdout }}
+
+          === REQUIRED DNS RECORDS ===
+          Type: A     | Name: mail              | Value: {{ server_ip }}
+          Type: MX    | Name: @                 | Value: mail.writingbot.ai (priority 10)
+          Type: TXT   | Name: @                 | Value: v=spf1 ip4:{{ server_ip }} a mx ~all
+          Type: TXT   | Name: _dmarc            | Value: v=DMARC1; p=quarantine; rua=mailto:john@nader.mx
+          Type: TXT   | Name: mail._domainkey.mail | Value: (DKIM key above)
+
+  handlers:
+    - name: restart postfix
+      systemd:
+        name: postfix
+        state: restarted
+
+    - name: restart opendkim
+      systemd:
+        name: opendkim
+        state: restarted

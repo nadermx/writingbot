@@ -1,0 +1,29 @@
+# OpenDKIM configuration - managed by Ansible
+
+# Logging
+Syslog                  yes
+SyslogSuccess           yes
+LogWhy                  yes
+
+# Signing and verification
+Canonicalization        relaxed/simple
+Mode                    sv
+SubDomains              no
+OversignHeaders         From
+
+# Key and signing tables
+SigningTable            refile:/etc/opendkim/signing.table
+KeyTable                /etc/opendkim/key.table
+ExternalIgnoreList      /etc/opendkim/trusted.hosts
+InternalHosts           /etc/opendkim/trusted.hosts
+
+# Connection
+Socket                  inet:8891@localhost
+PidFile                 /run/opendkim/opendkim.pid
+
+# Permissions
+UserID                  opendkim:opendkim
+UMask                   002
+
+# Algorithm
+SignatureAlgorithm      rsa-sha256

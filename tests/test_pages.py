@@ -8,6 +8,15 @@ from django.test import TestCase, Client
 class PublicPageTests(TestCase):
     """Test all public-facing pages return 200."""
 
+    @classmethod
+    def setUpTestData(cls):
+        # Create the Language record needed by GlobalVars.get_globals()
+        from translations.models.language import Language
+        Language.objects.get_or_create(
+            iso='en',
+            defaults={'name': 'English', 'en_label': 'English'}
+        )
+
     def setUp(self):
         self.client = Client()
 
@@ -95,10 +104,10 @@ class PublicPageTests(TestCase):
         self._get('/word-counter/')
 
     # ------------------------------------------------------------------
-    # Flow
+    # Flow (requires auth, expect redirect)
     # ------------------------------------------------------------------
     def test_flow(self):
-        self._get('/flow/')
+        self._get('/flow/', expected_status=302)
 
     def test_ai_chat(self):
         self._get('/ai-chat/')

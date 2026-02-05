@@ -1,9 +1,22 @@
 """Tests for media tools services (non-LLM operations)."""
-import io
+import unittest
 
 from django.test import TestCase
 
+try:
+    import qrcode
+    HAS_QRCODE = True
+except ImportError:
+    HAS_QRCODE = False
 
+try:
+    import wordcloud
+    HAS_WORDCLOUD = True
+except ImportError:
+    HAS_WORDCLOUD = False
+
+
+@unittest.skipUnless(HAS_QRCODE, 'qrcode package not installed')
 class QRServiceTests(TestCase):
 
     def test_generate_qr_code(self):
@@ -24,6 +37,7 @@ class QRServiceTests(TestCase):
         self.assertIsNotNone(error)
 
 
+@unittest.skipUnless(HAS_WORDCLOUD, 'wordcloud package not installed')
 class WordCloudServiceTests(TestCase):
 
     def test_generate_word_cloud(self):

@@ -1,0 +1,3 @@
+# Key table - managed by Ansible
+# Maps key names to domain:selector:key_path
+{{ dkim_selector }}._domainkey.{{ mail_domain }}    {{ mail_domain }}:{{ dkim_selector }}:{{ dkim_key_dir }}/{{ dkim_selector }}.private

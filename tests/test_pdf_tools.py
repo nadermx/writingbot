@@ -1,18 +1,30 @@
 """Tests for PDF tools service (no LLM mock needed for most operations)."""
 import io
+import unittest
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 
 try:
     from pypdf import PdfWriter
+    HAS_PYPDF = True
 except ImportError:
-    from PyPDF2 import PdfWriter
+    try:
+        from PyPDF2 import PdfWriter
+        HAS_PYPDF = True
+    except ImportError:
+        HAS_PYPDF = False
 
 
 def make_test_pdf(num_pages=3):
     """Create a minimal valid PDF file for testing."""
-    writer = PdfWriter()
+    if not HAS_PYPDF:
+        return None
+    try:
+        from pypdf import PdfWriter as Writer
+    except ImportError:
+        from PyPDF2 import PdfWriter as Writer
+    writer = Writer()
     for _ in range(num_pages):
         writer.add_blank_page(width=612, height=792)
     buf = io.BytesIO()
@@ -21,6 +33,7 @@ def make_test_pdf(num_pages=3):
     return SimpleUploadedFile('test.pdf', buf.read(), content_type='application/pdf')
 
 
+@unittest.skipUnless(HAS_PYPDF, 'pypdf/PyPDF2 not installed')
 class PDFServiceTests(TestCase):
 
     def test_merge_pdfs(self):

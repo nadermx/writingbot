@@ -1,0 +1,3 @@
+# Signing table - managed by Ansible
+# Maps sender addresses/domains to signing key names
+*@{{ mail_domain }}     {{ dkim_selector }}._domainkey.{{ mail_domain }}

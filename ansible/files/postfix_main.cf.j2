@@ -1,0 +1,50 @@
+# Postfix main.cf - managed by Ansible
+# See /usr/share/postfix/main.cf.dist for a complete reference
+
+# General
+smtpd_banner = $myhostname ESMTP
+biff = no
+append_dot_mydomain = no
+readme_directory = no
+compatibility_level = 2
+
+# TLS parameters
+smtpd_tls_cert_file=/etc/ssl/certs/ssl-cert-snakeoil.pem
+smtpd_tls_key_file=/etc/ssl/private/ssl-cert-snakeoil.key
+smtpd_tls_security_level=may
+smtp_tls_CApath=/etc/ssl/certs
+smtp_tls_security_level=may
+smtp_tls_session_cache_database = btree:${data_directory}/smtp_scache
+
+# Hostname and domain
+myhostname = {{ mail_domain }}
+mydomain = {{ base_domain }}
+myorigin = {{ mail_domain }}
+mydestination = $myhostname, {{ base_domain }}, localhost.localdomain, localhost
+
+# Network
+mynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128
+inet_interfaces = all
+inet_protocols = all
+
+# Virtual aliases
+virtual_alias_domains = {{ base_domain }}
+virtual_alias_maps = hash:/etc/postfix/virtual
+
+# Mailbox
+alias_maps = hash:/etc/aliases
+alias_database = hash:/etc/aliases
+mailbox_size_limit = 0
+recipient_delimiter = +
+
+# OpenDKIM milter
+milter_default_action = accept
+milter_protocol = 6
+smtpd_milters = inet:localhost:8891
+non_smtpd_milters = inet:localhost:8891
+
+# Security restrictions
+smtpd_helo_required = yes
+smtpd_recipient_restrictions =
+    permit_mynetworks,
+    reject_unauth_destination

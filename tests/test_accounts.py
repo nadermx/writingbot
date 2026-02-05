@@ -4,6 +4,14 @@ from django.test import TestCase, Client
 
 class AuthPageTests(TestCase):
 
+    @classmethod
+    def setUpTestData(cls):
+        from translations.models.language import Language
+        Language.objects.get_or_create(
+            iso='en',
+            defaults={'name': 'English', 'en_label': 'English'}
+        )
+
     def setUp(self):
         self.client = Client()
 

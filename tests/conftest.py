@@ -43,10 +43,13 @@ MOCK_SUMMARY_RESPONSE = json.dumps({
     'key_points': ['Point 1', 'Point 2'],
 })
 
-MOCK_AI_DETECT_RESPONSE = json.dumps([
-    {'sentence': 'This is a test sentence.', 'score': 45},
-    {'sentence': 'Another sentence here.', 'score': 20},
-])
+MOCK_AI_DETECT_RESPONSE = json.dumps({
+    'sentences': [
+        {'text': 'This is a test sentence.', 'score': 45},
+        {'text': 'Another sentence here.', 'score': 20},
+    ],
+    'overall_score': 32,
+})
 
 MOCK_HUMANIZE_SCORE_RESPONSE = '75'
 

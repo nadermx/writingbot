@@ -69,8 +69,8 @@ EMAIL_PORT = 25
 EMAIL_USE_TLS = False
 EMAIL_HOST_USER = ''
 EMAIL_HOST_PASSWORD = ''
-DEFAULT_FROM_EMAIL = f'{PROJECT_NAME} <no-reply@{PROJECT_DOMAIN}>'
-SERVER_EMAIL = f'server@{PROJECT_DOMAIN}'
+DEFAULT_FROM_EMAIL = f'{PROJECT_NAME} <no-reply@mail.{PROJECT_DOMAIN}>'
+SERVER_EMAIL = f'server@mail.{PROJECT_DOMAIN}'
 
 # For development:
 # EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
