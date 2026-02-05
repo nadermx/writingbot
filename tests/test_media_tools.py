@@ -21,7 +21,7 @@ class QRServiceTests(TestCase):
 
     def test_generate_qr_code(self):
         from media_tools.services import QRService
-        result, error = QRService.generate_qr_code(
+        result, error = QRService.generate_qr(
             data='https://writingbot.ai',
             size=200,
             fg_color='#000000',
@@ -32,7 +32,7 @@ class QRServiceTests(TestCase):
 
     def test_generate_qr_code_empty_data(self):
         from media_tools.services import QRService
-        result, error = QRService.generate_qr_code(data='')
+        result, error = QRService.generate_qr(data='')
         self.assertIsNone(result)
         self.assertIsNotNone(error)
 
