@@ -1,0 +1,49 @@
+"""Tests for media tools services (non-LLM operations)."""
+import io
+
+from django.test import TestCase
+
+
+class QRServiceTests(TestCase):
+
+    def test_generate_qr_code(self):
+        from media_tools.services import QRService
+        result, error = QRService.generate_qr_code(
+            data='https://writingbot.ai',
+            size=200,
+            fg_color='#000000',
+            bg_color='#FFFFFF',
+        )
+        self.assertIsNone(error)
+        self.assertIsNotNone(result)
+
+    def test_generate_qr_code_empty_data(self):
+        from media_tools.services import QRService
+        result, error = QRService.generate_qr_code(data='')
+        self.assertIsNone(result)
+        self.assertIsNotNone(error)
+
+
+class WordCloudServiceTests(TestCase):
+
+    def test_generate_word_cloud(self):
+        from media_tools.services import WordCloudService
+        text = 'writing tools AI paraphraser grammar checker summarizer word cloud test'
+        result, error = WordCloudService.generate_word_cloud(text)
+        self.assertIsNone(error)
+        self.assertIsNotNone(result)
+
+    def test_generate_word_cloud_empty(self):
+        from media_tools.services import WordCloudService
+        result, error = WordCloudService.generate_word_cloud('')
+        self.assertIsNone(result)
+        self.assertIsNotNone(error)
+
+
+class VoiceServiceTests(TestCase):
+
+    def test_voice_mapping(self):
+        from media_tools.services import VoiceService
+        # Check that all voice IDs are valid
+        self.assertIn('alloy', VoiceService.VOICES)
+        self.assertIn('echo', VoiceService.VOICES)

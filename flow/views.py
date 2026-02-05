@@ -242,7 +242,8 @@ class AISuggestAPI(APIView):
         # Strip HTML for the AI
         plain_text = strip_html(content)
 
-        suggestion, error = FlowService.suggest_next(plain_text, cursor_position)
+        is_premium = getattr(request.user, 'is_plan_active', False)
+        suggestion, error = FlowService.suggest_next(plain_text, cursor_position, use_premium=is_premium)
 
         if error:
             return Response(
@@ -280,7 +281,8 @@ class AIReviewAPI(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        review, error = FlowService.ai_review(plain_text)
+        is_premium = getattr(request.user, 'is_plan_active', False)
+        review, error = FlowService.ai_review(plain_text, use_premium=is_premium)
 
         if error:
             return Response(
@@ -315,7 +317,8 @@ class SmartStartAPI(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        outline, error = FlowService.smart_start(keywords)
+        is_premium = getattr(request.user, 'is_plan_active', False)
+        outline, error = FlowService.smart_start(keywords, use_premium=is_premium)
 
         if error:
             return Response(
@@ -468,7 +471,11 @@ class AIChatAPI(APIView):
             )
 
         # Call the chat service
-        reply, error = FlowService.chat(message, history)
+        is_premium = (
+            request.user.is_authenticated
+            and getattr(request.user, 'is_plan_active', False)
+        )
+        reply, error = FlowService.chat(message, history, use_premium=is_premium)
 
         if error:
             return Response(
@@ -555,7 +562,11 @@ class AISearchAPI(APIView):
             )
 
         # Call the search service
-        result, error = FlowService.search(query)
+        is_premium = (
+            request.user.is_authenticated
+            and getattr(request.user, 'is_plan_active', False)
+        )
+        result, error = FlowService.search(query, use_premium=is_premium)
 
         if error:
             return Response(

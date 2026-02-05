@@ -45,6 +45,13 @@ CURRENCY_SYMBOL = '$'
 ANTHROPIC_API_KEY = ''  # Get from https://console.anthropic.com/
 ANTHROPIC_MODEL = 'claude-sonnet-4-5-20250929'  # Default model for tool operations
 
+# Open-Source LLM API (served from GPU server via ollama)
+WRITINGBOT_API_URL = 'https://api.writingbot.ai'
+WRITINGBOT_API_KEY = ''  # Shared secret with GPU server
+
+# Premium LLM: set to True to use Claude for premium users
+USE_CLAUDE_FOR_PREMIUM = True
+
 # Translation API
 TRANSLATEAPI_KEY = ''  # Get from https://translateapi.ai/
 

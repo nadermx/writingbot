@@ -1,17 +1,15 @@
 import json
 import logging
-import anthropic
-from django.conf import settings
+from core.llm_client import LLMClient
 
 logger = logging.getLogger('app')
 
 
 class AIGrammarService:
     def __init__(self):
-        self.client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-        self.model = getattr(settings, 'ANTHROPIC_MODEL', 'claude-sonnet-4-5-20250929')
+        pass
 
-    def check_grammar(self, text, dialect='en-us'):
+    def check_grammar(self, text, dialect='en-us', use_premium=False):
         """
         Check grammar and score writing quality.
         Returns (result_dict, error_string).
@@ -60,13 +58,15 @@ Important rules:
 - Return ONLY valid JSON, no markdown formatting or extra text"""
 
         try:
-            response = self.client.messages.create(
-                model=self.model,
+            response_text, error = LLMClient.generate(
+                system_prompt=None,
+                messages=[{"role": "user", "content": prompt}],
                 max_tokens=4096,
-                messages=[{"role": "user", "content": prompt}]
+                use_premium=use_premium
             )
 
-            response_text = response.content[0].text.strip()
+            if error:
+                return None, error
 
             # Strip markdown code fences if present
             if response_text.startswith('```'):
@@ -100,9 +100,6 @@ Important rules:
         except json.JSONDecodeError as e:
             logger.error(f"Grammar check JSON parse error: {e}")
             return None, "Failed to parse AI response"
-        except anthropic.APIError as e:
-            logger.error(f"Grammar check API error: {e}")
-            return None, "AI service temporarily unavailable"
         except Exception as e:
             logger.error(f"Grammar check error: {e}")
             return None, str(e)

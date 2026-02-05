@@ -128,7 +128,11 @@ class AIToolsService:
             return None, f'Daily limit of {limit} free generations reached. Upgrade to Premium for unlimited access.'
 
         # Generate content
-        output_text, error = generator.generate(params)
+        use_premium = (
+            user and user.is_authenticated
+            and getattr(user, 'is_plan_active', False)
+        )
+        output_text, error = generator.generate(params, use_premium=use_premium)
 
         if error:
             return None, error

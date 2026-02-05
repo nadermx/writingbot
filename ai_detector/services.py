@@ -3,8 +3,7 @@ import logging
 import re
 import math
 
-import anthropic
-from django.conf import settings
+from core.llm_client import LLMClient
 
 logger = logging.getLogger('app')
 
@@ -101,9 +100,13 @@ class AIDetectorService:
         return min(uniformity_score + vocab_score + phrase_score, 50)
 
     @staticmethod
-    def detect(text):
+    def detect(text, use_premium=False):
         """
         Analyze text for AI-generated content using Claude + perplexity heuristics.
+
+        Args:
+            text: Text to analyze
+            use_premium: Whether to use premium tier for LLM calls
 
         Returns:
             tuple: (result_dict, error_string)
@@ -117,8 +120,6 @@ class AIDetectorService:
         heuristic_score = AIDetectorService._compute_perplexity_heuristics(text)
 
         try:
-            client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-
             prompt = f"""Analyze the following text and determine if it was written by AI or a human.
 For each sentence, provide a probability score from 0 to 100 indicating how likely it is AI-generated (100 = definitely AI, 0 = definitely human).
 
@@ -144,15 +145,18 @@ Text to analyze:
 
 Return ONLY the JSON object, no other text."""
 
-            response = client.messages.create(
-                model=settings.ANTHROPIC_MODEL,
+            response_text, error = LLMClient.generate(
+                system_prompt=None,
+                messages=[{"role": "user", "content": prompt}],
                 max_tokens=4096,
-                messages=[
-                    {"role": "user", "content": prompt}
-                ]
+                use_premium=use_premium
             )
 
-            response_text = response.content[0].text.strip()
+            if error:
+                logger.error(f'LLM error in AI detector: {error}')
+                return None, 'AI detection service is temporarily unavailable. Please try again.'
+
+            response_text = response_text.strip()
 
             # Extract JSON from response
             json_match = re.search(r'\{[\s\S]*\}', response_text)
@@ -196,9 +200,6 @@ Return ONLY the JSON object, no other text."""
                 'sentences': analyzed_sentences,
             }, None
 
-        except anthropic.APIError as e:
-            logger.error(f'Anthropic API error in AI detector: {str(e)}')
-            return None, 'AI detection service is temporarily unavailable. Please try again.'
         except json.JSONDecodeError as e:
             logger.error(f'JSON decode error in AI detector: {str(e)}')
             return None, 'Failed to parse AI detection results.'

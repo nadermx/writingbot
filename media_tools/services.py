@@ -3,8 +3,9 @@ import logging
 import os
 import tempfile
 
-import anthropic
 from django.conf import settings
+
+from core.llm_client import LLMClient
 
 logger = logging.getLogger('app')
 
@@ -287,7 +288,7 @@ class AIImageService:
     """Service for AI image generation using Anthropic Claude."""
 
     @classmethod
-    def generate_image_prompt(cls, description):
+    def generate_image_prompt(cls, description, use_premium=False):
         """
         Generate a detailed image generation prompt from a user description.
         This returns a refined prompt, not an actual image (since Claude does not generate images).
@@ -295,36 +296,30 @@ class AIImageService:
 
         Args:
             description: User's image description.
+            use_premium: If True, use premium LLM model.
 
         Returns:
             Tuple of (refined_prompt, error).
         """
-        try:
-            if not description or not description.strip():
-                return None, 'Please enter an image description.'
+        if not description or not description.strip():
+            return None, 'Please enter an image description.'
 
-            client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-            response = client.messages.create(
-                model=settings.ANTHROPIC_MODEL,
-                max_tokens=1024,
-                system=(
-                    'You are an expert at crafting detailed image generation prompts. '
-                    'Given a user description, create a detailed, vivid prompt that would produce a high-quality image. '
-                    'Include details about style, lighting, composition, colors, and mood. '
-                    'Return ONLY the refined prompt text, nothing else.'
-                ),
-                messages=[
-                    {'role': 'user', 'content': description}
-                ]
-            )
-            refined = response.content[0].text.strip()
-            return refined, None
-
-        except anthropic.RateLimitError:
-            return None, 'Service is temporarily busy. Please try again.'
-        except Exception as e:
-            logger.error(f'AI image prompt generation failed: {e}')
-            return None, 'Failed to generate image prompt.'
+        text, error = LLMClient.generate(
+            system_prompt=(
+                'You are an expert at crafting detailed image generation prompts. '
+                'Given a user description, create a detailed, vivid prompt that would produce a high-quality image. '
+                'Include details about style, lighting, composition, colors, and mood. '
+                'Return ONLY the refined prompt text, nothing else.'
+            ),
+            messages=[
+                {'role': 'user', 'content': description}
+            ],
+            max_tokens=1024,
+            use_premium=use_premium,
+        )
+        if error:
+            return None, error
+        return text, None
 
 
 class TranscriptionService:
@@ -386,6 +381,7 @@ class TranscriptionService:
                 except Exception:
                     duration_str = 'unknown'
 
+                import anthropic
                 client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
                 response = client.messages.create(
                     model=settings.ANTHROPIC_MODEL,
@@ -431,7 +427,7 @@ class LogoService:
     }
 
     @classmethod
-    def generate_logo_prompt(cls, business_name, industry='', style='modern', colors='', additional=''):
+    def generate_logo_prompt(cls, business_name, industry='', style='modern', colors='', additional='', use_premium=False):
         """
         Generate a detailed logo design description using AI.
 
@@ -441,50 +437,44 @@ class LogoService:
             style: Design style from STYLES.
             colors: Preferred color palette.
             additional: Additional preferences or requirements.
+            use_premium: If True, use premium LLM model.
 
         Returns:
             Tuple of (logo design description, error).
         """
-        try:
-            if not business_name or not business_name.strip():
-                return None, 'Please enter a business name.'
+        if not business_name or not business_name.strip():
+            return None, 'Please enter a business name.'
 
-            style_label = cls.STYLES.get(style, 'Modern & Minimalist')
+        style_label = cls.STYLES.get(style, 'Modern & Minimalist')
 
-            client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-            response = client.messages.create(
-                model=settings.ANTHROPIC_MODEL,
-                max_tokens=1500,
-                system=(
-                    'You are an expert logo designer and brand identity consultant. '
-                    'Given business details, create a comprehensive logo design brief with:\n'
-                    '1. **Concept**: A clear description of the logo concept and symbolism\n'
-                    '2. **Typography**: Font style recommendations and text treatment\n'
-                    '3. **Icon/Symbol**: Detailed description of any icon or graphical element\n'
-                    '4. **Color Palette**: Specific hex color codes with usage guidelines\n'
-                    '5. **Variations**: Suggestions for horizontal, stacked, and icon-only versions\n'
-                    '6. **AI Image Prompt**: A ready-to-use prompt for AI image generators like DALL-E or Midjourney\n\n'
-                    'Be specific, creative, and professional. Format with clear markdown headings.'
-                ),
-                messages=[
-                    {'role': 'user', 'content': (
-                        f'Business Name: {business_name}\n'
-                        f'Industry: {industry or "Not specified"}\n'
-                        f'Style: {style_label}\n'
-                        f'Preferred Colors: {colors or "Designer\'s choice"}\n'
-                        f'Additional Notes: {additional or "None"}\n\n'
-                        'Please create a detailed logo design brief and AI generation prompt.'
-                    )}
-                ]
-            )
-            result = response.content[0].text.strip()
-            return result, None
-
-        except anthropic.RateLimitError:
-            return None, 'Service is temporarily busy. Please try again.'
-        except Exception as e:
-            logger.error(f'Logo generation failed: {e}')
-            return None, 'Failed to generate logo design. Please try again.'
+        text, error = LLMClient.generate(
+            system_prompt=(
+                'You are an expert logo designer and brand identity consultant. '
+                'Given business details, create a comprehensive logo design brief with:\n'
+                '1. **Concept**: A clear description of the logo concept and symbolism\n'
+                '2. **Typography**: Font style recommendations and text treatment\n'
+                '3. **Icon/Symbol**: Detailed description of any icon or graphical element\n'
+                '4. **Color Palette**: Specific hex color codes with usage guidelines\n'
+                '5. **Variations**: Suggestions for horizontal, stacked, and icon-only versions\n'
+                '6. **AI Image Prompt**: A ready-to-use prompt for AI image generators like DALL-E or Midjourney\n\n'
+                'Be specific, creative, and professional. Format with clear markdown headings.'
+            ),
+            messages=[
+                {'role': 'user', 'content': (
+                    f'Business Name: {business_name}\n'
+                    f'Industry: {industry or "Not specified"}\n'
+                    f'Style: {style_label}\n'
+                    f'Preferred Colors: {colors or "Designer\'s choice"}\n'
+                    f'Additional Notes: {additional or "None"}\n\n'
+                    'Please create a detailed logo design brief and AI generation prompt.'
+                )}
+            ],
+            max_tokens=1500,
+            use_premium=use_premium,
+        )
+        if error:
+            return None, error
+        return text, None
 
 
 class CharacterService:
@@ -502,7 +492,7 @@ class CharacterService:
     }
 
     @classmethod
-    def generate_character(cls, name='', traits='', style='concept', gender='', age='', additional=''):
+    def generate_character(cls, name='', traits='', style='concept', gender='', age='', additional='', use_premium=False):
         """
         Generate a detailed AI character description.
 
@@ -513,53 +503,47 @@ class CharacterService:
             gender: Character gender (optional).
             age: Character age range (optional).
             additional: Additional details.
+            use_premium: If True, use premium LLM model.
 
         Returns:
             Tuple of (character description, error).
         """
-        try:
-            if not traits or not traits.strip():
-                return None, 'Please describe your character traits or features.'
+        if not traits or not traits.strip():
+            return None, 'Please describe your character traits or features.'
 
-            style_label = cls.STYLES.get(style, 'Concept Art')
+        style_label = cls.STYLES.get(style, 'Concept Art')
 
-            client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-            response = client.messages.create(
-                model=settings.ANTHROPIC_MODEL,
-                max_tokens=2000,
-                system=(
-                    'You are an expert character designer for games, animation, and storytelling. '
-                    'Given character details, create a comprehensive character sheet with:\n'
-                    '1. **Visual Description**: Detailed physical appearance (hair, eyes, build, distinguishing features)\n'
-                    '2. **Outfit & Accessories**: Clothing, armor, accessories, and props\n'
-                    '3. **Personality Profile**: Key traits, motivations, quirks\n'
-                    '4. **Background**: Brief backstory that informs the design\n'
-                    '5. **Color Palette**: Key colors associated with the character\n'
-                    '6. **Pose Suggestions**: 3 recommended poses for illustration\n'
-                    '7. **AI Image Prompt**: A ready-to-use prompt for AI image generators, '
-                    'optimized for the specified art style\n\n'
-                    'Be creative, detailed, and consistent with the requested style. Format with clear markdown headings.'
-                ),
-                messages=[
-                    {'role': 'user', 'content': (
-                        f'Character Name: {name or "Unnamed"}\n'
-                        f'Traits/Description: {traits}\n'
-                        f'Art Style: {style_label}\n'
-                        f'Gender: {gender or "Not specified"}\n'
-                        f'Age: {age or "Not specified"}\n'
-                        f'Additional Details: {additional or "None"}\n\n'
-                        'Please create a detailed character sheet and AI generation prompt.'
-                    )}
-                ]
-            )
-            result = response.content[0].text.strip()
-            return result, None
-
-        except anthropic.RateLimitError:
-            return None, 'Service is temporarily busy. Please try again.'
-        except Exception as e:
-            logger.error(f'Character generation failed: {e}')
-            return None, 'Failed to generate character. Please try again.'
+        text, error = LLMClient.generate(
+            system_prompt=(
+                'You are an expert character designer for games, animation, and storytelling. '
+                'Given character details, create a comprehensive character sheet with:\n'
+                '1. **Visual Description**: Detailed physical appearance (hair, eyes, build, distinguishing features)\n'
+                '2. **Outfit & Accessories**: Clothing, armor, accessories, and props\n'
+                '3. **Personality Profile**: Key traits, motivations, quirks\n'
+                '4. **Background**: Brief backstory that informs the design\n'
+                '5. **Color Palette**: Key colors associated with the character\n'
+                '6. **Pose Suggestions**: 3 recommended poses for illustration\n'
+                '7. **AI Image Prompt**: A ready-to-use prompt for AI image generators, '
+                'optimized for the specified art style\n\n'
+                'Be creative, detailed, and consistent with the requested style. Format with clear markdown headings.'
+            ),
+            messages=[
+                {'role': 'user', 'content': (
+                    f'Character Name: {name or "Unnamed"}\n'
+                    f'Traits/Description: {traits}\n'
+                    f'Art Style: {style_label}\n'
+                    f'Gender: {gender or "Not specified"}\n'
+                    f'Age: {age or "Not specified"}\n'
+                    f'Additional Details: {additional or "None"}\n\n'
+                    'Please create a detailed character sheet and AI generation prompt.'
+                )}
+            ],
+            max_tokens=2000,
+            use_premium=use_premium,
+        )
+        if error:
+            return None, error
+        return text, None
 
 
 class WordCloudService:
@@ -655,7 +639,7 @@ class BannerService:
     }
 
     @classmethod
-    def generate_banner(cls, title, subtitle='', cta='', size='1200x628', style='', brand_colors='', additional=''):
+    def generate_banner(cls, title, subtitle='', cta='', size='1200x628', style='', brand_colors='', additional='', use_premium=False):
         """
         Generate a detailed banner design description using AI.
 
@@ -667,60 +651,54 @@ class BannerService:
             style: Design style preference.
             brand_colors: Brand color palette.
             additional: Additional requirements.
+            use_premium: If True, use premium LLM model.
 
         Returns:
             Tuple of (banner design description, error).
         """
+        if not title or not title.strip():
+            return None, 'Please enter a banner title.'
+
+        size_label = cls.SIZES.get(size, size)
         try:
-            if not title or not title.strip():
-                return None, 'Please enter a banner title.'
+            width, height = size.split('x')
+            orientation = 'horizontal' if int(width) > int(height) else 'vertical' if int(height) > int(width) else 'square'
+        except ValueError:
+            orientation = 'horizontal'
 
-            size_label = cls.SIZES.get(size, size)
-            try:
-                width, height = size.split('x')
-                orientation = 'horizontal' if int(width) > int(height) else 'vertical' if int(height) > int(width) else 'square'
-            except ValueError:
-                orientation = 'horizontal'
-
-            client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-            response = client.messages.create(
-                model=settings.ANTHROPIC_MODEL,
-                max_tokens=1500,
-                system=(
-                    'You are an expert digital advertising designer. '
-                    'Given banner details, create a comprehensive banner design brief with:\n'
-                    '1. **Layout**: Detailed layout description for the specific dimensions\n'
-                    '2. **Visual Elements**: Background, images, patterns, and graphical elements\n'
-                    '3. **Typography**: Font choices, sizes, and hierarchy for the headline, subtitle, and CTA\n'
-                    '4. **Color Scheme**: Specific hex colors for all elements\n'
-                    '5. **CTA Button**: Button design, shape, color, and placement\n'
-                    '6. **Design Tips**: Best practices for the specific ad format\n'
-                    '7. **AI Image Prompt**: A ready-to-use prompt for AI image generators to create the banner background or full design\n\n'
-                    'Be specific about positioning, spacing, and proportions for the given dimensions. '
-                    'Format with clear markdown headings.'
-                ),
-                messages=[
-                    {'role': 'user', 'content': (
-                        f'Banner Title: {title}\n'
-                        f'Subtitle: {subtitle or "None"}\n'
-                        f'Call to Action: {cta or "None"}\n'
-                        f'Size: {size_label} ({size}px)\n'
-                        f'Orientation: {orientation}\n'
-                        f'Style: {style or "Professional and clean"}\n'
-                        f'Brand Colors: {brand_colors or "Designer\'s choice"}\n'
-                        f'Additional Notes: {additional or "None"}\n\n'
-                        'Please create a detailed banner design brief and AI generation prompt.'
-                    )}
-                ]
-            )
-            result = response.content[0].text.strip()
-            return result, None
-
-        except anthropic.RateLimitError:
-            return None, 'Service is temporarily busy. Please try again.'
-        except Exception as e:
-            logger.error(f'Banner generation failed: {e}')
-            return None, 'Failed to generate banner design. Please try again.'
+        text, error = LLMClient.generate(
+            system_prompt=(
+                'You are an expert digital advertising designer. '
+                'Given banner details, create a comprehensive banner design brief with:\n'
+                '1. **Layout**: Detailed layout description for the specific dimensions\n'
+                '2. **Visual Elements**: Background, images, patterns, and graphical elements\n'
+                '3. **Typography**: Font choices, sizes, and hierarchy for the headline, subtitle, and CTA\n'
+                '4. **Color Scheme**: Specific hex colors for all elements\n'
+                '5. **CTA Button**: Button design, shape, color, and placement\n'
+                '6. **Design Tips**: Best practices for the specific ad format\n'
+                '7. **AI Image Prompt**: A ready-to-use prompt for AI image generators to create the banner background or full design\n\n'
+                'Be specific about positioning, spacing, and proportions for the given dimensions. '
+                'Format with clear markdown headings.'
+            ),
+            messages=[
+                {'role': 'user', 'content': (
+                    f'Banner Title: {title}\n'
+                    f'Subtitle: {subtitle or "None"}\n'
+                    f'Call to Action: {cta or "None"}\n'
+                    f'Size: {size_label} ({size}px)\n'
+                    f'Orientation: {orientation}\n'
+                    f'Style: {style or "Professional and clean"}\n'
+                    f'Brand Colors: {brand_colors or "Designer\'s choice"}\n'
+                    f'Additional Notes: {additional or "None"}\n\n'
+                    'Please create a detailed banner design brief and AI generation prompt.'
+                )}
+            ],
+            max_tokens=1500,
+            use_premium=use_premium,
+        )
+        if error:
+            return None, error
+        return text, None
 
 
 class PresentationService:
@@ -737,7 +715,7 @@ class PresentationService:
     }
 
     @classmethod
-    def generate_presentation(cls, topic, num_slides=10, style='professional', audience='', additional=''):
+    def generate_presentation(cls, topic, num_slides=10, style='professional', audience='', additional='', use_premium=False):
         """
         Generate a detailed presentation outline with slide-by-slide content.
 
@@ -747,52 +725,46 @@ class PresentationService:
             style: Presentation style from STYLES.
             audience: Target audience description.
             additional: Additional requirements.
+            use_premium: If True, use premium LLM model.
 
         Returns:
             Tuple of (presentation content, error).
         """
-        try:
-            if not topic or not topic.strip():
-                return None, 'Please enter a presentation topic.'
+        if not topic or not topic.strip():
+            return None, 'Please enter a presentation topic.'
 
-            num_slides = max(3, min(30, int(num_slides)))
-            style_label = cls.STYLES.get(style, 'Professional / Corporate')
+        num_slides = max(3, min(30, int(num_slides)))
+        style_label = cls.STYLES.get(style, 'Professional / Corporate')
 
-            client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-            response = client.messages.create(
-                model=settings.ANTHROPIC_MODEL,
-                max_tokens=4096,
-                system=(
-                    'You are an expert presentation designer and content strategist. '
-                    'Create a complete, slide-by-slide presentation outline. For each slide provide:\n\n'
-                    '**Slide N: [Title]**\n'
-                    '- **Layout**: Description of the slide layout (title slide, two-column, image+text, etc.)\n'
-                    '- **Heading**: The slide heading text\n'
-                    '- **Content**: Bullet points or body text (concise, presentation-ready)\n'
-                    '- **Speaker Notes**: Brief notes for the presenter\n'
-                    '- **Visual Suggestion**: Recommended image, chart, or graphic\n\n'
-                    'Also include:\n'
-                    '- **Design Theme**: Color palette, font recommendations, overall visual style\n'
-                    '- **Key Takeaways**: 3-5 main points the audience should remember\n\n'
-                    'Make the content engaging, well-structured, and ready to use. '
-                    'Follow the specified presentation style. Format with clear markdown.'
-                ),
-                messages=[
-                    {'role': 'user', 'content': (
-                        f'Topic: {topic}\n'
-                        f'Number of Slides: {num_slides}\n'
-                        f'Style: {style_label}\n'
-                        f'Target Audience: {audience or "General"}\n'
-                        f'Additional Requirements: {additional or "None"}\n\n'
-                        f'Please create a complete {num_slides}-slide presentation.'
-                    )}
-                ]
-            )
-            result = response.content[0].text.strip()
-            return result, None
-
-        except anthropic.RateLimitError:
-            return None, 'Service is temporarily busy. Please try again.'
-        except Exception as e:
-            logger.error(f'Presentation generation failed: {e}')
-            return None, 'Failed to generate presentation. Please try again.'
+        text, error = LLMClient.generate(
+            system_prompt=(
+                'You are an expert presentation designer and content strategist. '
+                'Create a complete, slide-by-slide presentation outline. For each slide provide:\n\n'
+                '**Slide N: [Title]**\n'
+                '- **Layout**: Description of the slide layout (title slide, two-column, image+text, etc.)\n'
+                '- **Heading**: The slide heading text\n'
+                '- **Content**: Bullet points or body text (concise, presentation-ready)\n'
+                '- **Speaker Notes**: Brief notes for the presenter\n'
+                '- **Visual Suggestion**: Recommended image, chart, or graphic\n\n'
+                'Also include:\n'
+                '- **Design Theme**: Color palette, font recommendations, overall visual style\n'
+                '- **Key Takeaways**: 3-5 main points the audience should remember\n\n'
+                'Make the content engaging, well-structured, and ready to use. '
+                'Follow the specified presentation style. Format with clear markdown.'
+            ),
+            messages=[
+                {'role': 'user', 'content': (
+                    f'Topic: {topic}\n'
+                    f'Number of Slides: {num_slides}\n'
+                    f'Style: {style_label}\n'
+                    f'Target Audience: {audience or "General"}\n'
+                    f'Additional Requirements: {additional or "None"}\n\n'
+                    f'Please create a complete {num_slides}-slide presentation.'
+                )}
+            ],
+            max_tokens=4096,
+            use_premium=use_premium,
+        )
+        if error:
+            return None, error
+        return text, None

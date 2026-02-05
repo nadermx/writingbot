@@ -76,7 +76,7 @@ class SummarizeAPI(APIView):
             )
 
         service = AISummarizerService()
-        result, error = service.summarize(text, mode, length)
+        result, error = service.summarize(text, mode, length, use_premium=is_premium)
 
         if error:
             return Response(

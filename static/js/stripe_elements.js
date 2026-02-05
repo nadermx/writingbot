@@ -22,7 +22,7 @@ btn.addEventListener('click', async (e) => {
     if(result.error) {
       alert(result.error.message);
     } else {
-      window.location = "https://removebackground.app/success";
+      window.location = "/success/";
     }
   });
 });

@@ -1,7 +1,8 @@
 import logging
 
-import anthropic
 from django.conf import settings
+
+from core.llm_client import LLMClient
 
 logger = logging.getLogger('app')
 
@@ -49,12 +50,13 @@ class BaseGenerator:
                 prompt = prompt.replace('{' + key + '}', str(params.get(key, '')))
         return prompt
 
-    def generate(self, params):
+    def generate(self, params, use_premium=False):
         """
-        Build the prompt from params and call the Claude API.
+        Build the prompt from params and call the LLM.
 
         Args:
             params: dict of user input values keyed by field name.
+            use_premium: If True, use Claude for premium users.
 
         Returns:
             Tuple of (output_text, error). On success error is None.
@@ -76,28 +78,12 @@ class BaseGenerator:
 
         user_message = '\n'.join(user_parts) if user_parts else 'Generate content based on the system instructions.'
 
-        try:
-            client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-            response = client.messages.create(
-                model=settings.ANTHROPIC_MODEL,
-                max_tokens=4096,
-                system=system_prompt,
-                messages=[
-                    {'role': 'user', 'content': user_message}
-                ],
-            )
-            output_text = response.content[0].text
-            return output_text, None
-
-        except anthropic.RateLimitError:
-            logger.warning(f'Anthropic rate limit reached for tool: {self.slug}')
-            return None, 'Service is temporarily busy. Please try again in a moment.'
-        except anthropic.APIError as e:
-            logger.error(f'Anthropic API error for tool {self.slug}: {e}')
-            return None, 'An error occurred while generating content. Please try again.'
-        except Exception as e:
-            logger.error(f'Unexpected error for tool {self.slug}: {e}')
-            return None, 'An unexpected error occurred. Please try again.'
+        return LLMClient.generate(
+            system_prompt=system_prompt,
+            messages=[{'role': 'user', 'content': user_message}],
+            max_tokens=4096,
+            use_premium=use_premium,
+        )
 
     def to_dict(self):
         """Serialize the generator config to a dict for templates and API responses."""

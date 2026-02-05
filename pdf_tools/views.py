@@ -445,7 +445,11 @@ class ChatPDFAPI(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        answer, error = PDFService.chat_with_pdf(file, question)
+        is_premium = (
+            request.user.is_authenticated
+            and getattr(request.user, 'is_plan_active', False)
+        )
+        answer, error = PDFService.chat_with_pdf(file, question, use_premium=is_premium)
         if error:
             return Response({'error': error}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

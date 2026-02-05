@@ -75,7 +75,7 @@ class HumanizeAPI(APIView):
             )
 
         # Run humanization
-        result, error = AIHumanizerService.humanize(text, mode)
+        result, error = AIHumanizerService.humanize(text, mode, use_premium=is_premium)
 
         if error:
             return Response(

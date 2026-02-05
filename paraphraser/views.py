@@ -117,6 +117,7 @@ class ParaphraseAPI(APIView):
             frozen_words=frozen_words,
             settings_dict=settings_dict,
             language=language,
+            use_premium=is_premium,
         )
 
         if error:

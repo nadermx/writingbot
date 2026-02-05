@@ -68,7 +68,7 @@ class AIDetectAPI(APIView):
             )
 
         # Run detection
-        result, error = AIDetectorService.detect(text)
+        result, error = AIDetectorService.detect(text, use_premium=is_premium)
 
         if error:
             return Response(

@@ -1,10 +1,13 @@
 import hashlib
 import json
 import logging
+import re
+from urllib.parse import quote_plus
 
-import anthropic
+import requests
 from django.conf import settings
 from django.utils import timezone
+from core.llm_client import LLMClient
 
 logger = logging.getLogger('app')
 
@@ -22,13 +25,14 @@ class FlowService:
     """
 
     @classmethod
-    def suggest_next(cls, document_content, cursor_position=None):
+    def suggest_next(cls, document_content, cursor_position=None, use_premium=False):
         """
         Suggest the next sentence(s) based on document content and cursor position.
 
         Args:
             document_content: The full document text (HTML stripped by caller or raw text).
             cursor_position: Optional integer character offset of the cursor.
+            use_premium: Whether the user has premium access.
 
         Returns:
             Tuple of (suggestion_text, error). On success error is None.
@@ -54,35 +58,30 @@ class FlowService:
             return 'Start writing your document here...', None
 
         try:
-            client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-            response = client.messages.create(
-                model=settings.ANTHROPIC_MODEL,
-                max_tokens=512,
-                system=system_prompt,
+            suggestion, error = LLMClient.generate(
+                system_prompt=system_prompt,
                 messages=[
                     {'role': 'user', 'content': f'Continue this text:\n\n{text}'}
-                ]
+                ],
+                max_tokens=512,
+                use_premium=use_premium
             )
-            suggestion = response.content[0].text.strip()
-            return suggestion, None
+            if error:
+                return None, error
+            return suggestion.strip(), None
 
-        except anthropic.RateLimitError:
-            logger.warning('Anthropic rate limit reached during suggest_next')
-            return None, 'Service is temporarily busy. Please try again in a moment.'
-        except anthropic.APIError as e:
-            logger.error(f'Anthropic API error during suggest_next: {e}')
-            return None, 'An error occurred while generating suggestions. Please try again.'
         except Exception as e:
             logger.error(f'Unexpected error during suggest_next: {e}')
             return None, 'An unexpected error occurred. Please try again.'
 
     @classmethod
-    def ai_review(cls, document_content):
+    def ai_review(cls, document_content, use_premium=False):
         """
         Review a document and provide feedback on clarity, tone, style, and structure.
 
         Args:
             document_content: The full document text.
+            use_premium: Whether the user has premium access.
 
         Returns:
             Tuple of (review_dict, error). review_dict has keys: summary, clarity, tone, style, structure, suggestions.
@@ -104,16 +103,18 @@ class FlowService:
             return None, 'Please provide some text to review.'
 
         try:
-            client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-            response = client.messages.create(
-                model=settings.ANTHROPIC_MODEL,
-                max_tokens=1024,
-                system=system_prompt,
+            raw, error = LLMClient.generate(
+                system_prompt=system_prompt,
                 messages=[
                     {'role': 'user', 'content': f'Review this document:\n\n{document_content}'}
-                ]
+                ],
+                max_tokens=1024,
+                use_premium=use_premium
             )
-            raw = response.content[0].text.strip()
+            if error:
+                return None, error
+
+            raw = raw.strip()
 
             # Handle markdown code block wrapping
             if raw.startswith('```'):
@@ -125,23 +126,18 @@ class FlowService:
         except json.JSONDecodeError:
             logger.warning('Failed to parse AI review response as JSON')
             return None, 'Failed to parse the review. Please try again.'
-        except anthropic.RateLimitError:
-            logger.warning('Anthropic rate limit reached during ai_review')
-            return None, 'Service is temporarily busy. Please try again in a moment.'
-        except anthropic.APIError as e:
-            logger.error(f'Anthropic API error during ai_review: {e}')
-            return None, 'An error occurred while reviewing your document. Please try again.'
         except Exception as e:
             logger.error(f'Unexpected error during ai_review: {e}')
             return None, 'An unexpected error occurred. Please try again.'
 
     @classmethod
-    def smart_start(cls, keywords):
+    def smart_start(cls, keywords, use_premium=False):
         """
         Generate a document outline from keywords to help users get started.
 
         Args:
             keywords: A string of keywords or a brief topic description.
+            use_premium: Whether the user has premium access.
 
         Returns:
             Tuple of (outline_html, error). outline_html is HTML-formatted outline content.
@@ -163,16 +159,18 @@ class FlowService:
             return None, 'Please provide keywords or a topic to generate an outline.'
 
         try:
-            client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-            response = client.messages.create(
-                model=settings.ANTHROPIC_MODEL,
-                max_tokens=2048,
-                system=system_prompt,
+            outline, error = LLMClient.generate(
+                system_prompt=system_prompt,
                 messages=[
                     {'role': 'user', 'content': f'Generate a document outline for: {keywords}'}
-                ]
+                ],
+                max_tokens=2048,
+                use_premium=use_premium
             )
-            outline = response.content[0].text.strip()
+            if error:
+                return None, error
+
+            outline = outline.strip()
 
             # Strip markdown code fences if present
             if outline.startswith('```'):
@@ -180,12 +178,6 @@ class FlowService:
 
             return outline, None
 
-        except anthropic.RateLimitError:
-            logger.warning('Anthropic rate limit reached during smart_start')
-            return None, 'Service is temporarily busy. Please try again in a moment.'
-        except anthropic.APIError as e:
-            logger.error(f'Anthropic API error during smart_start: {e}')
-            return None, 'An error occurred while generating the outline. Please try again.'
         except Exception as e:
             logger.error(f'Unexpected error during smart_start: {e}')
             return None, 'An unexpected error occurred. Please try again.'
@@ -193,7 +185,7 @@ class FlowService:
     @classmethod
     def research_search(cls, query):
         """
-        Placeholder for web search integration for the research sidebar.
+        Search the web via DuckDuckGo for the research sidebar.
 
         Args:
             query: Search query string.
@@ -204,24 +196,62 @@ class FlowService:
         if not query or not query.strip():
             return None, 'Please enter a search query.'
 
-        # Placeholder: in production, integrate with a web search API
-        # (e.g., Brave Search, SerpAPI, Google Custom Search)
-        results = [
-            {
-                'title': f'Search results for "{query}"',
-                'snippet': 'Web search integration is coming soon. This is a placeholder result.',
-                'url': '#',
-            }
-        ]
-        return results, None
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (compatible; WritingBot/1.0; +https://writingbot.ai)'
+        }
+
+        try:
+            encoded_query = quote_plus(query.strip())
+            search_url = f'https://html.duckduckgo.com/html/?q={encoded_query}'
+            response = requests.get(search_url, headers=headers, timeout=8)
+
+            if response.status_code != 200:
+                return None, 'Search service is temporarily unavailable. Please try again.'
+
+            html = response.text
+
+            # Extract result links and snippets (same pattern as plagiarism service)
+            raw_results = re.findall(
+                r'<a[^>]+class="result__a"[^>]+href="([^"]*)"[^>]*>([^<]*)</a>.*?'
+                r'<a[^>]+class="result__snippet"[^>]*>(.*?)</a>',
+                html,
+                re.DOTALL
+            )
+
+            results = []
+            for result_url, result_title, snippet in raw_results[:10]:
+                clean_snippet = re.sub(r'<[^>]+>', '', snippet).strip()
+                clean_title = re.sub(r'<[^>]+>', '', result_title).strip()
+                if clean_title and result_url:
+                    results.append({
+                        'title': clean_title[:200],
+                        'snippet': clean_snippet[:500] if clean_snippet else '',
+                        'url': result_url,
+                    })
+
+            if not results:
+                return [], None
+
+            return results, None
+
+        except requests.exceptions.Timeout:
+            logger.warning(f'Research search timed out for query: {query}')
+            return None, 'Search timed out. Please try again.'
+        except requests.exceptions.RequestException as e:
+            logger.warning(f'Research search request failed: {e}')
+            return None, 'Search service is temporarily unavailable. Please try again.'
+        except Exception as e:
+            logger.error(f'Unexpected error during research search: {e}')
+            return None, 'An unexpected error occurred. Please try again.'
 
     @classmethod
-    def generate_outline(cls, topic):
+    def generate_outline(cls, topic, use_premium=False):
         """
         Generate a structured outline for a given topic.
 
         Args:
             topic: The topic or subject to outline.
+            use_premium: Whether the user has premium access.
 
         Returns:
             Tuple of (outline_data, error). outline_data is a dict with title and sections.
@@ -239,16 +269,18 @@ class FlowService:
             return None, 'Please provide a topic.'
 
         try:
-            client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-            response = client.messages.create(
-                model=settings.ANTHROPIC_MODEL,
-                max_tokens=1024,
-                system=system_prompt,
+            raw, error = LLMClient.generate(
+                system_prompt=system_prompt,
                 messages=[
                     {'role': 'user', 'content': f'Generate an outline for: {topic}'}
-                ]
+                ],
+                max_tokens=1024,
+                use_premium=use_premium
             )
-            raw = response.content[0].text.strip()
+            if error:
+                return None, error
+
+            raw = raw.strip()
 
             if raw.startswith('```'):
                 raw = raw.split('\n', 1)[-1].rsplit('```', 1)[0].strip()
@@ -259,12 +291,6 @@ class FlowService:
         except json.JSONDecodeError:
             logger.warning('Failed to parse outline response as JSON')
             return None, 'Failed to parse the outline. Please try again.'
-        except anthropic.RateLimitError:
-            logger.warning('Anthropic rate limit reached during generate_outline')
-            return None, 'Service is temporarily busy. Please try again in a moment.'
-        except anthropic.APIError as e:
-            logger.error(f'Anthropic API error during generate_outline: {e}')
-            return None, 'An error occurred while generating the outline. Please try again.'
         except Exception as e:
             logger.error(f'Unexpected error during generate_outline: {e}')
             return None, 'An unexpected error occurred. Please try again.'
@@ -332,13 +358,14 @@ class FlowService:
     # ------------------------------------------------------------------
 
     @classmethod
-    def chat(cls, message, history=None):
+    def chat(cls, message, history=None, use_premium=False):
         """
         Send a message with conversation history to Claude and return the response.
 
         Args:
             message: The user's latest message string.
             history: List of dicts with 'role' ('user'|'assistant') and 'content'.
+            use_premium: Whether the user has premium access.
 
         Returns:
             Tuple of (response_text, error). On success error is None.
@@ -373,22 +400,16 @@ class FlowService:
             messages = messages[-20:]
 
         try:
-            client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-            response = client.messages.create(
-                model=settings.ANTHROPIC_MODEL,
-                max_tokens=2048,
-                system=system_prompt,
+            reply, error = LLMClient.generate(
+                system_prompt=system_prompt,
                 messages=messages,
+                max_tokens=2048,
+                use_premium=use_premium
             )
-            reply = response.content[0].text.strip()
-            return reply, None
+            if error:
+                return None, error
+            return reply.strip(), None
 
-        except anthropic.RateLimitError:
-            logger.warning('Anthropic rate limit reached during chat')
-            return None, 'Service is temporarily busy. Please try again in a moment.'
-        except anthropic.APIError as e:
-            logger.error(f'Anthropic API error during chat: {e}')
-            return None, 'An error occurred while generating a response. Please try again.'
         except Exception as e:
             logger.error(f'Unexpected error during chat: {e}')
             return None, 'An unexpected error occurred. Please try again.'
@@ -398,13 +419,14 @@ class FlowService:
     # ------------------------------------------------------------------
 
     @classmethod
-    def search(cls, query):
+    def search(cls, query, use_premium=False):
         """
         Generate an AI-synthesized answer for a search query, including
         structured source-like references.
 
         Args:
             query: The user's search query string.
+            use_premium: Whether the user has premium access.
 
         Returns:
             Tuple of (result_dict, error).
@@ -428,16 +450,18 @@ class FlowService:
             return None, 'Please enter a search query.'
 
         try:
-            client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-            response = client.messages.create(
-                model=settings.ANTHROPIC_MODEL,
-                max_tokens=3000,
-                system=system_prompt,
+            raw, error = LLMClient.generate(
+                system_prompt=system_prompt,
                 messages=[
                     {'role': 'user', 'content': f'Research this topic: {query.strip()}'}
-                ]
+                ],
+                max_tokens=3000,
+                use_premium=use_premium
             )
-            raw = response.content[0].text.strip()
+            if error:
+                return None, error
+
+            raw = raw.strip()
 
             # Parse the structured response
             answer = raw
@@ -464,12 +488,6 @@ class FlowService:
 
             return {'answer': answer, 'sources': sources}, None
 
-        except anthropic.RateLimitError:
-            logger.warning('Anthropic rate limit reached during search')
-            return None, 'Service is temporarily busy. Please try again in a moment.'
-        except anthropic.APIError as e:
-            logger.error(f'Anthropic API error during search: {e}')
-            return None, 'An error occurred while researching your query. Please try again.'
         except Exception as e:
             logger.error(f'Unexpected error during search: {e}')
             return None, 'An unexpected error occurred. Please try again.'

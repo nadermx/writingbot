@@ -1,15 +1,13 @@
 import json
 import logging
-import anthropic
-from django.conf import settings
+from core.llm_client import LLMClient
 
 logger = logging.getLogger('app')
 
 
 class AISummarizerService:
     def __init__(self):
-        self.client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-        self.model = getattr(settings, 'ANTHROPIC_MODEL', 'claude-sonnet-4-5-20250929')
+        pass
 
     # Map length 1-5 to approximate percentage of original
     LENGTH_MAP = {
@@ -20,11 +18,12 @@ class AISummarizerService:
         5: 50,
     }
 
-    def summarize(self, text, mode='paragraph', length=3):
+    def summarize(self, text, mode='paragraph', length=3, use_premium=False):
         """
         Summarize the given text.
         mode: 'key_sentences' or 'paragraph'
         length: 1-5 (shortest to longest)
+        use_premium: whether to use premium model
         Returns (result_dict, error_string).
         """
         length = max(1, min(5, int(length)))
@@ -62,13 +61,17 @@ Return ONLY a valid JSON object with this structure:
 Return ONLY valid JSON, no markdown formatting or extra text."""
 
         try:
-            response = self.client.messages.create(
-                model=self.model,
+            response_text, error = LLMClient.generate(
+                system_prompt="You are an expert text summarizer.",
+                messages=[{"role": "user", "content": prompt}],
                 max_tokens=2048,
-                messages=[{"role": "user", "content": prompt}]
+                use_premium=use_premium
             )
 
-            response_text = response.content[0].text.strip()
+            if error:
+                return None, error
+
+            response_text = response_text.strip()
 
             # Strip markdown code fences if present
             if response_text.startswith('```'):
@@ -107,9 +110,6 @@ Return ONLY valid JSON, no markdown formatting or extra text."""
         except json.JSONDecodeError as e:
             logger.error(f"Summarizer JSON parse error: {e}")
             return None, "Failed to parse AI response"
-        except anthropic.APIError as e:
-            logger.error(f"Summarizer API error: {e}")
-            return None, "AI service temporarily unavailable"
         except Exception as e:
             logger.error(f"Summarizer error: {e}")
             return None, str(e)

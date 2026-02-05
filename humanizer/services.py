@@ -2,8 +2,7 @@ import json
 import logging
 import re
 
-import anthropic
-from django.conf import settings
+from core.llm_client import LLMClient
 
 logger = logging.getLogger('app')
 
@@ -11,13 +10,14 @@ logger = logging.getLogger('app')
 class AIHumanizerService:
 
     @staticmethod
-    def humanize(text, mode='basic'):
+    def humanize(text, mode='basic', use_premium=False):
         """
         Rewrite AI-generated text to sound more human.
 
         Args:
             text: The AI-generated text to humanize
             mode: 'basic' for light touch, 'advanced' for deep rewrite
+            use_premium: Whether to use premium model tier
 
         Returns:
             tuple: (result_dict, error_string)
@@ -27,8 +27,6 @@ class AIHumanizerService:
             return None, 'Please provide text to humanize.'
 
         try:
-            client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-
             # First, assess the AI score of the input
             score_prompt = f"""Analyze this text and estimate how likely it is to be AI-generated.
 Return ONLY a JSON object with this format: {{"ai_score": 75}}
@@ -37,13 +35,17 @@ The score should be 0-100 where 100 = definitely AI generated.
 Text:
 {text}"""
 
-            score_response = client.messages.create(
-                model=settings.ANTHROPIC_MODEL,
+            score_text, error = LLMClient.generate(
+                system_prompt="You are an AI text detector.",
+                messages=[{"role": "user", "content": score_prompt}],
                 max_tokens=256,
-                messages=[{"role": "user", "content": score_prompt}]
+                use_premium=use_premium
             )
 
-            score_text = score_response.content[0].text.strip()
+            if error:
+                return None, error
+
+            score_text = score_text.strip()
             json_match = re.search(r'\{[\s\S]*?\}', score_text)
             if json_match:
                 score_data = json.loads(json_match.group())
@@ -84,13 +86,17 @@ IMPORTANT: Return ONLY the rewritten text. Do not include any explanations, note
 Text to rewrite:
 {text}"""
 
-            humanize_response = client.messages.create(
-                model=settings.ANTHROPIC_MODEL,
+            output_text, error = LLMClient.generate(
+                system_prompt="You are a professional text rewriter who makes AI text sound human.",
+                messages=[{"role": "user", "content": humanize_prompt}],
                 max_tokens=4096,
-                messages=[{"role": "user", "content": humanize_prompt}]
+                use_premium=use_premium
             )
 
-            output_text = humanize_response.content[0].text.strip()
+            if error:
+                return None, error
+
+            output_text = output_text.strip()
 
             # Score the output
             score_after_prompt = f"""Analyze this text and estimate how likely it is to be AI-generated.
@@ -100,13 +106,17 @@ The score should be 0-100 where 100 = definitely AI generated.
 Text:
 {output_text}"""
 
-            score_after_response = client.messages.create(
-                model=settings.ANTHROPIC_MODEL,
+            score_after_text, error = LLMClient.generate(
+                system_prompt="You are an AI text detector.",
+                messages=[{"role": "user", "content": score_after_prompt}],
                 max_tokens=256,
-                messages=[{"role": "user", "content": score_after_prompt}]
+                use_premium=use_premium
             )
 
-            score_after_text = score_after_response.content[0].text.strip()
+            if error:
+                return None, error
+
+            score_after_text = score_after_text.strip()
             json_match = re.search(r'\{[\s\S]*?\}', score_after_text)
             if json_match:
                 score_after_data = json.loads(json_match.group())
@@ -121,9 +131,6 @@ Text:
                 'ai_score_after': ai_score_after,
             }, None
 
-        except anthropic.APIError as e:
-            logger.error(f'Anthropic API error in humanizer: {str(e)}')
-            return None, 'Humanizer service is temporarily unavailable. Please try again.'
         except Exception as e:
             logger.error(f'Unexpected error in humanizer: {str(e)}')
             return None, 'An unexpected error occurred. Please try again.'

@@ -1,8 +1,10 @@
+import json
 import logging
 import re
 
-import anthropic
 from django.conf import settings
+
+from core.llm_client import LLMClient
 
 logger = logging.getLogger('app')
 
@@ -82,9 +84,9 @@ class AIParaphraseService:
 
     @classmethod
     def paraphrase(cls, text, mode='standard', synonym_level=3, frozen_words=None,
-                   settings_dict=None, language='en'):
+                   settings_dict=None, language='en', use_premium=False):
         """
-        Paraphrase text using Claude API with mode-specific system prompts.
+        Paraphrase text with mode-specific system prompts.
 
         Args:
             text: The input text to paraphrase.
@@ -93,6 +95,7 @@ class AIParaphraseService:
             frozen_words: List of words/phrases that must remain unchanged.
             settings_dict: Dict with optional keys: use_contractions, active_voice, custom_instructions.
             language: ISO language code for the output.
+            use_premium: If True, use Claude for premium users.
 
         Returns:
             Tuple of (output_text, error). On success error is None; on failure output_text is None.
@@ -113,41 +116,29 @@ class AIParaphraseService:
                 f"Text to paraphrase:\n{text}"
             )
 
-        try:
-            client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-            response = client.messages.create(
-                model=settings.ANTHROPIC_MODEL,
-                max_tokens=4096,
-                system=system_prompt,
-                messages=[
-                    {'role': 'user', 'content': user_message}
-                ]
-            )
-            output_text = response.content[0].text
+        output_text, error = LLMClient.generate(
+            system_prompt=system_prompt,
+            messages=[{'role': 'user', 'content': user_message}],
+            max_tokens=4096,
+            use_premium=use_premium,
+        )
 
-            # Post-processing
-            output_text = cls._post_process(output_text, frozen_words, settings_dict)
+        if error:
+            return None, error
 
-            return output_text, None
-
-        except anthropic.RateLimitError:
-            logger.warning('Anthropic rate limit reached during paraphrase')
-            return None, 'Service is temporarily busy. Please try again in a moment.'
-        except anthropic.APIError as e:
-            logger.error(f'Anthropic API error during paraphrase: {e}')
-            return None, 'An error occurred while processing your text. Please try again.'
-        except Exception as e:
-            logger.error(f'Unexpected error during paraphrase: {e}')
-            return None, 'An unexpected error occurred. Please try again.'
+        # Post-processing
+        output_text = cls._post_process(output_text, frozen_words, settings_dict)
+        return output_text, None
 
     @classmethod
-    def get_synonyms(cls, word, context=''):
+    def get_synonyms(cls, word, context='', use_premium=False):
         """
-        Get a list of contextual synonyms for a word using Claude API.
+        Get a list of contextual synonyms for a word.
 
         Args:
             word: The word to find synonyms for.
             context: The surrounding sentence for context-aware synonyms.
+            use_premium: If True, use Claude for premium users.
 
         Returns:
             Tuple of (synonyms_list, error). On success error is None.
@@ -164,20 +155,17 @@ class AIParaphraseService:
         if context:
             user_message += f'\nContext: "{context}"'
 
-        try:
-            client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-            response = client.messages.create(
-                model=settings.ANTHROPIC_MODEL,
-                max_tokens=256,
-                system=system_prompt,
-                messages=[
-                    {'role': 'user', 'content': user_message}
-                ]
-            )
-            raw = response.content[0].text.strip()
+        raw, error = LLMClient.generate(
+            system_prompt=system_prompt,
+            messages=[{'role': 'user', 'content': user_message}],
+            max_tokens=256,
+            use_premium=use_premium,
+        )
 
-            # Parse the JSON array from the response
-            import json
+        if error:
+            return None, error
+
+        try:
             # Handle case where model wraps in markdown code block
             if raw.startswith('```'):
                 raw = raw.split('\n', 1)[-1].rsplit('```', 1)[0].strip()
@@ -190,15 +178,9 @@ class AIParaphraseService:
             synonyms = [s for s in synonyms if isinstance(s, str)][:8]
             return synonyms, None
 
-        except anthropic.RateLimitError:
-            logger.warning('Anthropic rate limit reached during synonym lookup')
-            return None, 'Service is temporarily busy. Please try again.'
         except (json.JSONDecodeError, ValueError):
             logger.warning(f'Failed to parse synonym response for word: {word}')
             return [], None
-        except Exception as e:
-            logger.error(f'Unexpected error during synonym lookup: {e}')
-            return None, 'Could not retrieve synonyms. Please try again.'
 
     @classmethod
     def _build_system_prompt(cls, mode, synonym_level, frozen_words, settings_dict, language):

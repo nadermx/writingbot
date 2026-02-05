@@ -4,8 +4,8 @@ import logging
 import os
 import tempfile
 
-import anthropic
 from django.conf import settings
+from core.llm_client import LLMClient
 
 logger = logging.getLogger('app')
 
@@ -312,13 +312,14 @@ class PDFService:
             return None, 'Failed to extract text from PDF.'
 
     @staticmethod
-    def chat_with_pdf(file, question):
+    def chat_with_pdf(file, question, use_premium=False):
         """
         Answer a question about a PDF's contents using Claude API.
 
         Args:
             file: UploadedFile object (PDF).
             question: User question string.
+            use_premium: If True, use premium Claude API.
 
         Returns:
             Tuple of (answer_string, error).
@@ -336,11 +337,8 @@ class PDFService:
             if len(text) > max_chars:
                 text = text[:max_chars] + '\n\n[Document truncated due to length...]'
 
-            client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-            response = client.messages.create(
-                model=settings.ANTHROPIC_MODEL,
-                max_tokens=2048,
-                system=(
+            answer, error = LLMClient.generate(
+                system_prompt=(
                     'You are a helpful document analysis assistant. The user has uploaded a PDF document '
                     'and wants to ask questions about it. Answer based ONLY on the document content provided. '
                     'If the answer is not in the document, say so. Be concise and accurate.'
@@ -350,18 +348,16 @@ class PDFService:
                         'role': 'user',
                         'content': f'Document content:\n\n{text}\n\n---\n\nQuestion: {question}'
                     }
-                ]
+                ],
+                max_tokens=2048,
+                use_premium=use_premium
             )
 
-            answer = response.content[0].text
+            if error:
+                return None, error
+
             return answer, None
 
-        except anthropic.RateLimitError:
-            logger.warning('Anthropic rate limit reached during ChatPDF')
-            return None, 'Service is temporarily busy. Please try again in a moment.'
-        except anthropic.APIError as e:
-            logger.error(f'Anthropic API error during ChatPDF: {e}')
-            return None, 'An error occurred while analyzing your document.'
         except Exception as e:
             logger.error(f'ChatPDF failed: {e}')
             return None, 'Failed to process your question about the PDF.'

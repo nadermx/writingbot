@@ -434,7 +434,11 @@ class AIImagePromptAPI(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        prompt, error = AIImageService.generate_image_prompt(description)
+        is_premium = (
+            request.user.is_authenticated
+            and getattr(request.user, 'is_plan_active', False)
+        )
+        prompt, error = AIImageService.generate_image_prompt(description, use_premium=is_premium)
         if error:
             return Response({'error': error}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -477,8 +481,12 @@ class LogoGenerateAPI(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        is_premium = (
+            request.user.is_authenticated
+            and getattr(request.user, 'is_plan_active', False)
+        )
         result, error = LogoService.generate_logo_prompt(
-            business_name, industry, style, colors, additional
+            business_name, industry, style, colors, additional, use_premium=is_premium
         )
         if error:
             return Response({'error': error}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -503,8 +511,12 @@ class CharacterGenerateAPI(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        is_premium = (
+            request.user.is_authenticated
+            and getattr(request.user, 'is_plan_active', False)
+        )
         result, error = CharacterService.generate_character(
-            name, traits, style, gender, age, additional
+            name, traits, style, gender, age, additional, use_premium=is_premium
         )
         if error:
             return Response({'error': error}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -558,8 +570,12 @@ class BannerGenerateAPI(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        is_premium = (
+            request.user.is_authenticated
+            and getattr(request.user, 'is_plan_active', False)
+        )
         result, error = BannerService.generate_banner(
-            title, subtitle, cta, size, style, brand_colors, additional
+            title, subtitle, cta, size, style, brand_colors, additional, use_premium=is_premium
         )
         if error:
             return Response({'error': error}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -583,8 +599,12 @@ class PresentationGenerateAPI(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        is_premium = (
+            request.user.is_authenticated
+            and getattr(request.user, 'is_plan_active', False)
+        )
         result, error = PresentationService.generate_presentation(
-            topic, num_slides, style, audience, additional
+            topic, num_slides, style, audience, additional, use_premium=is_premium
         )
         if error:
             return Response({'error': error}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
