@@ -18,37 +18,24 @@ logger = logging.getLogger('app')
 # Build reverse lookup: lowercase language name -> language code
 NAME_TO_CODE = {name.lower(): code for code, name in LANGUAGES.items()}
 
-# Major languages for translation pair pages
-PAIR_LANGUAGES = [
-    'english', 'spanish', 'french', 'german', 'italian', 'portuguese',
-    'chinese', 'japanese', 'korean', 'arabic', 'hindi', 'russian',
-    'dutch', 'turkish', 'polish', 'swedish',
-]
-
-
 def build_language_pairs():
-    """Build translation pairs organized by language category."""
+    """Build translation pairs organized by language category, using all available languages."""
+    # Sort languages alphabetically by name
+    sorted_langs = sorted(LANGUAGES.items(), key=lambda x: x[1])
     categories = []
-    for lang in PAIR_LANGUAGES:
-        lang_code = NAME_TO_CODE.get(lang)
-        if not lang_code:
-            continue
-        lang_name = LANGUAGES[lang_code]
+    for code, name in sorted_langs:
+        lang_lower = name.lower()
         pairs = []
-        for other in PAIR_LANGUAGES:
-            if other == lang:
+        for other_code, other_name in sorted_langs:
+            if other_code == code:
                 continue
-            other_code = NAME_TO_CODE.get(other)
-            if not other_code:
-                continue
-            other_name = LANGUAGES[other_code]
             pairs.append({
-                'source_name': lang_name,
+                'source_name': name,
                 'target_name': other_name,
-                'url': f'/translate/{lang}-to-{other}/',
+                'url': f'/translate/{lang_lower}-to-{other_name.lower()}/',
             })
         categories.append({
-            'language': lang_name,
+            'language': name,
             'pairs': pairs,
         })
     return categories
