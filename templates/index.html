@@ -713,6 +713,90 @@
                     </p>
                 </div>
             </div>
+
+            <!-- FAQ 7 -->
+            <div class="card overflow-hidden">
+                <button @click="openFaq = openFaq === 7 ? null : 7"
+                        class="w-100 d-flex align-items-center justify-content-between px-4 py-3 text-start border-0 bg-transparent">
+                    <span class="small fw-semibold text-dark">{{ g.i18n.faq_q7|default:"What can the grammar checker do?" }}</span>
+                    <svg class="text-muted flex-shrink-0 ms-3" width="20" height="20" :style="openFaq === 7 ? 'transform: rotate(180deg)' : ''" style="transition: transform 0.2s;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div x-show="openFaq === 7" x-collapse>
+                    <p class="px-4 pb-3 small text-muted mb-0" style="line-height: 1.625;">
+                        {{ g.i18n.faq_a7|default:"Our grammar checker goes beyond basic spell-checking. It detects and corrects grammar, punctuation, spelling, and style issues in real time. It also provides writing scores for clarity, engagement, tone, and delivery, along with detailed explanations for each suggestion so you can learn as you write. You can choose between American, British, and other English dialects." }}
+                    </p>
+                </div>
+            </div>
+
+            <!-- FAQ 8 -->
+            <div class="card overflow-hidden">
+                <button @click="openFaq = openFaq === 8 ? null : 8"
+                        class="w-100 d-flex align-items-center justify-content-between px-4 py-3 text-start border-0 bg-transparent">
+                    <span class="small fw-semibold text-dark">{{ g.i18n.faq_q8|default:"How is WritingBot different from Grammarly or QuillBot?" }}</span>
+                    <svg class="text-muted flex-shrink-0 ms-3" width="20" height="20" :style="openFaq === 8 ? 'transform: rotate(180deg)' : ''" style="transition: transform 0.2s;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div x-show="openFaq === 8" x-collapse>
+                    <p class="px-4 pb-3 small text-muted mb-0" style="line-height: 1.625;">
+                        {{ g.i18n.faq_a8|default:"WritingBot combines the best features of multiple writing tools into one platform. Unlike Grammarly or QuillBot, we offer paraphrasing, grammar checking, AI detection, summarization, translation, citation generation, PDF tools, and 98+ AI writing generators all in a single place. Our free tier is more generous, and our premium plans are more affordable while offering comparable or better quality." }}
+                    </p>
+                </div>
+            </div>
+
+            <!-- FAQ 9 -->
+            <div class="card overflow-hidden">
+                <button @click="openFaq = openFaq === 9 ? null : 9"
+                        class="w-100 d-flex align-items-center justify-content-between px-4 py-3 text-start border-0 bg-transparent">
+                    <span class="small fw-semibold text-dark">{{ g.i18n.faq_q9|default:"Is my data private and secure?" }}</span>
+                    <svg class="text-muted flex-shrink-0 ms-3" width="20" height="20" :style="openFaq === 9 ? 'transform: rotate(180deg)' : ''" style="transition: transform 0.2s;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div x-show="openFaq === 9" x-collapse>
+                    <p class="px-4 pb-3 small text-muted mb-0" style="line-height: 1.625;">
+                        {{ g.i18n.faq_a9|default:"Yes, we take your privacy seriously. Your text is processed securely and is not stored on our servers after processing is complete. We do not use your content to train AI models or share it with third parties. All connections are encrypted via HTTPS, and we follow industry-standard security practices to protect your data." }}
+                    </p>
+                </div>
+            </div>
+
+            <!-- FAQ 10 -->
+            <div class="card overflow-hidden">
+                <button @click="openFaq = openFaq === 10 ? null : 10"
+                        class="w-100 d-flex align-items-center justify-content-between px-4 py-3 text-start border-0 bg-transparent">
+                    <span class="small fw-semibold text-dark">{{ g.i18n.faq_q10|default:"What file formats do you support?" }}</span>
+                    <svg class="text-muted flex-shrink-0 ms-3" width="20" height="20" :style="openFaq === 10 ? 'transform: rotate(180deg)' : ''" style="transition: transform 0.2s;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div x-show="openFaq === 10" x-collapse>
+                    <p class="px-4 pb-3 small text-muted mb-0" style="line-height: 1.625;">
+                        {{ g.i18n.faq_a10|default:"WritingBot includes a full suite of PDF and document tools. You can convert between PDF, Word, Excel, PowerPoint, JPG, and PNG formats. We also offer PDF merging, splitting, compression, and OCR text extraction. Upload your files directly in the browser and download the converted results instantly -- no software installation required." }}
+                    </p>
+                </div>
+            </div>
+
+            <!-- FAQ 11 -->
+            <div class="card overflow-hidden">
+                <button @click="openFaq = openFaq === 11 ? null : 11"
+                        class="w-100 d-flex align-items-center justify-content-between px-4 py-3 text-start border-0 bg-transparent">
+                    <span class="small fw-semibold text-dark">{{ g.i18n.faq_q11|default:"Does WritingBot work on mobile devices and all browsers?" }}</span>
+                    <svg class="text-muted flex-shrink-0 ms-3" width="20" height="20" :style="openFaq === 11 ? 'transform: rotate(180deg)' : ''" style="transition: transform 0.2s;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div x-show="openFaq === 11" x-collapse>
+                    <p class="px-4 pb-3 small text-muted mb-0" style="line-height: 1.625;">
+                        {{ g.i18n.faq_a11|default:"Yes, WritingBot is fully responsive and works on any device -- desktop, tablet, or smartphone. Our web app is compatible with all modern browsers including Chrome, Firefox, Safari, and Edge. There is nothing to install; just visit writingbot.ai from any browser and start writing. All tools and features work the same on mobile as they do on desktop." }}
+                    </p>
+                </div>
+            </div>
+
+            <!-- FAQ 12 -->
+            <div class="card overflow-hidden">
+                <button @click="openFaq = openFaq === 12 ? null : 12"
+                        class="w-100 d-flex align-items-center justify-content-between px-4 py-3 text-start border-0 bg-transparent">
+                    <span class="small fw-semibold text-dark">{{ g.i18n.faq_q12|default:"Can WritingBot generate citations and check for plagiarism?" }}</span>
+                    <svg class="text-muted flex-shrink-0 ms-3" width="20" height="20" :style="openFaq === 12 ? 'transform: rotate(180deg)' : ''" style="transition: transform 0.2s;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div x-show="openFaq === 12" x-collapse>
+                    <p class="px-4 pb-3 small text-muted mb-0" style="line-height: 1.625;">
+                        {{ g.i18n.faq_a12|default:"Absolutely. Our citation generator supports APA, MLA, Chicago, Harvard, IEEE, and other major formats. Simply paste a URL, DOI, or book title and we will generate a properly formatted citation for you. We also offer a plagiarism checker (available on Premium plans) that scans your text against billions of web pages and academic papers to ensure your writing is original." }}
+                    </p>
+                </div>
+            </div>
         </div>
     </div>
 </section>

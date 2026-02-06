@@ -390,45 +390,27 @@
     <!-- Utilities JS -->
     <script src="{% static 'js/utils.js' %}?v={{ g.scripts_version }}"></script>
 
-    <!-- Frontend Error Logging -->
+    <!-- Frontend Error Logging (max 3 per page load) -->
     <script>
-    window.onerror = function(message, source, lineno, colno, error) {
-        var csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
-        fetch('/api/accounts/log-error/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrfToken
-            },
-            body: JSON.stringify({
-                message: message,
-                source: source,
-                lineno: lineno,
-                colno: colno,
-                stack: error?.stack || '',
-                url: window.location.href
-            })
-        }).catch(function() {});
-        return false;
-    };
-    window.addEventListener('unhandledrejection', function(event) {
-        var csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
-        fetch('/api/accounts/log-error/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrfToken
-            },
-            body: JSON.stringify({
-                message: 'Unhandled Promise Rejection: ' + (event.reason?.message || event.reason || 'Unknown'),
-                source: 'promise',
-                lineno: 0,
-                colno: 0,
-                stack: event.reason?.stack || '',
-                url: window.location.href
-            })
-        }).catch(function() {});
-    });
+    (function() {
+        var errCount = 0, maxErrs = 3;
+        function logErr(payload) {
+            if (++errCount > maxErrs) return;
+            var csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+            fetch('/api/accounts/log-error/', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
+                body: JSON.stringify(payload)
+            }).catch(function() {});
+        }
+        window.onerror = function(message, source, lineno, colno, error) {
+            logErr({message: message, source: source, lineno: lineno, colno: colno, stack: error?.stack || '', url: window.location.href});
+            return false;
+        };
+        window.addEventListener('unhandledrejection', function(event) {
+            logErr({message: 'Unhandled Promise Rejection: ' + (event.reason?.message || event.reason || 'Unknown'), source: 'promise', lineno: 0, colno: 0, stack: event.reason?.stack || '', url: window.location.href});
+        });
+    })();
     </script>
 
     <!-- Bootstrap 5.3 JS Bundle -->

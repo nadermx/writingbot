@@ -153,6 +153,68 @@ class TranslationLanguagePage(View):
                         f'and click Translate.'
                     ),
                 },
+                {
+                    'q': f'How fast is the {lang_name} translator?',
+                    'a': (
+                        f'Our {lang_name} translator delivers results in seconds, even for longer texts. '
+                        f'The AI processes your text instantly so you can get your {lang_name} translations '
+                        f'without any waiting.'
+                    ),
+                },
+                {
+                    'q': f'Is my {lang_name} text kept private?',
+                    'a': (
+                        f'Yes, your privacy is our priority. Text you submit for {lang_name} translation '
+                        f'is processed securely and is not stored or shared with third parties. '
+                        f'Your translations remain completely confidential.'
+                    ),
+                },
+                {
+                    'q': f'Can I translate business or academic {lang_name} text?',
+                    'a': (
+                        f'Absolutely. Our AI {lang_name} translator handles a wide range of text types '
+                        f'including business emails, academic papers, technical documentation, and casual '
+                        f'conversation with high accuracy for each style.'
+                    ),
+                },
+                {
+                    'q': f'What is the character limit for {lang_name} translations?',
+                    'a': (
+                        f'Free users can translate up to 5,000 characters of {lang_name} text per request. '
+                        f'Premium users enjoy unlimited character limits with priority processing for longer documents.'
+                    ),
+                },
+                {
+                    'q': f'Can I use the {lang_name} translator on my phone?',
+                    'a': (
+                        f'Yes, our {lang_name} translator is fully responsive and works great on mobile devices. '
+                        f'You can translate {lang_name} text on any smartphone or tablet with a web browser.'
+                    ),
+                },
+                {
+                    'q': f'Does the translator auto-detect {lang_name}?',
+                    'a': (
+                        f'Yes, our translator can automatically detect {lang_name} as the source language. '
+                        f'Simply paste your text and the AI will identify that it is {lang_name} and translate '
+                        f'it to your chosen target language.'
+                    ),
+                },
+                {
+                    'q': f'Can I translate technical or medical text from {lang_name}?',
+                    'a': (
+                        f'Our AI translator handles specialized {lang_name} text including technical, medical, '
+                        f'and legal content. While it delivers strong results for domain-specific terminology, '
+                        f'we recommend reviewing critical translations with a professional.'
+                    ),
+                },
+                {
+                    'q': f'How does this {lang_name} translator compare to Google Translate?',
+                    'a': (
+                        f'Our {lang_name} translator uses advanced AI that excels at understanding context '
+                        f'and producing natural-sounding output. It supports {len(pairs)} language pairs for '
+                        f'{lang_name} and is designed to deliver fluent, human-quality translations.'
+                    ),
+                },
             ],
         }
 
@@ -343,6 +405,72 @@ class TranslationPairPage(View):
                         f'You can translate any type of text including emails, documents, articles, '
                         f'essays, social media posts, and more from {source_name} to {target_name}. '
                         f'The translator handles both formal and informal language.'
+                    ),
+                },
+                {
+                    'q': f'How fast is the {source_name} to {target_name} translation?',
+                    'a': (
+                        f'Our {source_name} to {target_name} translator delivers results in seconds, '
+                        f'even for longer texts. The AI processes your {source_lower} text instantly '
+                        f'and returns a fluent {target_lower} translation without any waiting.'
+                    ),
+                },
+                {
+                    'q': f'Is my {source_name} text kept private when translating to {target_name}?',
+                    'a': (
+                        f'Yes, your privacy is our priority. Text you submit for {source_name} to '
+                        f'{target_name} translation is processed securely and is not stored or shared '
+                        f'with third parties. Your translations remain completely confidential.'
+                    ),
+                },
+                {
+                    'q': f'Can I translate formal and informal {source_name} to {target_name}?',
+                    'a': (
+                        f'Yes, our translator handles both formal and informal {source_name} text when '
+                        f'translating to {target_name}. Whether you need a professional business tone or '
+                        f'casual conversational style, the AI adapts the {target_lower} output accordingly.'
+                    ),
+                },
+                {
+                    'q': f'What is the character limit for {source_name} to {target_name} translation?',
+                    'a': (
+                        f'Free users can translate up to 5,000 characters from {source_name} to {target_name} '
+                        f'per request. Premium users enjoy unlimited character limits with priority processing '
+                        f'for longer documents.'
+                    ),
+                },
+                {
+                    'q': f'Can I use the {source_name} to {target_name} translator on my phone?',
+                    'a': (
+                        f'Yes, our translator is fully responsive and works great on mobile devices. '
+                        f'You can translate {source_lower} to {target_lower} on any smartphone or tablet '
+                        f'with a web browser — no app download needed.'
+                    ),
+                },
+                {
+                    'q': f'Can I translate technical or medical text from {source_name} to {target_name}?',
+                    'a': (
+                        f'Our AI translator handles specialized {source_name} text including technical, '
+                        f'medical, and legal content when translating to {target_name}. While it delivers '
+                        f'strong results for domain-specific terminology, we recommend reviewing critical '
+                        f'translations with a professional.'
+                    ),
+                },
+                {
+                    'q': f'How does this compare to Google Translate for {source_name} to {target_name}?',
+                    'a': (
+                        f'Our translator uses advanced AI that excels at understanding context and producing '
+                        f'natural-sounding {target_name} output from {source_name} text. It is designed to '
+                        f'deliver fluent, human-quality translations rather than word-for-word results.'
+                    ),
+                },
+                {
+                    'q': f'Can I save my {source_name} to {target_name} translations?',
+                    'a': (
+                        f'You can easily copy your {target_lower} translation to the clipboard with one click. '
+                        f'Premium users also get access to '
+                        f'<a href="/translate/{source_lower}/">full translation history</a> '
+                        f'so you can revisit past {source_name} to {target_name} translations at any time.'
                     ),
                 },
             ],

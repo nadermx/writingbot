@@ -520,6 +520,73 @@ def get_format_specific_faqs(source_key, target_key, conv_type):
                 f'formats in both directions.'
             ),
         },
+        {
+            'q': f'Will the {tgt_name} file be larger or smaller than my {src_name} file?',
+            'a': (
+                f'File size depends on the compression methods used by each format. '
+                f'In general, converting from {src_name} to {tgt_name} may result in a different file size '
+                f'depending on the content and encoding. Our converter uses optimal settings to balance '
+                f'quality and file size for your {tgt_name} output.'
+            ),
+        },
+        {
+            'q': f'Can I convert multiple {src_name} files to {tgt_name} at once?',
+            'a': (
+                f'Currently, our converter processes one {src_name} to {tgt_name} conversion at a time. '
+                f'You can quickly convert additional files by uploading them one after another — each '
+                f'conversion only takes a few seconds.'
+            ),
+        },
+        {
+            'q': f'What is the maximum file size I can upload for {src_name} to {tgt_name} conversion?',
+            'a': (
+                f'You can upload {src_name} files up to 50 MB for conversion to {tgt_name}. '
+                f'This limit is generous enough to handle most files. If your {src_name} file exceeds '
+                f'this limit, try compressing it or splitting it into smaller parts before converting.'
+            ),
+        },
+        {
+            'q': f'Is it safe to upload my {src_name} files for conversion?',
+            'a': (
+                f'Absolutely. Your privacy is our top priority. Uploaded {src_name} files are processed '
+                f'securely and are automatically deleted from our servers immediately after conversion to '
+                f'{tgt_name}. We never store, share, or access the contents of your files.'
+            ),
+        },
+        {
+            'q': f'Can I convert {src_name} to {tgt_name} on my phone or tablet?',
+            'a': (
+                f'Yes! Our {src_name} to {tgt_name} converter is fully responsive and works on any '
+                f'device — including iPhones, Android phones, and tablets. No app installation is needed; '
+                f'just open the page in your mobile browser and upload your file.'
+            ),
+        },
+        {
+            'q': f'Can I adjust quality settings when converting {src_name} to {tgt_name}?',
+            'a': (
+                f'Depending on the target format, you may see a quality slider that lets you balance '
+                f'between file size and output quality for your {tgt_name} file. If the {tgt_name} format '
+                f'supports adjustable compression, the slider will appear automatically after you upload '
+                f'your {src_name} file.'
+            ),
+        },
+        {
+            'q': f'Is metadata preserved when converting from {src_name} to {tgt_name}?',
+            'a': (
+                f'Metadata handling depends on the formats involved. Some metadata from your {src_name} '
+                f'file (such as EXIF data, color profiles, or document properties) may not carry over to '
+                f'the {tgt_name} format if it does not support those metadata types. Core content and '
+                f'visual quality are always preserved.'
+            ),
+        },
+        {
+            'q': f'Which browsers support the {src_name} to {tgt_name} converter?',
+            'a': (
+                f'Our {src_name} to {tgt_name} converter works in all modern browsers including '
+                f'Google Chrome, Mozilla Firefox, Safari, Microsoft Edge, and Opera. No plugins or '
+                f'extensions are required — just visit the page and upload your {src_name} file to get started.'
+            ),
+        },
     ]
 
     return faqs
