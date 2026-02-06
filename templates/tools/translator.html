@@ -157,25 +157,20 @@
         </div>
     </div>
 </div>
-    <!-- Translation Pairs by Language -->
-    {% if pair_categories %}
+    <!-- Supported Languages -->
+    {% if language_links %}
     <div class="container py-5">
-        <h2 class="text-center fw-bold mb-2">Translation Pairs</h2>
-        <p class="text-center text-muted mb-4">Translate to and from 16 popular languages</p>
-        {% for cat in pair_categories %}
-        <div class="mb-4">
-            <h3 class="h6 fw-bold mb-2">{{ cat.language }}</h3>
-            <div class="row g-2">
-                {% for pair in cat.pairs %}
-                <div class="col-6 col-md-4 col-lg-3">
-                    <a href="{{ pair.url }}" class="d-block text-decoration-none text-dark p-2 rounded small border bg-white" style="transition: background-color 0.15s;">
-                        {{ pair.source_name }} to {{ pair.target_name }}
-                    </a>
-                </div>
-                {% endfor %}
+        <h2 class="text-center fw-bold mb-2">Supported Languages</h2>
+        <p class="text-center text-muted mb-4">Click a language to see all available translation pairs</p>
+        <div class="row g-2 justify-content-center">
+            {% for lang in language_links %}
+            <div class="col-6 col-md-4 col-lg-3 col-xl-2">
+                <a href="{{ lang.url }}" class="d-block text-decoration-none text-dark p-2 rounded small border bg-white text-center" style="transition: background-color 0.15s;">
+                    {{ lang.name }}
+                </a>
             </div>
+            {% endfor %}
         </div>
-        {% endfor %}
     </div>
     {% endif %}
 {% endblock %}

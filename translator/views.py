@@ -18,27 +18,27 @@ logger = logging.getLogger('app')
 # Build reverse lookup: lowercase language name -> language code
 NAME_TO_CODE = {name.lower(): code for code, name in LANGUAGES.items()}
 
-def build_language_pairs():
-    """Build translation pairs organized by language category, using all available languages."""
-    # Sort languages alphabetically by name
+def get_all_language_links():
+    """Return sorted list of language links for the main translator page."""
+    return [
+        {'name': name, 'url': f'/translate/{name.lower()}/'}
+        for _, name in sorted(LANGUAGES.items(), key=lambda x: x[1])
+    ]
+
+
+def get_language_pairs(lang_name):
+    """Build all translation pairs for a specific language."""
     sorted_langs = sorted(LANGUAGES.items(), key=lambda x: x[1])
-    categories = []
-    for code, name in sorted_langs:
-        lang_lower = name.lower()
-        pairs = []
-        for other_code, other_name in sorted_langs:
-            if other_code == code:
-                continue
-            pairs.append({
-                'source_name': name,
-                'target_name': other_name,
-                'url': f'/translate/{lang_lower}-to-{other_name.lower()}/',
-            })
-        categories.append({
-            'language': name,
-            'pairs': pairs,
+    lang_lower = lang_name.lower()
+    pairs = []
+    for other_code, other_name in sorted_langs:
+        if other_name.lower() == lang_lower:
+            continue
+        pairs.append({
+            'target_name': other_name,
+            'url': f'/translate/{lang_lower}-to-{other_name.lower()}/',
         })
-    return categories
+    return pairs
 
 
 class TranslatorPage(View):
@@ -48,9 +48,6 @@ class TranslatorPage(View):
             request.user.is_authenticated and request.user.is_plan_active
         )
         languages = TranslationService.get_languages()
-
-        # Build translation pairs organized by language
-        pair_categories = build_language_pairs()
 
         return render(
             request,
@@ -62,7 +59,63 @@ class TranslatorPage(View):
                 'g': settings,
                 'is_premium': is_premium,
                 'languages_json': json.dumps(languages),
-                'pair_categories': pair_categories,
+                'language_links': get_all_language_links(),
+            }
+        )
+
+
+class TranslationLanguagePage(View):
+    """
+    SEO landing page for a specific language, e.g. /translate/english/
+    Shows an embedded translator pre-set to that language + all translation pairs.
+    """
+
+    def get(self, request, language):
+        lang_lower = language.lower()
+        lang_code = NAME_TO_CODE.get(lang_lower)
+        if not lang_code:
+            raise Http404
+
+        lang_name = LANGUAGES[lang_code]
+        settings = GlobalVars.get_globals(request)
+        is_premium = (
+            request.user.is_authenticated and request.user.is_plan_active
+        )
+        languages_list = TranslationService.get_languages()
+        pairs = get_language_pairs(lang_name)
+
+        # Pick a sensible default target (English if source isn't English, else Spanish)
+        if lang_code == 'en':
+            default_target = 'es'
+        else:
+            default_target = 'en'
+
+        seo = {
+            'h1': f'{lang_name} Translator',
+            'subtitle': f'Translate {lang_name} to and from {len(pairs)} languages with AI',
+            'meta_title': f'{lang_name} Translator - Translate {lang_name} Online Free | {config.PROJECT_NAME}',
+            'meta_description': (
+                f'Free online {lang_name} translator. Translate {lang_name} to and from '
+                f'{len(pairs)} languages instantly with AI-powered accuracy.'
+            ),
+        }
+
+        return render(
+            request,
+            'translator/language.html',
+            {
+                'title': seo['meta_title'],
+                'description': seo['meta_description'],
+                'page': 'translator',
+                'g': settings,
+                'seo': seo,
+                'is_premium': is_premium,
+                'languages_json': json.dumps(languages_list),
+                'default_source': lang_code,
+                'default_target': default_target,
+                'lang_name': lang_name,
+                'pairs': pairs,
+                'language_links': get_all_language_links(),
             }
         )
 
@@ -239,8 +292,8 @@ class TranslationPairPage(View):
             ],
         }
 
-        # Build translation pairs organized by language
-        pair_categories = build_language_pairs()
+        # Build pairs for source language (other translations from this language)
+        source_pairs = get_language_pairs(source_name)
 
         return render(
             request,
@@ -257,6 +310,6 @@ class TranslationPairPage(View):
                 'default_target': target_code,
                 'source_name': source_name,
                 'target_name': target_name,
-                'pair_categories': pair_categories,
+                'source_pairs': source_pairs,
             }
         )
