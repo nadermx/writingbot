@@ -40,6 +40,19 @@ class TranslatorPage(View):
             request.user.is_authenticated and request.user.is_plan_active
         )
         languages = TranslationService.get_languages()
+
+        # Build popular pairs for the bottom section
+        popular_pairs = []
+        for s, t in POPULAR_PAIRS:
+            s_code = NAME_TO_CODE.get(s)
+            t_code = NAME_TO_CODE.get(t)
+            if s_code and t_code:
+                popular_pairs.append({
+                    'source_name': LANGUAGES[s_code],
+                    'target_name': LANGUAGES[t_code],
+                    'url': f'/translate/{s}-to-{t}/',
+                })
+
         return render(
             request,
             'tools/translator.html',
@@ -50,6 +63,7 @@ class TranslatorPage(View):
                 'g': settings,
                 'is_premium': is_premium,
                 'languages_json': json.dumps(languages),
+                'popular_pairs': popular_pairs,
             }
         )
 

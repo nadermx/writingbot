@@ -227,6 +227,25 @@
         </div>
     </div>
 </div>
+<!-- Other Language Grammar Checkers -->
+<div class="container py-5">
+    <h2 class="text-center fw-bold mb-4">Grammar Checkers for Other Languages</h2>
+    <p class="text-center text-muted mb-4">Check grammar in 10+ languages with our AI-powered tools</p>
+    <div class="row g-2 justify-content-center">
+        {% for lang_page in grammar_pages %}
+        {% if lang_page.key != page %}
+        <div class="col-6 col-md-4 col-lg-3">
+            <a href="{{ lang_page.url }}" class="d-block text-decoration-none text-dark p-2 rounded border bg-white text-center small">
+                {{ lang_page.name }}
+            </a>
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+    <div class="text-center mt-4">
+        <a href="/grammar-check/" class="btn btn-outline-primary">English Grammar Checker</a>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}

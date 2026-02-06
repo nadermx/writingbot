@@ -206,6 +206,15 @@ class SEOLandingPage(View):
 
         is_premium = request.user.is_authenticated and request.user.is_plan_active
 
+        # Build related tools list for cross-linking
+        related_tools = []
+        for key, data in SEO_PAGES.items():
+            related_tools.append({
+                'key': key,
+                'name': data['h1'].replace('Free ', ''),
+                'url': f'/{key}/',
+            })
+
         return render(request, 'seo/landing.html', {
             'title': f'{page_data["meta_title"]} | {config.PROJECT_NAME}',
             'description': page_data['meta_description'],
@@ -216,6 +225,7 @@ class SEOLandingPage(View):
             'free_word_limit': FREE_WORD_LIMIT,
             'free_modes': FREE_MODES,
             'all_modes': ALL_MODES,
+            'related_tools': related_tools,
         })
 
 
@@ -461,6 +471,15 @@ class GrammarSEOLandingPage(View):
 
         is_premium = request.user.is_authenticated and request.user.is_plan_active
 
+        # Build list of all grammar pages for cross-linking
+        grammar_pages = []
+        for key, data in GRAMMAR_SEO_PAGES.items():
+            grammar_pages.append({
+                'key': key,
+                'name': f'{data["language_name"]} Grammar Checker',
+                'url': f'/{key}/',
+            })
+
         return render(request, 'seo/grammar-landing.html', {
             'title': f'{page_data["meta_title"]} | {config.PROJECT_NAME}',
             'description': page_data['meta_description'],
@@ -469,6 +488,7 @@ class GrammarSEOLandingPage(View):
             'seo': page_data,
             'is_premium': is_premium,
             'word_limit': GRAMMAR_FREE_WORD_LIMIT,
+            'grammar_pages': grammar_pages,
         })
 
 

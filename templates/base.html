@@ -94,6 +94,15 @@
                                     <div class="text-muted" style="font-size:0.75rem">{{ g.i18n.grammar_desc|default:"Fix grammar, spelling & punctuation" }}</div>
                                 </div>
                             </a>
+                            <a href="/proofreader/?lang={{ g.lang.iso }}" class="d-flex align-items-start gap-3 p-3 rounded-3 dropdown-item-custom">
+                                <div class="d-flex align-items-center justify-content-center flex-shrink-0 rounded-3" style="width:40px;height:40px;background:#dbeafe">
+                                    <svg style="width:20px;height:20px;color:#2563eb" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                                </div>
+                                <div>
+                                    <div class="fw-semibold text-dark small">{{ g.i18n.proofreader|default:"Proofreader" }}</div>
+                                    <div class="text-muted" style="font-size:0.75rem">{{ g.i18n.proofreader_desc|default:"Professional proofreading with AI" }}</div>
+                                </div>
+                            </a>
                             <a href="/summarize/?lang={{ g.lang.iso }}" class="d-flex align-items-start gap-3 p-3 rounded-3 dropdown-item-custom">
                                 <div class="d-flex align-items-center justify-content-center flex-shrink-0 rounded-3" style="width:40px;height:40px;background:#f3e8ff">
                                     <svg style="width:20px;height:20px;color:#9333ea" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h8m-8 6h16"/></svg>
@@ -228,6 +237,15 @@
                                 <svg style="width:20px;height:20px;color:#6b7280" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222"/></svg>
                                 <span class="fw-medium text-dark small">{{ g.i18n.courses|default:"Courses" }}</span>
                             </a>
+                            <hr class="my-2">
+                            <a href="/convert/" class="d-flex align-items-center gap-3 p-3 rounded-3 dropdown-item-custom">
+                                <svg style="width:20px;height:20px;color:#6b7280" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+                                <span class="fw-medium text-dark small">{{ g.i18n.file_converter|default:"File Converter" }}</span>
+                            </a>
+                            <a href="/guides/" class="d-flex align-items-center gap-3 p-3 rounded-3 dropdown-item-custom">
+                                <svg style="width:20px;height:20px;color:#6b7280" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                                <span class="fw-medium text-dark small">{{ g.i18n.guides|default:"Writing Guides" }}</span>
+                            </a>
                         </div>
                     </li>
 
@@ -351,6 +369,8 @@
                         <li class="mb-2"><a href="/word-counter/?lang={{ g.lang.iso }}" class="text-decoration-none text-secondary link-light small">{{ g.i18n.word_counter|default:"Word Counter" }}</a></li>
                         <li class="mb-2"><a href="/citation-generator/?lang={{ g.lang.iso }}" class="text-decoration-none text-secondary link-light small">{{ g.i18n.citation_generator|default:"Citation Generator" }}</a></li>
                         <li class="mb-2"><a href="/convert/" class="text-decoration-none text-secondary link-light small">File Converter</a></li>
+                        <li class="mb-2"><a href="/proofreader/?lang={{ g.lang.iso }}" class="text-decoration-none text-secondary link-light small">{{ g.i18n.proofreader|default:"Proofreader" }}</a></li>
+                        <li class="mb-2"><a href="/guides/" class="text-decoration-none text-secondary link-light small">{{ g.i18n.guides|default:"Writing Guides" }}</a></li>
                     </ul>
                 </div>
             </div>
