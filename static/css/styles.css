@@ -38,15 +38,16 @@
 }
 
 /* Dropdown item custom hover */
-.dropdown-item-custom {
-    text-decoration: none;
+.dropdown-item-custom,
+.dropdown-item-custom:hover,
+.dropdown-item-custom:focus,
+.dropdown-item-custom:active {
+    text-decoration: none !important;
     color: inherit;
     display: flex;
 }
 .dropdown-item-custom:hover {
     background-color: #f0f5ff;
-    text-decoration: none;
-    color: inherit;
 }
 
 /* Alpine.js cloak */
