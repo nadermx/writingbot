@@ -98,6 +98,62 @@ class TranslationLanguagePage(View):
                 f'Free online {lang_name} translator. Translate {lang_name} to and from '
                 f'{len(pairs)} languages instantly with AI-powered accuracy.'
             ),
+            'features': [
+                {
+                    'title': f'Accurate {lang_name} Translation',
+                    'text': (
+                        f'Our AI translator understands the nuances of {lang_name}, '
+                        f'delivering accurate translations that preserve meaning and context.'
+                    ),
+                },
+                {
+                    'title': 'Instant Results',
+                    'text': (
+                        f'Translate {lang_name} text in seconds. '
+                        f'No waiting, no sign-up required. Just paste your text and get results.'
+                    ),
+                },
+                {
+                    'title': 'Natural-Sounding Output',
+                    'text': (
+                        f'Get translations that read naturally, not like machine output. '
+                        f'Our AI produces fluent, human-quality translations every time.'
+                    ),
+                },
+            ],
+            'faqs': [
+                {
+                    'q': f'How many languages can I translate {lang_name} to?',
+                    'a': (
+                        f'You can translate {lang_name} to and from {len(pairs)} languages '
+                        f'including English, Spanish, French, German, Chinese, Japanese, '
+                        f'Arabic, Hindi, and many more.'
+                    ),
+                },
+                {
+                    'q': f'Is the {lang_name} translator free?',
+                    'a': (
+                        f'Yes, you can translate up to 5,000 characters of {lang_name} text '
+                        f'completely free. Premium users get unlimited translations with priority processing.'
+                    ),
+                },
+                {
+                    'q': f'How accurate is the {lang_name} translator?',
+                    'a': (
+                        f'Our AI-powered {lang_name} translator delivers high-accuracy translations '
+                        f'by understanding context, grammar, and idiomatic expressions. '
+                        f'It handles everyday conversation, business documents, and academic text.'
+                    ),
+                },
+                {
+                    'q': f'Can I translate documents from {lang_name}?',
+                    'a': (
+                        f'You can paste text directly from any document to translate it from {lang_name}. '
+                        f'Simply copy your text, paste it into the translator, select your target language, '
+                        f'and click Translate.'
+                    ),
+                },
+            ],
         }
 
         return render(

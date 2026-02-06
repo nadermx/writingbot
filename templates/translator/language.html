@@ -109,6 +109,49 @@
     </div>
 </div>
 
+<!-- Features Section -->
+<div class="bg-light py-5">
+    <div class="container">
+        <h2 class="text-center fw-bold mb-5">Why Use Our {{ lang_name }} Translator?</h2>
+        <div class="row g-4">
+            {% for feature in seo.features %}
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm p-4">
+                    <h5 class="fw-semibold mb-3">{{ feature.title }}</h5>
+                    <p class="text-muted mb-0">{{ feature.text }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- How It Works Section -->
+<div class="container py-5">
+    <h2 class="text-center fw-bold mb-5">How to Translate {{ lang_name }}</h2>
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="row g-4">
+                <div class="col-md-4 text-center">
+                    <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center mb-3" style="width: 48px; height: 48px; font-size: 1.25rem; font-weight: 700;">1</div>
+                    <h5 class="fw-semibold">Enter Text</h5>
+                    <p class="text-muted small">Type or paste your {{ lang_name }} text into the input box above.</p>
+                </div>
+                <div class="col-md-4 text-center">
+                    <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center mb-3" style="width: 48px; height: 48px; font-size: 1.25rem; font-weight: 700;">2</div>
+                    <h5 class="fw-semibold">Choose Language</h5>
+                    <p class="text-muted small">Select the target language from over 60 available options.</p>
+                </div>
+                <div class="col-md-4 text-center">
+                    <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center mb-3" style="width: 48px; height: 48px; font-size: 1.25rem; font-weight: 700;">3</div>
+                    <h5 class="fw-semibold">Get Translation</h5>
+                    <p class="text-muted small">Click Translate and copy your result with one click.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Translation Pairs for This Language -->
 {% if pairs %}
 <div class="bg-light py-5">
@@ -128,24 +171,55 @@
 </div>
 {% endif %}
 
+<!-- FAQ Section -->
+<div class="container py-5">
+    <h2 class="text-center fw-bold mb-5">Frequently Asked Questions</h2>
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="accordion" id="faqAccordion">
+                {% for faq in seo.faqs %}
+                <div class="accordion-item border-0 mb-2">
+                    <h3 class="accordion-header">
+                        <button class="accordion-button {% if not forloop.first %}collapsed{% endif %} fw-semibold"
+                                type="button" data-bs-toggle="collapse"
+                                data-bs-target="#faq{{ forloop.counter }}">
+                            {{ faq.q }}
+                        </button>
+                    </h3>
+                    <div id="faq{{ forloop.counter }}"
+                         class="accordion-collapse collapse {% if forloop.first %}show{% endif %}"
+                         data-bs-parent="#faqAccordion">
+                        <div class="accordion-body text-muted">
+                            {{ faq.a }}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Other Languages -->
 {% if language_links %}
-<div class="container py-5">
-    <h2 class="text-center fw-bold mb-2">Other Languages</h2>
-    <p class="text-center text-muted mb-4">Explore translators for other languages</p>
-    <div class="row g-2 justify-content-center">
-        {% for lang in language_links %}
-        {% if lang.name != lang_name %}
-        <div class="col-6 col-md-4 col-lg-3 col-xl-2">
-            <a href="{{ lang.url }}" class="d-block text-decoration-none text-dark p-2 rounded small border bg-white text-center">
-                {{ lang.name }}
-            </a>
+<div class="bg-light py-5">
+    <div class="container">
+        <h2 class="text-center fw-bold mb-2">Other Languages</h2>
+        <p class="text-center text-muted mb-4">Explore translators for other languages</p>
+        <div class="row g-2 justify-content-center">
+            {% for lang in language_links %}
+            {% if lang.name != lang_name %}
+            <div class="col-6 col-md-4 col-lg-3 col-xl-2">
+                <a href="{{ lang.url }}" class="d-block text-decoration-none text-dark p-2 rounded small border bg-white text-center">
+                    {{ lang.name }}
+                </a>
+            </div>
+            {% endif %}
+            {% endfor %}
         </div>
-        {% endif %}
-        {% endfor %}
-    </div>
-    <div class="text-center mt-4">
-        <a href="/translate/" class="btn btn-outline-primary">Back to Translator</a>
+        <div class="text-center mt-4">
+            <a href="/translate/" class="btn btn-outline-primary">Back to Translator</a>
+        </div>
     </div>
 </div>
 {% endif %}
