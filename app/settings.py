@@ -16,6 +16,7 @@ SECRET_KEY = config.SECRET_KEY
 DEBUG = config.DEBUG
 ALLOWED_HOSTS = getattr(config, 'ALLOWED_HOSTS', ['*'])
 CSRF_TRUSTED_ORIGINS = getattr(config, 'CSRF_TRUSTED_ORIGINS', [])
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Application definition
 INSTALLED_APPS = [
