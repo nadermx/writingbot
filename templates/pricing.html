@@ -1,54 +1,104 @@
 {% extends 'base.html' %}
 {% block content %}
-    <div class="container text-center">
-        <h1 class="page-header">{{ g.i18n.pricing|default:"Pricing" }}</h1>
-        <p class="lead">{{ g.i18n.pricing_subtitle|default:"Choose the plan that works for you" }}</p>
+<div class="container py-5">
+    <div class="text-center mb-5">
+        <h1 class="display-5 fw-bold">{{ g.i18n.pricing|default:"Pricing" }}</h1>
+        <p class="lead text-muted">{{ g.i18n.pricing_subtitle|default:"Choose the plan that works for you" }}</p>
     </div>
-    <form class="container-md pricing-form"
-          action="{% url 'checkout' %}"
-          method="get">
-        <div class="row">
+
+    <form action="{% url 'checkout' %}" method="get">
+        <div class="row justify-content-center g-4">
             {% for plan in plans %}
-                <div class="col">
-                    <div class="form-check">
-                        <input class="form-check-input"
-                               type="radio"
-                               name="plan"
-                               id="{{ plan.code_name }}"
-                               value="{{ plan.code_name }}"
-                               {% if forloop.first %}checked{% endif %} >
-                        <label class="form-check-label"
-                               for="{{ plan.code_name }}">
-                                <span class="price-wrapper">
-                                    <span class="price-value">{{ g.currency_symbol }}{{ plan.price }}</span><br>
-                                    {% if plan.is_subscription %}
-                                        {{ g.i18n.monthly|default:"per month" }}
-                                    {% else %}
-                                        {{ g.i18n.single_charge|default:"one-time" }}
-                                    {% endif %}
-                                </span>
-                            <br>
-                            <span class="plan-check">
-                                {% include 'svgs/check.html' %}
-                                {% if plan.credits %}
-                                    <span>{{ plan.credits }} {{ g.i18n.credits|default:"credits" }}</span>
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100 shadow-sm {% if forloop.last %}border-primary{% endif %}" style="{% if forloop.last %}border-width: 2px;{% endif %}">
+                    {% if forloop.last %}
+                    <div class="card-header bg-primary text-white text-center py-2 fw-semibold small">
+                        {{ g.i18n.most_popular|default:"Most Popular" }}
+                    </div>
+                    {% endif %}
+                    <div class="card-body d-flex flex-column p-4">
+                        <div class="text-center mb-4">
+                            <div class="display-4 fw-bold text-dark">
+                                {{ g.currency_symbol }}{{ plan.price }}
+                            </div>
+                            <div class="text-muted small mt-1">
+                                {% if plan.is_subscription %}
+                                    {{ g.i18n.monthly|default:"per month" }}
                                 {% else %}
-                                    <span>{{ g.i18n.unlimited_access|default:"Unlimited access" }}</span>
+                                    {{ g.i18n.single_charge|default:"one-time" }}
                                 {% endif %}
-                            </span>
-                        </label>
+                            </div>
+                        </div>
+
+                        <ul class="list-unstyled mb-4 flex-grow-1">
+                            {% if plan.credits %}
+                            <li class="d-flex align-items-center mb-2">
+                                <svg class="text-success flex-shrink-0 me-2" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/></svg>
+                                <span>{{ plan.credits }} {{ g.i18n.credits|default:"credits" }}</span>
+                            </li>
+                            {% else %}
+                            <li class="d-flex align-items-center mb-2">
+                                <svg class="text-success flex-shrink-0 me-2" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/></svg>
+                                <span>{{ g.i18n.unlimited_access|default:"Unlimited access" }}</span>
+                            </li>
+                            {% endif %}
+                            <li class="d-flex align-items-center mb-2">
+                                <svg class="text-success flex-shrink-0 me-2" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/></svg>
+                                <span>{{ g.i18n.all_writing_tools|default:"All writing tools" }}</span>
+                            </li>
+                            <li class="d-flex align-items-center mb-2">
+                                <svg class="text-success flex-shrink-0 me-2" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/></svg>
+                                <span>{{ g.i18n.premium_modes|default:"All premium modes" }}</span>
+                            </li>
+                            <li class="d-flex align-items-center mb-2">
+                                <svg class="text-success flex-shrink-0 me-2" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/></svg>
+                                <span>{{ g.i18n.priority_processing|default:"Priority processing" }}</span>
+                            </li>
+                            <li class="d-flex align-items-center mb-2">
+                                <svg class="text-success flex-shrink-0 me-2" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/></svg>
+                                <span>{{ g.i18n.no_word_limit|default:"No word limits" }}</span>
+                            </li>
+                        </ul>
+
+                        <input type="radio" name="plan" id="{{ plan.code_name }}" value="{{ plan.code_name }}" class="d-none" {% if forloop.first %}checked{% endif %}>
+                        <button type="submit"
+                                class="btn w-100 {% if forloop.last %}btn-primary{% else %}btn-outline-primary{% endif %}"
+                                onclick="document.getElementById('{{ plan.code_name }}').checked=true;">
+                            {{ g.i18n.get_started|default:"Get Started" }}
+                        </button>
                     </div>
                 </div>
+            </div>
             {% endfor %}
         </div>
-        <hr>
-        <button id="pricingbutton"
-                class="btn btn-success btn-lg">{{ g.i18n.purchase|default:"Purchase" }}</button>
-        <br>
-        <p class="small mt-3">
-            <strong>{{ g.i18n.risk_free|default:"Risk-free" }}:</strong> {{ g.i18n.money_back|default:"30-day money-back guarantee" }}<br>
-            <strong>{{ g.i18n.flexible|default:"Flexible" }}:</strong> {{ g.i18n.change_plan_whenever|default:"Change or cancel anytime" }}<br>
-            <strong>{{ g.i18n.fair|default:"Fair" }}:</strong> {{ g.i18n.credits_never_expire|default:"Credits never expire" | safe }}
-        </p>
     </form>
+
+    <div class="row justify-content-center mt-5">
+        <div class="col-lg-8">
+            <div class="row g-4 text-center">
+                <div class="col-md-4">
+                    <div class="p-3">
+                        <svg class="text-success mb-2" width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                        <h6 class="fw-semibold">{{ g.i18n.risk_free|default:"Risk-free" }}</h6>
+                        <p class="text-muted small mb-0">{{ g.i18n.money_back|default:"30-day money-back guarantee" }}</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3">
+                        <svg class="text-primary mb-2" width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                        <h6 class="fw-semibold">{{ g.i18n.flexible|default:"Flexible" }}</h6>
+                        <p class="text-muted small mb-0">{{ g.i18n.change_plan_whenever|default:"Change or cancel anytime" }}</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3">
+                        <svg class="text-warning mb-2" width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <h6 class="fw-semibold">{{ g.i18n.fair|default:"Fair" }}</h6>
+                        <p class="text-muted small mb-0">{{ g.i18n.credits_never_expire|default:"Credits never expire" }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

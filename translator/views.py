@@ -18,19 +18,40 @@ logger = logging.getLogger('app')
 # Build reverse lookup: lowercase language name -> language code
 NAME_TO_CODE = {name.lower(): code for code, name in LANGUAGES.items()}
 
-# Popular translation pairs for the "Other Translation Pairs" section
-POPULAR_PAIRS = [
-    ('english', 'spanish'), ('english', 'french'), ('english', 'german'),
-    ('english', 'italian'), ('english', 'portuguese'), ('english', 'chinese'),
-    ('english', 'japanese'), ('english', 'korean'), ('english', 'arabic'),
-    ('english', 'hindi'), ('english', 'russian'), ('english', 'dutch'),
-    ('english', 'turkish'), ('english', 'polish'), ('english', 'swedish'),
-    ('spanish', 'english'), ('french', 'english'), ('german', 'english'),
-    ('italian', 'english'), ('portuguese', 'english'), ('chinese', 'english'),
-    ('japanese', 'english'), ('korean', 'english'), ('arabic', 'english'),
-    ('hindi', 'english'), ('russian', 'english'), ('french', 'spanish'),
-    ('spanish', 'french'), ('french', 'german'), ('german', 'french'),
+# Major languages for translation pair pages
+PAIR_LANGUAGES = [
+    'english', 'spanish', 'french', 'german', 'italian', 'portuguese',
+    'chinese', 'japanese', 'korean', 'arabic', 'hindi', 'russian',
+    'dutch', 'turkish', 'polish', 'swedish',
 ]
+
+
+def build_language_pairs():
+    """Build translation pairs organized by language category."""
+    categories = []
+    for lang in PAIR_LANGUAGES:
+        lang_code = NAME_TO_CODE.get(lang)
+        if not lang_code:
+            continue
+        lang_name = LANGUAGES[lang_code]
+        pairs = []
+        for other in PAIR_LANGUAGES:
+            if other == lang:
+                continue
+            other_code = NAME_TO_CODE.get(other)
+            if not other_code:
+                continue
+            other_name = LANGUAGES[other_code]
+            pairs.append({
+                'source_name': lang_name,
+                'target_name': other_name,
+                'url': f'/translate/{lang}-to-{other}/',
+            })
+        categories.append({
+            'language': lang_name,
+            'pairs': pairs,
+        })
+    return categories
 
 
 class TranslatorPage(View):
@@ -41,17 +62,8 @@ class TranslatorPage(View):
         )
         languages = TranslationService.get_languages()
 
-        # Build popular pairs for the bottom section
-        popular_pairs = []
-        for s, t in POPULAR_PAIRS:
-            s_code = NAME_TO_CODE.get(s)
-            t_code = NAME_TO_CODE.get(t)
-            if s_code and t_code:
-                popular_pairs.append({
-                    'source_name': LANGUAGES[s_code],
-                    'target_name': LANGUAGES[t_code],
-                    'url': f'/translate/{s}-to-{t}/',
-                })
+        # Build translation pairs organized by language
+        pair_categories = build_language_pairs()
 
         return render(
             request,
@@ -63,7 +75,7 @@ class TranslatorPage(View):
                 'g': settings,
                 'is_premium': is_premium,
                 'languages_json': json.dumps(languages),
-                'popular_pairs': popular_pairs,
+                'pair_categories': pair_categories,
             }
         )
 
@@ -240,21 +252,8 @@ class TranslationPairPage(View):
             ],
         }
 
-        # Build popular pairs list (exclude current pair)
-        other_pairs = []
-        for s, t in POPULAR_PAIRS:
-            if s == source_lower and t == target_lower:
-                continue
-            s_code = NAME_TO_CODE.get(s)
-            t_code = NAME_TO_CODE.get(t)
-            if s_code and t_code:
-                other_pairs.append({
-                    'source_name': LANGUAGES[s_code],
-                    'target_name': LANGUAGES[t_code],
-                    'url': f'/translate/{s}-to-{t}/',
-                })
-            if len(other_pairs) >= 20:
-                break
+        # Build translation pairs organized by language
+        pair_categories = build_language_pairs()
 
         return render(
             request,
@@ -271,6 +270,6 @@ class TranslationPairPage(View):
                 'default_target': target_code,
                 'source_name': source_name,
                 'target_name': target_name,
-                'other_pairs': other_pairs,
+                'pair_categories': pair_categories,
             }
         )

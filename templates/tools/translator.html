@@ -10,7 +10,7 @@
 
     {% csrf_token %}
 
-    <div x-data="translator({{ languages_json|safe }})" x-cloak>
+    <div x-data="translator({{ languages_json|safe }})">
         <div class="row justify-content-center">
             <div class="col-lg-10">
                 <!-- Language Selection Bar -->
@@ -157,24 +157,25 @@
         </div>
     </div>
 </div>
-    <!-- Popular Translation Pairs -->
-    {% if popular_pairs %}
+    <!-- Translation Pairs by Language -->
+    {% if pair_categories %}
     <div class="container py-5">
-        <h2 class="text-center fw-bold mb-4">Popular Translation Pairs</h2>
-        <p class="text-center text-muted mb-4">Translate between the most popular language combinations</p>
-        <div class="row justify-content-center">
-            <div class="col-lg-10">
-                <div class="row g-2">
-                    {% for pair in popular_pairs %}
-                    <div class="col-6 col-md-4 col-lg-3">
-                        <a href="{{ pair.url }}" class="d-block text-decoration-none text-dark p-2 rounded small border bg-white" style="transition: background-color 0.15s;">
-                            {{ pair.source_name }} to {{ pair.target_name }}
-                        </a>
-                    </div>
-                    {% endfor %}
+        <h2 class="text-center fw-bold mb-2">Translation Pairs</h2>
+        <p class="text-center text-muted mb-4">Translate to and from 16 popular languages</p>
+        {% for cat in pair_categories %}
+        <div class="mb-4">
+            <h3 class="h6 fw-bold mb-2">{{ cat.language }}</h3>
+            <div class="row g-2">
+                {% for pair in cat.pairs %}
+                <div class="col-6 col-md-4 col-lg-3">
+                    <a href="{{ pair.url }}" class="d-block text-decoration-none text-dark p-2 rounded small border bg-white" style="transition: background-color 0.15s;">
+                        {{ pair.source_name }} to {{ pair.target_name }}
+                    </a>
                 </div>
+                {% endfor %}
             </div>
         </div>
+        {% endfor %}
     </div>
     {% endif %}
 {% endblock %}
