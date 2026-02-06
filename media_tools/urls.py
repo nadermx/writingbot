@@ -13,8 +13,8 @@ from media_tools.views import (
 
 urlpatterns = [
     # Page views
-    path('image-tools/', ImageConverterPage.as_view(), name='image_converter'),
-    path('converter-tools/', AIImageGeneratorPage.as_view(), name='ai_image_generator'),
+    path('image-tools/', AIImageGeneratorPage.as_view(), name='ai_image_generator'),
+    path('converter-tools/', ImageConverterPage.as_view(), name='image_converter'),
     path('background-remover/', BackgroundRemoverPage.as_view(), name='background_remover'),
     path('tools/qr-code-generator/', QRCodePage.as_view(), name='qr_code_generator'),
     path('tools/ai-voice-generator/', VoiceGeneratorPage.as_view(), name='voice_generator'),

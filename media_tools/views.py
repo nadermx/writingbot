@@ -26,7 +26,7 @@ MEDIA_TOOLS = [
         'description': 'Convert images between JPG, PNG, WebP, GIF, BMP, and more.',
         'category': 'image',
         'icon': 'image',
-        'url': '/image-tools/',
+        'url': '/converter-tools/',
     },
     {
         'slug': 'background-remover',
@@ -42,7 +42,7 @@ MEDIA_TOOLS = [
         'description': 'Generate image prompts with AI to create stunning visuals.',
         'category': 'ai',
         'icon': 'ai',
-        'url': '/converter-tools/',
+        'url': '/image-tools/',
     },
     {
         'slug': 'qr-code-generator',

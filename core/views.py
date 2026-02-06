@@ -17,8 +17,8 @@ class IndexPage(View):
             request,
             'index.html',
             {
-                'title': config.PROJECT_NAME,
-                'description': settings.get('i18n').get('site_description', ''),
+                'title': f'{config.PROJECT_NAME} - Free AI Writing Tools | Paraphraser, Grammar Checker & More',
+                'description': settings.get('i18n').get('site_description', 'Free AI writing tools: paraphrase, check grammar, detect AI content, summarize, translate, and more. No sign-up required.'),
                 'page': 'home',
                 'g': settings,
             }
@@ -37,7 +37,7 @@ class ContactPage(View):
             self.template_name,
             {
                 'title': f"{settings.get('i18n').get('contact', 'Contact')} | {config.PROJECT_NAME}",
-                'description': settings.get('i18n').get('contact_meta_description', ''),
+                'description': settings.get('i18n').get('contact_meta_description', f'Contact the {config.PROJECT_NAME} team for support, feedback, or partnership inquiries.'),
                 'page': 'contact',
                 'g': settings,
                 'form': form
@@ -89,7 +89,7 @@ class AboutPage(View):
             'about.html',
             {
                 'title': f"{settings.get('i18n').get('about_us', 'About')} | {config.PROJECT_NAME}",
-                'description': settings.get('i18n').get('about_us_meta_description', ''),
+                'description': settings.get('i18n').get('about_us_meta_description', f'About {config.PROJECT_NAME} - AI-powered writing tools that help you write better, faster, and with confidence.'),
                 'page': 'about',
                 'g': settings
             }
@@ -369,6 +369,7 @@ class PricingPage(View):
             'pricing.html',
             {
                 'title': f"{settings.get('i18n').get('pricing', 'Pricing')} | {config.PROJECT_NAME}",
+                'description': f'Compare {config.PROJECT_NAME} plans and pricing. Free and premium options for writers, students, and teams.',
                 'page': 'pricing',
                 'plans': plans,
                 'g': settings,
