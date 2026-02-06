@@ -1,0 +1,328 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4" x-data="proofreaderApp()" x-init="init()">
+    {% csrf_token %}
+
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12 text-center">
+            <h1 class="h2 fw-bold">Online Proofreader</h1>
+            <p class="text-muted">Upload a document or paste text for comprehensive proofreading with AI-powered analysis</p>
+        </div>
+    </div>
+
+    <!-- Upload / Input Section -->
+    <div class="row" x-show="!hasResult">
+        <div class="col-12 col-lg-8 mx-auto">
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+
+                    <!-- Tab Switcher -->
+                    <div class="d-flex gap-2 mb-4">
+                        <button
+                            @click="inputMode = 'paste'"
+                            class="btn btn-sm"
+                            :class="inputMode === 'paste' ? 'btn-primary' : 'btn-outline-secondary'"
+                        >Paste Text</button>
+                        <button
+                            @click="inputMode = 'upload'"
+                            class="btn btn-sm"
+                            :class="inputMode === 'upload' ? 'btn-primary' : 'btn-outline-secondary'"
+                        >Upload Document</button>
+                    </div>
+
+                    <!-- Paste Text Mode -->
+                    <div x-show="inputMode === 'paste'">
+                        <textarea
+                            x-model="text"
+                            class="form-control"
+                            rows="14"
+                            placeholder="Paste your text here to proofread..."
+                            style="font-size: 1rem; line-height: 1.7; resize: vertical;"
+                        ></textarea>
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <span class="text-muted small">
+                                <span x-text="wordCount"></span> words
+                                {% if not is_premium %} / {{ free_word_limit }} word limit{% endif %}
+                            </span>
+                            {% if not is_premium %}
+                            <a href="/pricing/" class="btn btn-sm btn-outline-primary">Upgrade for Unlimited</a>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Upload Mode -->
+                    <div x-show="inputMode === 'upload'">
+                        <div
+                            class="border border-2 border-dashed rounded-3 p-5 text-center"
+                            :class="dragOver ? 'border-primary bg-primary bg-opacity-10' : 'border-secondary'"
+                            @dragover.prevent="dragOver = true"
+                            @dragleave.prevent="dragOver = false"
+                            @drop.prevent="handleDrop($event)"
+                            style="cursor: pointer;"
+                            @click="$refs.fileInput.click()"
+                        >
+                            <input
+                                type="file"
+                                x-ref="fileInput"
+                                @change="handleFileSelect($event)"
+                                accept=".docx,.txt,.pdf"
+                                class="d-none"
+                            />
+                            <div x-show="!selectedFile">
+                                <svg class="mb-3" style="width:48px;height:48px;color:#6b7280" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                                </svg>
+                                <p class="fw-semibold mb-1">Drag and drop your document here</p>
+                                <p class="text-muted small mb-0">or click to browse. Supports DOCX, TXT, and PDF (max 10 MB)</p>
+                            </div>
+                            <div x-show="selectedFile">
+                                <svg class="mb-2" style="width:40px;height:40px;color:#22c55e" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                <p class="fw-semibold mb-1" x-text="selectedFile ? selectedFile.name : ''"></p>
+                                <p class="text-muted small mb-1" x-text="selectedFile ? formatFileSize(selectedFile.size) : ''"></p>
+                                <button @click.stop="clearFile()" class="btn btn-sm btn-outline-danger mt-1">Remove</button>
+                            </div>
+                        </div>
+                        {% if not is_premium %}
+                        <div class="text-end mt-2">
+                            <a href="/pricing/" class="btn btn-sm btn-outline-primary">Upgrade for Unlimited</a>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Error Alert -->
+                    <template x-if="errorMessage">
+                        <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
+                            <span x-text="errorMessage"></span>
+                            <button type="button" class="btn-close" @click="errorMessage = null"></button>
+                        </div>
+                    </template>
+
+                    <!-- Proofread Button -->
+                    <div class="text-center mt-4">
+                        <button
+                            @click="proofread()"
+                            :disabled="loading || (!text.trim() && !selectedFile)"
+                            class="btn btn-primary btn-lg px-5"
+                        >
+                            <span x-show="loading" class="spinner-border spinner-border-sm me-2"></span>
+                            <span x-text="loading ? 'Analyzing Document...' : 'Proofread Document'"></span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Section -->
+    <div x-show="hasResult" x-cloak>
+        <!-- Back / New Document Button -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <button @click="resetAll()" class="btn btn-outline-secondary btn-sm">
+                    <svg style="width:16px;height:16px" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                    </svg>
+                    New Document
+                </button>
+            </div>
+        </div>
+
+        <!-- Score & Summary Row -->
+        <div class="row mb-4 g-3">
+            <!-- Overall Score Card -->
+            <div class="col-12 col-md-4 col-lg-3">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body text-center py-4">
+                        <div class="position-relative d-inline-flex align-items-center justify-content-center mb-2" style="width: 120px; height: 120px;">
+                            <svg width="120" height="120" viewBox="0 0 120 120">
+                                <circle cx="60" cy="60" r="52" fill="none" stroke="#e9ecef" stroke-width="8"/>
+                                <circle
+                                    cx="60" cy="60" r="52" fill="none"
+                                    :stroke="getScoreColor(result.overall_score)"
+                                    stroke-width="8"
+                                    stroke-linecap="round"
+                                    :stroke-dasharray="(2 * Math.PI * 52)"
+                                    :stroke-dashoffset="(2 * Math.PI * 52) * (1 - (result.overall_score || 0) / 100)"
+                                    transform="rotate(-90 60 60)"
+                                    style="transition: stroke-dashoffset 0.8s ease;"
+                                />
+                            </svg>
+                            <div class="position-absolute text-center">
+                                <span class="display-6 fw-bold" :style="'color:' + getScoreColor(result.overall_score)" x-text="result.overall_score || 0"></span>
+                                <div class="small text-muted">/ 100</div>
+                            </div>
+                        </div>
+                        <h5 class="fw-semibold mb-1">Quality Score</h5>
+                        <p class="text-muted small mb-0" x-text="getScoreLabel(result.overall_score)"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Summary & Error Counts -->
+            <div class="col-12 col-md-8 col-lg-9">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body">
+                        <!-- Summary -->
+                        <p class="mb-3" x-text="result.summary"></p>
+
+                        <!-- Stats Row -->
+                        <div class="d-flex flex-wrap gap-2 mb-3">
+                            <span class="badge bg-light text-dark border px-3 py-2">
+                                <span class="fw-bold" x-text="result.word_count || 0"></span> words
+                            </span>
+                            <span class="badge bg-light text-dark border px-3 py-2">
+                                <span class="fw-bold" x-text="result.total_errors || 0"></span> issues found
+                            </span>
+                        </div>
+
+                        <!-- Error Category Bars -->
+                        <h6 class="fw-semibold small text-muted text-uppercase mb-2">Issues by Category</h6>
+                        <div class="row g-2">
+                            <template x-for="cat in errorCategories" :key="cat.key">
+                                <div class="col-6 col-md-4" x-show="(result.error_counts && result.error_counts[cat.key]) > 0">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="rounded-circle flex-shrink-0" :style="'width:10px;height:10px;background:' + cat.color"></div>
+                                        <span class="small text-capitalize" x-text="cat.label"></span>
+                                        <span class="badge rounded-pill ms-auto" :style="'background:' + cat.color + '; color: white;'" x-text="result.error_counts ? result.error_counts[cat.key] : 0"></span>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content: Corrections + Side-by-Side -->
+        <div class="row g-3">
+            <!-- Corrections List -->
+            <div class="col-12 col-lg-4">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <span class="fw-semibold">Corrections</span>
+                        <span class="badge bg-danger rounded-pill" x-text="result.corrections ? result.corrections.length : 0"></span>
+                    </div>
+                    <div class="card-body p-0" style="max-height: 600px; overflow-y: auto;">
+                        <template x-if="!result.corrections || result.corrections.length === 0">
+                            <p class="text-muted text-center small p-3 mb-0">No errors found. Great writing!</p>
+                        </template>
+
+                        <!-- Filter buttons -->
+                        <div x-show="result.corrections && result.corrections.length > 0" class="px-3 py-2 border-bottom">
+                            <div class="d-flex flex-wrap gap-1">
+                                <button
+                                    @click="filterType = 'all'"
+                                    class="btn btn-sm"
+                                    :class="filterType === 'all' ? 'btn-dark' : 'btn-outline-secondary'"
+                                >All</button>
+                                <template x-for="cat in errorCategories" :key="cat.key">
+                                    <button
+                                        x-show="result.error_counts && result.error_counts[cat.key] > 0"
+                                        @click="filterType = cat.key"
+                                        class="btn btn-sm"
+                                        :class="filterType === cat.key ? 'btn-dark' : 'btn-outline-secondary'"
+                                        x-text="cat.label + ' (' + (result.error_counts ? result.error_counts[cat.key] : 0) + ')'"
+                                    ></button>
+                                </template>
+                            </div>
+                        </div>
+
+                        <!-- Correction items -->
+                        <template x-for="(correction, idx) in filteredCorrections" :key="idx">
+                            <div class="px-3 py-3 border-bottom correction-item" style="cursor: pointer;">
+                                <div class="d-flex align-items-start gap-2 mb-1">
+                                    <span class="badge rounded-pill flex-shrink-0" :style="'background:' + getCategoryColor(correction.type) + '; color: white; font-size: 0.7rem;'" x-text="correction.type"></span>
+                                </div>
+                                <div class="mb-1">
+                                    <span class="text-decoration-line-through text-danger small" x-text="correction.original"></span>
+                                </div>
+                                <div class="text-success small fw-semibold mb-1" x-text="correction.suggestion"></div>
+                                <div class="text-muted small" x-text="correction.explanation"></div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Side-by-Side: Original vs Corrected -->
+            <div class="col-12 col-lg-8">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div class="d-flex gap-2">
+                            <button
+                                @click="viewMode = 'corrected'"
+                                class="btn btn-sm"
+                                :class="viewMode === 'corrected' ? 'btn-primary' : 'btn-outline-secondary'"
+                            >Corrected</button>
+                            <button
+                                @click="viewMode = 'original'"
+                                class="btn btn-sm"
+                                :class="viewMode === 'original' ? 'btn-primary' : 'btn-outline-secondary'"
+                            >Original</button>
+                            <button
+                                @click="viewMode = 'sidebyside'"
+                                class="btn btn-sm d-none d-md-inline-block"
+                                :class="viewMode === 'sidebyside' ? 'btn-primary' : 'btn-outline-secondary'"
+                            >Side by Side</button>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-success dropdown-toggle" type="button" data-bs-toggle="dropdown" :disabled="downloading">
+                                    <span x-show="downloading" class="spinner-border spinner-border-sm me-1"></span>
+                                    Download Corrected
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#" @click.prevent="downloadCorrected('docx')">Download as DOCX</a></li>
+                                    <li><a class="dropdown-item" href="#" @click.prevent="downloadCorrected('txt')">Download as TXT</a></li>
+                                </ul>
+                            </div>
+                            <button @click="copyCorrected()" class="btn btn-sm btn-outline-secondary" title="Copy corrected text">
+                                <svg style="width:16px;height:16px" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                                </svg>
+                                <span x-text="copied ? 'Copied!' : 'Copy'"></span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <!-- Corrected View -->
+                        <div x-show="viewMode === 'corrected'" class="p-4" style="min-height: 400px; max-height: 600px; overflow-y: auto;">
+                            <div class="document-text" style="white-space: pre-wrap; word-wrap: break-word; font-size: 1rem; line-height: 1.8;" x-text="result.corrected_text"></div>
+                        </div>
+
+                        <!-- Original View -->
+                        <div x-show="viewMode === 'original'" class="p-4" style="min-height: 400px; max-height: 600px; overflow-y: auto;">
+                            <div class="document-text" style="white-space: pre-wrap; word-wrap: break-word; font-size: 1rem; line-height: 1.8;" x-text="result.original_text"></div>
+                        </div>
+
+                        <!-- Side by Side View -->
+                        <div x-show="viewMode === 'sidebyside'" class="row g-0" style="min-height: 400px; max-height: 600px;">
+                            <div class="col-6 border-end" style="overflow-y: auto;">
+                                <div class="px-2 py-1 bg-light border-bottom text-center">
+                                    <small class="fw-semibold text-muted">Original</small>
+                                </div>
+                                <div class="p-3" style="white-space: pre-wrap; word-wrap: break-word; font-size: 0.9rem; line-height: 1.7;" x-text="result.original_text"></div>
+                            </div>
+                            <div class="col-6" style="overflow-y: auto;">
+                                <div class="px-2 py-1 bg-light border-bottom text-center">
+                                    <small class="fw-semibold text-muted">Corrected</small>
+                                </div>
+                                <div class="p-3" style="white-space: pre-wrap; word-wrap: break-word; font-size: 0.9rem; line-height: 1.7;" x-text="result.corrected_text"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/proofreader.js' %}?v={{ g.scripts_version }}"></script>
+{% endblock %}

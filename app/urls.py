@@ -39,6 +39,7 @@ urlpatterns = [
     path('', include('pdf_tools.urls')),
     path('', include('media_tools.urls')),
     path('', include('seo.urls')),
+    path('', include('converter.urls')),
     path('', include('courses.urls')),
     path('', include('blog.urls')),
 

@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="bg-light py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 text-center">
+                <h1 class="display-5 fw-bold mb-3">Writing Guides</h1>
+                <p class="lead text-muted mb-0">Free educational guides to help you write better. From paraphrasing techniques to citation formats, master every aspect of writing.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Guides Grid -->
+<div class="container py-5">
+    <div class="row g-4">
+        {% for guide in guides %}
+        <div class="col-md-6 col-lg-4">
+            <a href="{{ guide.url }}" class="text-decoration-none">
+                <div class="card h-100 border-0 shadow-sm hover-lift">
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="d-flex align-items-center justify-content-center rounded-3 flex-shrink-0" style="width:44px;height:44px;background:#e0eaff">
+                                <svg style="width:22px;height:22px;color:#1a3fff" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <h2 class="h5 fw-bold text-dark mb-2">{{ guide.title }}</h2>
+                        <p class="text-muted small mb-0">{{ guide.description }}</p>
+                    </div>
+                    <div class="card-footer bg-transparent border-0 p-4 pt-0">
+                        <span class="text-primary fw-semibold small">Read Guide
+                            <svg class="ms-1" style="width:14px;height:14px" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                            </svg>
+                        </span>
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- CTA Section -->
+<div class="bg-light py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 text-center">
+                <h2 class="fw-bold mb-3">Ready to Improve Your Writing?</h2>
+                <p class="text-muted mb-4">Put what you have learned into practice with our free AI-powered writing tools.</p>
+                <div class="d-flex flex-wrap gap-3 justify-content-center">
+                    <a href="/paraphrasing-tool/" class="btn btn-primary">Paraphrasing Tool</a>
+                    <a href="/grammar-check/" class="btn btn-outline-primary">Grammar Checker</a>
+                    <a href="/citation-generator/" class="btn btn-outline-primary">Citation Generator</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .hover-lift {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .hover-lift:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 .5rem 1.5rem rgba(0,0,0,.12) !important;
+    }
+</style>
+{% endblock %}

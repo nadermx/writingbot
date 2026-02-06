@@ -17,6 +17,13 @@ function summarizerApp() {
         errorMessage: null,
         inputWordCount: 0,
 
+        // Custom mode
+        customInstructions: '',
+
+        // Keywords
+        keywords: [],
+        keywordInput: '',
+
         init() {
             this.$watch('text', () => this.updateWordCount());
         },
@@ -27,6 +34,22 @@ function summarizerApp() {
                 return;
             }
             this.inputWordCount = this.text.trim().split(/\s+/).length;
+        },
+
+        addKeyword() {
+            var kw = this.keywordInput.trim().replace(/,$/,'').trim();
+            if (kw && this.keywords.indexOf(kw) === -1 && this.keywords.length < 20) {
+                this.keywords.push(kw);
+            }
+            this.keywordInput = '';
+        },
+
+        removeKeyword(idx) {
+            this.keywords.splice(idx, 1);
+        },
+
+        showUpgradeForCustom() {
+            this.errorMessage = 'Custom mode is available for Premium users only. Upgrade to unlock custom summarization instructions.';
         },
 
         clearInput() {
@@ -48,10 +71,32 @@ function summarizerApp() {
             var self = this;
             if (!self.text.trim() || self.loading) return;
 
+            // Validate custom mode has instructions
+            if (self.mode === 'custom' && !self.customInstructions.trim()) {
+                self.errorMessage = 'Please provide custom instructions for custom mode.';
+                return;
+            }
+
             self.loading = true;
             self.errorMessage = null;
             self.summary = '';
             self.sentences = [];
+
+            var payload = {
+                text: self.text,
+                mode: self.mode,
+                length: self.summaryLength
+            };
+
+            // Add custom instructions for custom mode
+            if (self.mode === 'custom' && self.customInstructions.trim()) {
+                payload.custom_instructions = self.customInstructions.trim();
+            }
+
+            // Add keywords if any
+            if (self.keywords.length > 0) {
+                payload.keywords = self.keywords;
+            }
 
             fetch('/api/summarize/', {
                 method: 'POST',
@@ -59,11 +104,7 @@ function summarizerApp() {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': self.getCSRFToken()
                 },
-                body: JSON.stringify({
-                    text: self.text,
-                    mode: self.mode,
-                    length: self.summaryLength
-                })
+                body: JSON.stringify(payload)
             })
             .then(function(response) {
                 return response.json().then(function(data) {

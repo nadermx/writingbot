@@ -40,6 +40,8 @@ class SummarizeAPI(APIView):
         text = request.data.get('text', '').strip()
         mode = request.data.get('mode', 'paragraph')
         length = request.data.get('length', 3)
+        custom_instructions = request.data.get('custom_instructions', '').strip()
+        keywords = request.data.get('keywords', [])
 
         if not text:
             return Response(
@@ -48,7 +50,7 @@ class SummarizeAPI(APIView):
             )
 
         # Validate mode
-        if mode not in ('key_sentences', 'paragraph'):
+        if mode not in ('key_sentences', 'paragraph', 'custom'):
             mode = 'paragraph'
 
         # Validate length
@@ -75,8 +77,35 @@ class SummarizeAPI(APIView):
                 status=status.HTTP_403_FORBIDDEN
             )
 
+        # Custom mode is premium only
+        if mode == 'custom' and not is_premium:
+            return Response(
+                {
+                    'error': 'Custom mode is available for Premium users only.',
+                    'upgrade': True
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Validate custom_instructions for custom mode
+        if mode == 'custom' and not custom_instructions:
+            return Response(
+                {'error': 'Please provide custom instructions for custom mode.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Sanitize keywords: ensure it's a list of strings, cap at 20
+        if isinstance(keywords, list):
+            keywords = [str(k).strip() for k in keywords if str(k).strip()][:20]
+        else:
+            keywords = []
+
         service = AISummarizerService()
-        result, error = service.summarize(text, mode, length, use_premium=is_premium)
+        result, error = service.summarize(
+            text, mode, length, use_premium=is_premium,
+            custom_instructions=custom_instructions if mode == 'custom' else None,
+            keywords=keywords if keywords else None
+        )
 
         if error:
             return Response(

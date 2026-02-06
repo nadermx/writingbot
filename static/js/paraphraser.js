@@ -6,7 +6,8 @@
  * - Mode selection and settings
  * - Frozen words
  * - Synonym popup on word click
- * - Color-coded diff highlighting
+ * - Color-coded diff highlighting (toggle)
+ * - Compare modes (3-column comparison)
  * - File upload (.txt, .docx)
  * - Copy to clipboard
  * - History loading (premium)
@@ -17,15 +18,21 @@ function paraphraser() {
         inputText: '',
         outputText: '',
         outputHtml: '',
+        diffHtml: '',
+        showDiff: false,
         mode: 'standard',
         synonymLevel: 3,
         frozenWords: [],
         isLoading: false,
+        isComparing: false,
         errorMessage: '',
         showUpgrade: false,
         copyLabel: 'Copy',
         inputWordCount: 0,
         outputWordCount: 0,
+
+        // Compare results
+        compareResults: [],
 
         // Config passed from template
         isPremium: false,
@@ -130,8 +137,11 @@ function paraphraser() {
             this.isLoading = true;
             this.outputHtml = '';
             this.outputText = '';
+            this.diffHtml = '';
+            this.showDiff = false;
             this.outputWordCount = 0;
             this.synonymPopup.visible = false;
+            this.compareResults = [];
 
             var payload = {
                 text: text,
@@ -173,12 +183,311 @@ function paraphraser() {
 
                 self.outputText = result.data.output_text;
                 self.outputWordCount = result.data.output_word_count || self.countWords(self.outputText);
-                self.outputHtml = self.calculateDiff(self.inputText, self.outputText);
+                self.outputHtml = self._renderOutputWords(self.outputText);
+                self.diffHtml = self.computeDiff(self.inputText, self.outputText);
             })
             .catch(function (err) {
                 self.isLoading = false;
                 self.errorMessage = 'Network error. Please check your connection and try again.';
             });
+        },
+
+        /**
+         * Toggle the diff view on/off
+         */
+        toggleDiff: function () {
+            if (!this.diffHtml && this.inputText && this.outputText) {
+                this.diffHtml = this.computeDiff(this.inputText, this.outputText);
+            }
+            this.showDiff = !this.showDiff;
+        },
+
+        /**
+         * Compare paraphrase: run text through 3 different modes simultaneously
+         */
+        compareParaphrase: function () {
+            var self = this;
+            var text = this.inputText.trim();
+
+            if (!text) {
+                this.errorMessage = 'Please enter some text to compare.';
+                return;
+            }
+
+            // Pick 3 modes for comparison: current mode + 2 others
+            var compareModes = this._pickCompareModes(this.mode);
+
+            this.errorMessage = '';
+            this.showUpgrade = false;
+            this.isComparing = true;
+            this.compareResults = [];
+
+            var promises = [];
+            var csrfToken = this.getCsrfToken();
+
+            for (var i = 0; i < compareModes.length; i++) {
+                var cMode = compareModes[i];
+
+                // Check if mode is available for user
+                if (!this.isPremium && !this.freeModes.includes(cMode)) {
+                    continue;
+                }
+
+                var payload = {
+                    text: text,
+                    mode: cMode,
+                    synonym_level: parseInt(this.synonymLevel, 10),
+                    frozen_words: this.frozenWords,
+                    settings: {
+                        use_contractions: this.paraphraseSettings.use_contractions,
+                        active_voice: this.paraphraseSettings.active_voice,
+                    },
+                    language: 'en',
+                };
+
+                promises.push(
+                    (function(mode) {
+                        return fetch('/api/paraphrase/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': csrfToken,
+                            },
+                            body: JSON.stringify({
+                                text: text,
+                                mode: mode,
+                                synonym_level: parseInt(self.synonymLevel, 10),
+                                frozen_words: self.frozenWords,
+                                settings: {
+                                    use_contractions: self.paraphraseSettings.use_contractions,
+                                    active_voice: self.paraphraseSettings.active_voice,
+                                },
+                                language: 'en',
+                            }),
+                        })
+                        .then(function(resp) {
+                            return resp.json().then(function(data) {
+                                return { ok: resp.ok, data: data, mode: mode };
+                            });
+                        });
+                    })(cMode)
+                );
+            }
+
+            if (promises.length === 0) {
+                this.isComparing = false;
+                this.errorMessage = 'No modes available for comparison. Upgrade to access more modes.';
+                this.showUpgrade = true;
+                return;
+            }
+
+            Promise.all(promises)
+                .then(function(results) {
+                    self.isComparing = false;
+                    var compareItems = [];
+                    for (var r = 0; r < results.length; r++) {
+                        var res = results[r];
+                        if (res.ok && res.data.output_text) {
+                            compareItems.push({
+                                mode: res.mode,
+                                text: res.data.output_text,
+                                wordCount: res.data.output_word_count || self.countWords(res.data.output_text),
+                                copyLabel: 'Copy',
+                            });
+                        }
+                    }
+                    self.compareResults = compareItems;
+                })
+                .catch(function() {
+                    self.isComparing = false;
+                    self.errorMessage = 'Failed to compare modes. Please try again.';
+                });
+        },
+
+        /**
+         * Pick 3 modes for comparison. Uses the current mode plus 2 different ones.
+         */
+        _pickCompareModes: function (currentMode) {
+            // Define comparison sets based on the current mode category
+            var allModes = ['standard', 'fluency', 'formal', 'academic', 'simple', 'creative'];
+            var selected = [currentMode];
+
+            // Add different modes that offer meaningful contrast
+            var modeContrasts = {
+                'standard': ['formal', 'creative'],
+                'fluency': ['formal', 'simple'],
+                'formal': ['standard', 'creative'],
+                'academic': ['standard', 'simple'],
+                'simple': ['standard', 'formal'],
+                'creative': ['standard', 'formal'],
+                'expand': ['standard', 'shorten'],
+                'shorten': ['standard', 'expand'],
+                'custom': ['standard', 'formal'],
+                'humanizer': ['standard', 'creative'],
+            };
+
+            var contrasts = modeContrasts[currentMode] || ['standard', 'formal'];
+
+            for (var i = 0; i < contrasts.length; i++) {
+                if (selected.indexOf(contrasts[i]) === -1) {
+                    selected.push(contrasts[i]);
+                }
+            }
+
+            // Ensure we have exactly 3 modes
+            for (var m = 0; m < allModes.length && selected.length < 3; m++) {
+                if (selected.indexOf(allModes[m]) === -1) {
+                    selected.push(allModes[m]);
+                }
+            }
+
+            return selected.slice(0, 3);
+        },
+
+        /**
+         * Use a compare result as the main output
+         */
+        useCompareResult: function (index) {
+            var cr = this.compareResults[index];
+            if (!cr) return;
+
+            this.outputText = cr.text;
+            this.outputWordCount = cr.wordCount;
+            this.outputHtml = this._renderOutputWords(this.outputText);
+            this.diffHtml = this.computeDiff(this.inputText, this.outputText);
+            this.compareResults = [];
+        },
+
+        /**
+         * Copy a compare result to clipboard
+         */
+        copyCompareResult: function (index) {
+            var self = this;
+            var cr = this.compareResults[index];
+            if (!cr) return;
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(cr.text).then(function () {
+                    self.compareResults[index].copyLabel = 'Copied!';
+                    setTimeout(function () {
+                        self.compareResults[index].copyLabel = 'Copy';
+                    }, 2000);
+                });
+            } else {
+                var textarea = document.createElement('textarea');
+                textarea.value = cr.text;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                self.compareResults[index].copyLabel = 'Copied!';
+                setTimeout(function () {
+                    self.compareResults[index].copyLabel = 'Copy';
+                }, 2000);
+            }
+        },
+
+        /**
+         * Render output words as clickable spans (no diff coloring).
+         * Used for the default (non-diff) output view.
+         */
+        _renderOutputWords: function (text) {
+            if (!text) return '';
+            var words = text.trim().split(/\s+/);
+            var html = [];
+            for (var i = 0; i < words.length; i++) {
+                html.push(
+                    '<span class="output-word" data-word="' +
+                    this._escapeHtml(words[i]) + '" data-index="' + i + '">' +
+                    this._escapeHtml(words[i]) + '</span> '
+                );
+            }
+            return html.join('');
+        },
+
+        /**
+         * Compute color-coded diff between input and output.
+         * Uses Longest Common Subsequence (LCS) to identify changes.
+         * Changed/added words: green background
+         * Removed words: red strikethrough
+         * Unchanged words: normal text (still clickable)
+         */
+        computeDiff: function (input, output) {
+            if (!input || !output) return '';
+
+            var inputWords = input.trim().split(/\s+/);
+            var outputWords = output.trim().split(/\s+/);
+
+            // Build LCS table for word-level diff
+            var lcs = this._lcs(inputWords, outputWords);
+
+            var html = [];
+            var i = 0;
+            var j = 0;
+            var lcsIdx = 0;
+            var outputWordIndex = 0;
+
+            while (i < inputWords.length || j < outputWords.length) {
+                if (lcsIdx < lcs.length &&
+                    i < inputWords.length &&
+                    j < outputWords.length &&
+                    this._normalizeWord(inputWords[i]) === this._normalizeWord(lcs[lcsIdx]) &&
+                    this._normalizeWord(outputWords[j]) === this._normalizeWord(lcs[lcsIdx])) {
+                    // Unchanged word
+                    html.push(
+                        '<span class="output-word diff-unchanged" data-word="' +
+                        this._escapeHtml(outputWords[j]) + '" data-index="' + outputWordIndex + '">' +
+                        this._escapeHtml(outputWords[j]) + '</span> '
+                    );
+                    i++;
+                    j++;
+                    lcsIdx++;
+                    outputWordIndex++;
+                } else if (j < outputWords.length &&
+                    (lcsIdx >= lcs.length || this._normalizeWord(outputWords[j]) !== this._normalizeWord(lcs[lcsIdx]))) {
+                    // Added/changed word in output
+                    html.push(
+                        '<span class="output-word diff-added" data-word="' +
+                        this._escapeHtml(outputWords[j]) + '" data-index="' + outputWordIndex + '">' +
+                        this._escapeHtml(outputWords[j]) + '</span> '
+                    );
+                    j++;
+                    outputWordIndex++;
+                } else if (i < inputWords.length &&
+                    (lcsIdx >= lcs.length || this._normalizeWord(inputWords[i]) !== this._normalizeWord(lcs[lcsIdx]))) {
+                    // Removed word from input (shown as strikethrough)
+                    html.push(
+                        '<span class="diff-removed">' +
+                        this._escapeHtml(inputWords[i]) + '</span> '
+                    );
+                    i++;
+                } else {
+                    // Safety: advance both to prevent infinite loop
+                    if (j < outputWords.length) {
+                        html.push(
+                            '<span class="output-word diff-added" data-word="' +
+                            this._escapeHtml(outputWords[j]) + '" data-index="' + outputWordIndex + '">' +
+                            this._escapeHtml(outputWords[j]) + '</span> '
+                        );
+                        j++;
+                        outputWordIndex++;
+                    }
+                    if (i < inputWords.length) {
+                        i++;
+                    }
+                }
+            }
+
+            return html.join('');
+        },
+
+        /**
+         * Legacy alias - the old calculateDiff now calls computeDiff
+         */
+        calculateDiff: function (input, output) {
+            return this.computeDiff(input, output);
         },
 
         /**
@@ -240,7 +549,8 @@ function paraphraser() {
             }
 
             this.outputText = words.join('');
-            this.outputHtml = this.calculateDiff(this.inputText, this.outputText);
+            this.outputHtml = this._renderOutputWords(this.outputText);
+            this.diffHtml = this.computeDiff(this.inputText, this.outputText);
             this.outputWordCount = this.countWords(this.outputText);
             this.synonymPopup.visible = false;
         },
@@ -306,80 +616,6 @@ function paraphraser() {
                 this.copyLabel = 'Copied!';
                 setTimeout(function () { self.copyLabel = 'Copy'; }, 2000);
             }
-        },
-
-        /**
-         * Calculate diff between input and output, producing HTML with color coding.
-         * Uses a simple word-level diff approach.
-         * Changed words get .diff-added class, unchanged words are clickable output-word spans.
-         */
-        calculateDiff: function (input, output) {
-            if (!input || !output) return '';
-
-            var inputWords = input.trim().split(/\s+/);
-            var outputWords = output.trim().split(/\s+/);
-
-            // Build LCS (Longest Common Subsequence) table for word-level diff
-            var lcs = this._lcs(inputWords, outputWords);
-
-            var html = [];
-            var i = 0;
-            var j = 0;
-            var lcsIdx = 0;
-            var outputWordIndex = 0;
-
-            while (i < inputWords.length || j < outputWords.length) {
-                if (lcsIdx < lcs.length &&
-                    i < inputWords.length &&
-                    j < outputWords.length &&
-                    this._normalizeWord(inputWords[i]) === this._normalizeWord(lcs[lcsIdx]) &&
-                    this._normalizeWord(outputWords[j]) === this._normalizeWord(lcs[lcsIdx])) {
-                    // Unchanged word
-                    html.push(
-                        '<span class="output-word diff-unchanged" data-word="' +
-                        this._escapeHtml(outputWords[j]) + '" data-index="' + outputWordIndex + '">' +
-                        this._escapeHtml(outputWords[j]) + '</span> '
-                    );
-                    i++;
-                    j++;
-                    lcsIdx++;
-                    outputWordIndex++;
-                } else if (j < outputWords.length &&
-                    (lcsIdx >= lcs.length || this._normalizeWord(outputWords[j]) !== this._normalizeWord(lcs[lcsIdx]))) {
-                    // Added/changed word in output
-                    html.push(
-                        '<span class="output-word diff-added" data-word="' +
-                        this._escapeHtml(outputWords[j]) + '" data-index="' + outputWordIndex + '">' +
-                        this._escapeHtml(outputWords[j]) + '</span> '
-                    );
-                    j++;
-                    outputWordIndex++;
-                } else if (i < inputWords.length &&
-                    (lcsIdx >= lcs.length || this._normalizeWord(inputWords[i]) !== this._normalizeWord(lcs[lcsIdx]))) {
-                    // Removed word from input (shown as strikethrough)
-                    html.push(
-                        '<span class="diff-removed">' +
-                        this._escapeHtml(inputWords[i]) + '</span> '
-                    );
-                    i++;
-                } else {
-                    // Safety: advance both to prevent infinite loop
-                    if (j < outputWords.length) {
-                        html.push(
-                            '<span class="output-word diff-added" data-word="' +
-                            this._escapeHtml(outputWords[j]) + '" data-index="' + outputWordIndex + '">' +
-                            this._escapeHtml(outputWords[j]) + '</span> '
-                        );
-                        j++;
-                        outputWordIndex++;
-                    }
-                    if (i < inputWords.length) {
-                        i++;
-                    }
-                }
-            }
-
-            return html.join('');
         },
 
         /**
@@ -569,7 +805,9 @@ function paraphraser() {
         loadFromHistory: function (item) {
             this.inputText = item.input_text;
             this.outputText = item.output_text;
-            this.outputHtml = this.calculateDiff(item.input_text, item.output_text);
+            this.outputHtml = this._renderOutputWords(item.output_text);
+            this.diffHtml = this.computeDiff(item.input_text, item.output_text);
+            this.showDiff = false;
             this.updateInputWordCount();
             this.outputWordCount = this.countWords(item.output_text);
             this.mode = item.mode;

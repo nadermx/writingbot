@@ -5,6 +5,7 @@ from django.shortcuts import render
 from django.views.generic import View
 
 from accounts.views import GlobalVars
+from seo.guides_content import GUIDES
 import config
 
 logger = logging.getLogger('app')
@@ -16,6 +17,9 @@ ALL_MODES = [
     'standard', 'fluency', 'formal', 'academic', 'simple',
     'creative', 'expand', 'shorten', 'custom', 'humanizer',
 ]
+
+GRAMMAR_LIMITS = django_settings.TOOL_LIMITS.get('grammar', {})
+GRAMMAR_FREE_WORD_LIMIT = GRAMMAR_LIMITS.get('free_words', 5000)
 
 
 # --- SEO page content definitions ---
@@ -170,6 +174,8 @@ SEO_PAGES = {
         'subtitle': 'Proofread your text professionally. Catch every error in grammar, spelling, punctuation, and style before you publish.',
         'meta_title': 'Free Online Proofreader',
         'meta_description': 'Proofread your text online for free. Our AI proofreader catches grammar, spelling, punctuation, and style errors with professional accuracy.',
+        'tool_url': '/proofreader/',
+        'tool_cta': 'Try Our Full Proofreader Tool',
         'features': [
             {'title': 'Professional-Grade', 'text': 'Catches errors that even experienced human proofreaders might miss, with AI-powered contextual understanding.'},
             {'title': 'Style Suggestions', 'text': 'Goes beyond error correction to suggest improvements for clarity, conciseness, and readability.'},
@@ -178,7 +184,7 @@ SEO_PAGES = {
         'faqs': [
             {'q': 'How is this different from a spell checker?', 'a': 'A proofreader checks much more than spelling: it reviews grammar, punctuation, word choice, sentence structure, consistency, and style -- providing a comprehensive review of your writing.'},
             {'q': 'Can I use it for professional documents?', 'a': 'Absolutely. Our proofreader is used for business reports, marketing copy, academic papers, legal documents, and all professional writing.'},
-            {'q': 'Does it support long documents?', 'a': 'Free users can proofread up to 500 words per check. Premium users can proofread documents of any length.'},
+            {'q': 'Does it support long documents?', 'a': 'Free users can proofread up to 5,000 words per check. Premium users can proofread documents of any length. You can also upload DOCX, TXT, and PDF files.'},
         ],
     },
 }
@@ -251,3 +257,310 @@ class EssayCheckerPage(SEOLandingPage):
 
 class OnlineProofreaderPage(SEOLandingPage):
     page_key = 'online-proofreader'
+
+
+# --- Grammar SEO page content definitions ---
+
+GRAMMAR_SEO_PAGES = {
+    'german-grammar-check': {
+        'h1': 'Free German Grammar Checker',
+        'subtitle': 'Check and correct German grammar, spelling, and punctuation instantly. Our AI understands complex German grammar rules including noun cases, verb conjugation, and word order.',
+        'meta_title': 'Free German Grammar Checker Online',
+        'meta_description': 'Check German grammar online for free. Our AI-powered German grammar checker fixes noun cases, verb conjugation, umlauts, compound words, and punctuation errors instantly.',
+        'language_name': 'German',
+        'default_dialect': 'de',
+        'features': [
+            {'title': 'Case & Gender Detection', 'text': 'German has four grammatical cases (Nominativ, Akkusativ, Dativ, Genitiv) and three genders. Our AI catches case and gender agreement errors that other tools miss.'},
+            {'title': 'Compound Word Analysis', 'text': 'German is famous for compound nouns (Zusammengesetzte Nomen). Our checker validates compound word formation and capitalization rules.'},
+            {'title': 'Verb Conjugation & Word Order', 'text': 'Detects incorrect verb conjugation, separable prefix placement, and the V2 word order rule that makes German sentence structure unique.'},
+        ],
+        'faqs': [
+            {'q': 'Does this tool check all four German cases?', 'a': 'Yes, our AI grammar checker understands all four German grammatical cases (Nominativ, Akkusativ, Dativ, Genitiv) and checks for correct case usage with prepositions, verbs, and in relative clauses.'},
+            {'q': 'Can it check compound German words?', 'a': 'Yes, German compound words (like Handschuh or Krankenhaus) are analyzed for correct formation, spelling, and capitalization. The tool also suggests compound word corrections.'},
+            {'q': 'Does it handle both formal and informal German?', 'a': 'Absolutely. The checker understands both formal (Sie) and informal (du) address forms and checks for consistent usage throughout your text, including verb conjugation differences.'},
+        ],
+    },
+    'french-grammar-check': {
+        'h1': 'Free French Grammar Checker',
+        'subtitle': 'Perfect your French writing with AI-powered grammar checking. Catch agreement errors, accent issues, and complex conjugation mistakes instantly.',
+        'meta_title': 'Free French Grammar Checker Online',
+        'meta_description': 'Check French grammar online for free. Our AI French grammar checker corrects verb conjugation, gender agreement, accents, and punctuation with native-level accuracy.',
+        'language_name': 'French',
+        'default_dialect': 'fr',
+        'features': [
+            {'title': 'Gender & Number Agreement', 'text': 'French adjectives and articles must agree in gender and number. Our AI catches every mismatch, including tricky cases with compound subjects and irregular adjectives.'},
+            {'title': 'Accent & Spelling Precision', 'text': 'Correctly identifies missing or wrong accents (aigu, grave, circonflexe, trema, cedille) that change word meaning and pronunciation.'},
+            {'title': 'Complex Verb Conjugation', 'text': 'Checks all French tenses including subjunctive, conditional, and compound tenses. Catches agreement errors with past participles and reflexive verbs.'},
+        ],
+        'faqs': [
+            {'q': 'Does it check French accent marks?', 'a': 'Yes, our French grammar checker validates all accent marks including accent aigu, accent grave, accent circonflexe, trema, and cedille. It detects missing accents and incorrect accent placement.'},
+            {'q': 'Can it check the French subjunctive?', 'a': 'Yes, the tool checks for correct subjunctive usage after conjunctions like "que," emotional expressions, doubt, and necessity. It also verifies subjunctive verb conjugation.'},
+            {'q': 'Does it handle both European and Canadian French?', 'a': 'Our grammar checker supports both European (France) and Canadian (Quebec) French, including differences in vocabulary, spelling conventions, and punctuation rules.'},
+        ],
+    },
+    'spanish-grammar-check': {
+        'h1': 'Free Spanish Grammar Checker',
+        'subtitle': 'Improve your Spanish writing with accurate grammar, accent, and spelling corrections. Our AI handles the nuances of Spanish grammar across all dialects.',
+        'meta_title': 'Free Spanish Grammar Checker Online',
+        'meta_description': 'Check Spanish grammar online for free. Our AI Spanish grammar checker fixes verb conjugation, gender agreement, accent marks, and punctuation errors instantly.',
+        'language_name': 'Spanish',
+        'default_dialect': 'es',
+        'features': [
+            {'title': 'Ser vs. Estar Mastery', 'text': 'One of Spanish\'s trickiest aspects is choosing between ser and estar. Our AI understands the contextual rules and catches incorrect usage every time.'},
+            {'title': 'Accent Mark Validation', 'text': 'Spanish accent marks (tildes) change word meaning and indicate stress. Our checker ensures every accent is correctly placed according to Spanish orthographic rules.'},
+            {'title': 'Subjunctive & Indicative', 'text': 'Correctly identifies when the subjunctive mood should be used instead of the indicative, including after expressions of doubt, desire, and emotion.'},
+        ],
+        'faqs': [
+            {'q': 'Does it support Latin American and European Spanish?', 'a': 'Yes, our Spanish grammar checker supports both European (Spain) and Latin American Spanish dialects, including differences in voseo, vocabulary, and the use of ustedes vs. vosotros.'},
+            {'q': 'Can it check Spanish accent marks?', 'a': 'Yes, the tool validates all Spanish accent marks (tildes) and checks for correct placement according to stress rules. It also catches missing accents on interrogative and exclamatory words.'},
+            {'q': 'Does it handle the Spanish subjunctive?', 'a': 'Absolutely. Our AI understands all Spanish subjunctive triggers including doubt, emotion, desire, and impersonal expressions, and checks for correct subjunctive conjugation.'},
+        ],
+    },
+    'portuguese-grammar-check': {
+        'h1': 'Free Portuguese Grammar Checker',
+        'subtitle': 'Polish your Portuguese writing with AI-powered grammar corrections. From verb conjugation to accent placement, get native-level accuracy.',
+        'meta_title': 'Free Portuguese Grammar Checker Online',
+        'meta_description': 'Check Portuguese grammar online for free. Our AI Portuguese grammar checker corrects verb conjugation, gender agreement, accents, and clitics with precision.',
+        'language_name': 'Portuguese',
+        'default_dialect': 'pt',
+        'features': [
+            {'title': 'Brazilian & European Portuguese', 'text': 'Supports both Brazilian (PT-BR) and European (PT-PT) Portuguese, including differences in spelling, vocabulary, gerund usage, and pronoun placement.'},
+            {'title': 'Clitic Pronoun Placement', 'text': 'Portuguese clitic pronouns (me, te, se, nos) follow complex placement rules. Our AI checks for correct proclisis, enclisis, and mesoclisis usage.'},
+            {'title': 'Verb Conjugation Across Tenses', 'text': 'Verifies conjugation across all tenses including the personal infinitive and future subjunctive, which are unique to Portuguese among Romance languages.'},
+        ],
+        'faqs': [
+            {'q': 'Does it support Brazilian Portuguese?', 'a': 'Yes, our grammar checker fully supports both Brazilian Portuguese (PT-BR) and European Portuguese (PT-PT), including their distinct spelling, grammar, and vocabulary differences.'},
+            {'q': 'Can it check the personal infinitive?', 'a': 'Yes, the personal infinitive is a unique feature of Portuguese grammar. Our tool checks for correct usage and conjugation of the personal infinitive in subordinate clauses.'},
+            {'q': 'Does it handle Portuguese accent marks?', 'a': 'Yes, the tool validates all Portuguese diacritical marks including acute accents, circumflex accents, tildes, graves, and cedillas according to the current orthographic agreement.'},
+        ],
+    },
+    'dutch-grammar-check': {
+        'h1': 'Free Dutch Grammar Checker',
+        'subtitle': 'Write flawless Dutch with AI-powered grammar checking. Catch word order errors, spelling mistakes, and verb conjugation issues instantly.',
+        'meta_title': 'Free Dutch Grammar Checker Online',
+        'meta_description': 'Check Dutch grammar online for free. Our AI Dutch grammar checker fixes word order, verb conjugation, de/het articles, and spelling errors with precision.',
+        'language_name': 'Dutch',
+        'default_dialect': 'nl',
+        'features': [
+            {'title': 'De/Het Article Selection', 'text': 'Choosing between "de" and "het" is one of Dutch\'s biggest challenges. Our AI knows the article for thousands of Dutch nouns and catches every mismatch.'},
+            {'title': 'Verb Position & Word Order', 'text': 'Dutch has strict V2 word order in main clauses and SOV in subordinate clauses. Our checker detects word order violations and suggests corrections.'},
+            {'title': 'Compound Word Spelling', 'text': 'Dutch compound words follow specific spelling rules for concatenation. Our tool checks compound formation, hyphenation, and the trema/spacing rules.'},
+        ],
+        'faqs': [
+            {'q': 'Can it tell me when to use de or het?', 'a': 'Yes, our Dutch grammar checker has a comprehensive database of Dutch nouns with their correct articles (de or het) and catches article-noun mismatches throughout your text.'},
+            {'q': 'Does it check Dutch word order?', 'a': 'Yes, Dutch has specific word order rules (V2 in main clauses, SOV in subordinate clauses). Our tool detects incorrect verb placement and inversion errors.'},
+            {'q': 'Does it support both Netherlands and Belgian Dutch?', 'a': 'Yes, our grammar checker supports both standard Dutch (Netherlands) and Belgian Dutch (Flemish), including differences in vocabulary and certain grammar preferences.'},
+        ],
+    },
+    'italian-grammar-check': {
+        'h1': 'Free Italian Grammar Checker',
+        'subtitle': 'Perfect your Italian writing with comprehensive grammar checking. From congiuntivo to double pronouns, our AI catches every error.',
+        'meta_title': 'Free Italian Grammar Checker Online',
+        'meta_description': 'Check Italian grammar online for free. Our AI Italian grammar checker fixes verb conjugation, gender agreement, prepositions, and punctuation with native accuracy.',
+        'language_name': 'Italian',
+        'default_dialect': 'it',
+        'features': [
+            {'title': 'Congiuntivo Detection', 'text': 'The Italian subjunctive (congiuntivo) is one of the most common errors, even among native speakers. Our AI correctly identifies when the congiuntivo should be used.'},
+            {'title': 'Preposition Mastery', 'text': 'Italian prepositions combine with articles (preposizioni articolate). Our checker validates all contractions like "del, dello, della, dei" and catches prepositional errors.'},
+            {'title': 'Double Pronoun Combinations', 'text': 'When Italian combines direct and indirect object pronouns (glielo, me lo, te la), complex rules apply. Our AI ensures correct pronoun combinations and placement.'},
+        ],
+        'faqs': [
+            {'q': 'Does it check the Italian subjunctive?', 'a': 'Yes, our Italian grammar checker detects when the congiuntivo (subjunctive) should be used instead of the indicative, including after verbs of opinion, doubt, desire, and certain conjunctions.'},
+            {'q': 'Can it handle Italian preposition contractions?', 'a': 'Yes, the tool checks all articulated prepositions (preposizioni articolate) like del, nello, sulla and ensures the correct preposition is used with verbs, nouns, and in idiomatic expressions.'},
+            {'q': 'Does it check for common Italian mistakes?', 'a': 'Yes, including common errors like "piuttosto che" misuse, incorrect use of "ne" and "ci," subjunctive avoidance, and the passato prossimo vs. imperfetto distinction.'},
+        ],
+    },
+    'polish-grammar-check': {
+        'h1': 'Free Polish Grammar Checker',
+        'subtitle': 'Master Polish grammar with AI-powered checking. Handle 7 cases, complex verb aspects, and declension patterns with confidence.',
+        'meta_title': 'Free Polish Grammar Checker Online',
+        'meta_description': 'Check Polish grammar online for free. Our AI Polish grammar checker handles all 7 cases, verb aspects, declensions, and spelling with native-level precision.',
+        'language_name': 'Polish',
+        'default_dialect': 'pl',
+        'features': [
+            {'title': 'Seven-Case System', 'text': 'Polish has seven grammatical cases. Our AI checks noun, adjective, and pronoun declension across all cases including the tricky instrumental and locative.'},
+            {'title': 'Verb Aspect Pairs', 'text': 'Polish verbs come in perfective/imperfective pairs with different conjugation patterns. Our checker ensures you use the correct aspect for your intended meaning.'},
+            {'title': 'Complex Declension Patterns', 'text': 'Polish nouns, adjectives, and numerals follow complex declension tables. Our tool verifies agreement across all grammatical categories and catches ending errors.'},
+        ],
+        'faqs': [
+            {'q': 'Does it check all seven Polish cases?', 'a': 'Yes, our grammar checker validates all seven Polish grammatical cases (mianownik, dopelniacz, celownik, biernik, narzednik, miejscownik, wolacz) and catches incorrect case endings.'},
+            {'q': 'Can it check Polish verb aspects?', 'a': 'Yes, the tool understands Polish perfective and imperfective verb pairs and checks that the correct aspect is used based on context, tense, and intended meaning.'},
+            {'q': 'Does it handle Polish diacritical marks?', 'a': 'Yes, the tool checks for all Polish special characters including the ogonek (a, e), kreska (c, n, o, s, z), and the dot above (z) and catches missing or incorrect diacritical marks.'},
+        ],
+    },
+    'swedish-grammar-check': {
+        'h1': 'Free Swedish Grammar Checker',
+        'subtitle': 'Write perfect Swedish with AI-powered grammar checking. From en/ett words to verb forms, get accurate corrections for all your Swedish text.',
+        'meta_title': 'Free Swedish Grammar Checker Online',
+        'meta_description': 'Check Swedish grammar online for free. Our AI Swedish grammar checker fixes en/ett articles, verb conjugation, word order, and spelling errors instantly.',
+        'language_name': 'Swedish',
+        'default_dialect': 'sv',
+        'features': [
+            {'title': 'En/Ett Gender System', 'text': 'Swedish nouns are either "en" or "ett" words, affecting articles, adjectives, and pronouns. Our AI knows the gender of thousands of Swedish words and catches mismatches.'},
+            {'title': 'Definite Form Suffixes', 'text': 'Unlike English, Swedish adds definite articles as suffixes (-en, -et, -na). Our checker validates correct suffix usage and catches double-definition errors.'},
+            {'title': 'V2 Word Order', 'text': 'Swedish follows V2 (verb-second) word order in main clauses. Our tool detects incorrect verb placement, especially in inverted sentences and subordinate clauses.'},
+        ],
+        'faqs': [
+            {'q': 'Can it check en/ett gender for Swedish nouns?', 'a': 'Yes, our grammar checker has a comprehensive database of Swedish nouns with their correct gender (en or ett) and checks all agreement patterns including adjective endings and pronoun forms.'},
+            {'q': 'Does it handle Swedish compound words?', 'a': 'Yes, Swedish frequently creates compound words by combining nouns. Our tool checks compound word formation, the linking "s" (foge-s), and validates correct spelling of compound forms.'},
+            {'q': 'Does it check both formal and informal Swedish?', 'a': 'Yes, the checker handles both formal and informal Swedish writing styles and can detect inconsistencies in register throughout your text.'},
+        ],
+    },
+    'russian-grammar-check': {
+        'h1': 'Free Russian Grammar Checker',
+        'subtitle': 'Perfect your Russian writing with AI grammar checking. Handle six cases, verb aspects, and complex agreement rules with ease.',
+        'meta_title': 'Free Russian Grammar Checker Online',
+        'meta_description': 'Check Russian grammar online for free. Our AI Russian grammar checker fixes case endings, verb aspects, agreement errors, and punctuation with native accuracy.',
+        'language_name': 'Russian',
+        'default_dialect': 'ru',
+        'features': [
+            {'title': 'Six-Case Declension', 'text': 'Russian has six grammatical cases with complex declension patterns. Our AI checks noun, adjective, and pronoun endings across all cases including irregular forms.'},
+            {'title': 'Verb Aspect & Motion Verbs', 'text': 'Russian verb aspects (perfective/imperfective) and verbs of motion have special rules. Our checker ensures correct aspect usage and motion verb pair selection.'},
+            {'title': 'Cyrillic Spelling & Punctuation', 'text': 'Validates Cyrillic spelling, catches common letter confusions, and checks Russian punctuation rules which differ significantly from English conventions.'},
+        ],
+        'faqs': [
+            {'q': 'Does it check all six Russian cases?', 'a': 'Yes, our grammar checker validates all six Russian grammatical cases (imenitelny, roditelny, datelny, vinitelny, tvoritelny, predlozhny) and catches incorrect case endings for nouns, adjectives, and pronouns.'},
+            {'q': 'Can it check Russian verb aspects?', 'a': 'Yes, the tool understands Russian perfective and imperfective verb aspects and checks for correct aspect usage based on context, including in complex sentences with multiple clauses.'},
+            {'q': 'Does it handle Russian punctuation rules?', 'a': 'Yes, Russian has specific punctuation rules that differ from English, particularly regarding comma placement with conjunctions and subordinate clauses. Our tool checks all Russian-specific punctuation conventions.'},
+        ],
+    },
+    'japanese-grammar-check': {
+        'h1': 'Free Japanese Grammar Checker',
+        'subtitle': 'Improve your Japanese writing with AI-powered grammar checking. From particle usage to keigo, get accurate corrections for natural Japanese.',
+        'meta_title': 'Free Japanese Grammar Checker Online',
+        'meta_description': 'Check Japanese grammar online for free. Our AI Japanese grammar checker fixes particle usage, verb conjugation, keigo, and sentence structure for natural writing.',
+        'language_name': 'Japanese',
+        'default_dialect': 'ja',
+        'features': [
+            {'title': 'Particle Precision', 'text': 'Japanese particles (wa, ga, wo, ni, de, etc.) are essential but tricky. Our AI understands particle usage rules and catches incorrect or missing particles in context.'},
+            {'title': 'Keigo & Politeness Levels', 'text': 'Checks for consistent and correct use of Japanese honorific language (keigo), including sonkeigo, kenjougo, and teineigo across your entire text.'},
+            {'title': 'Verb & Adjective Conjugation', 'text': 'Validates all Japanese verb and adjective conjugation forms including te-form, potential, causative, passive, and their combinations.'},
+        ],
+        'faqs': [
+            {'q': 'Does it check Japanese particle usage?', 'a': 'Yes, our grammar checker understands the nuances of Japanese particles (ha/wa, ga, wo, ni, de, to, he, kara, made, etc.) and checks for correct usage based on sentence context and meaning.'},
+            {'q': 'Can it check keigo (honorific language)?', 'a': 'Yes, the tool checks for correct and consistent use of Japanese politeness levels including teineigo (polite), sonkeigo (respectful), and kenjougo (humble), and flags mixing of politeness levels.'},
+            {'q': 'Does it work with all Japanese scripts?', 'a': 'Yes, our checker works with hiragana, katakana, and kanji. It can detect incorrect kanji usage, validate okurigana, and check for correct katakana transcription of foreign words.'},
+        ],
+    },
+}
+
+
+class GrammarSEOLandingPage(View):
+    """
+    SEO landing page for language-specific grammar checkers.
+    Renders the grammar checker tool with SEO content for a specific language.
+    """
+    page_key = None
+
+    def get(self, request):
+        g = GlobalVars.get_globals(request)
+        page_data = GRAMMAR_SEO_PAGES.get(self.page_key, {})
+
+        if not page_data:
+            return render(request, '404.html', {'g': g}, status=404)
+
+        is_premium = request.user.is_authenticated and request.user.is_plan_active
+
+        return render(request, 'seo/grammar-landing.html', {
+            'title': f'{page_data["meta_title"]} | {config.PROJECT_NAME}',
+            'description': page_data['meta_description'],
+            'page': self.page_key,
+            'g': g,
+            'seo': page_data,
+            'is_premium': is_premium,
+            'word_limit': GRAMMAR_FREE_WORD_LIMIT,
+        })
+
+
+class GermanGrammarCheckPage(GrammarSEOLandingPage):
+    page_key = 'german-grammar-check'
+
+
+class FrenchGrammarCheckPage(GrammarSEOLandingPage):
+    page_key = 'french-grammar-check'
+
+
+class SpanishGrammarCheckPage(GrammarSEOLandingPage):
+    page_key = 'spanish-grammar-check'
+
+
+class PortugueseGrammarCheckPage(GrammarSEOLandingPage):
+    page_key = 'portuguese-grammar-check'
+
+
+class DutchGrammarCheckPage(GrammarSEOLandingPage):
+    page_key = 'dutch-grammar-check'
+
+
+class ItalianGrammarCheckPage(GrammarSEOLandingPage):
+    page_key = 'italian-grammar-check'
+
+
+class PolishGrammarCheckPage(GrammarSEOLandingPage):
+    page_key = 'polish-grammar-check'
+
+
+class SwedishGrammarCheckPage(GrammarSEOLandingPage):
+    page_key = 'swedish-grammar-check'
+
+
+class RussianGrammarCheckPage(GrammarSEOLandingPage):
+    page_key = 'russian-grammar-check'
+
+
+class JapaneseGrammarCheckPage(GrammarSEOLandingPage):
+    page_key = 'japanese-grammar-check'
+
+
+# --- Guides views ---
+
+class GuidesIndexPage(View):
+    """Renders the guides index page at /guides/."""
+
+    def get(self, request):
+        g = GlobalVars.get_globals(request)
+        guides_list = []
+        for key, guide in GUIDES.items():
+            guides_list.append({
+                'key': key,
+                'title': guide['h1'],
+                'description': guide['meta_description'],
+                'url': f'/guides/{key}/',
+            })
+        return render(request, 'seo/guides-index.html', {
+            'title': f'Writing Guides | {config.PROJECT_NAME}',
+            'description': 'Free educational writing guides covering paraphrasing, grammar, citation styles, academic writing, essay writing, and more.',
+            'g': g,
+            'guides': guides_list,
+        })
+
+
+class GuidePage(View):
+    """Renders an individual guide page at /guides/<guide_key>/."""
+    guide_key = None
+
+    def get(self, request):
+        g = GlobalVars.get_globals(request)
+        guide_data = GUIDES.get(self.guide_key)
+
+        if not guide_data:
+            return render(request, '404.html', {'g': g}, status=404)
+
+        # Build list of all guides for sidebar navigation
+        all_guides = []
+        for key, guide in GUIDES.items():
+            all_guides.append({
+                'key': key,
+                'title': guide['h1'],
+                'url': f'/guides/{key}/',
+                'active': key == self.guide_key,
+            })
+
+        return render(request, 'seo/guide.html', {
+            'title': f'{guide_data["title"]} | {config.PROJECT_NAME}',
+            'description': guide_data['meta_description'],
+            'g': g,
+            'guide': guide_data,
+            'guide_key': self.guide_key,
+            'all_guides': all_guides,
+        })

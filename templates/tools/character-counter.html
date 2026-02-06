@@ -1,0 +1,229 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4" x-data="characterCounterApp()" x-init="init()">
+
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12 text-center">
+            <h1 class="h2 fw-bold">Character Counter</h1>
+            <p class="text-muted">Count characters, words, and sentences in real time. Check your text against social media and SEO character limits.</p>
+        </div>
+    </div>
+
+    <!-- Main Stats Bar -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body py-2">
+                    <div class="d-flex flex-wrap justify-content-center gap-4">
+                        <div class="text-center">
+                            <div class="h3 fw-bold mb-0 text-primary" x-text="characters"></div>
+                            <div class="small text-muted">Characters</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="h4 fw-bold mb-0 text-secondary" x-text="charactersNoSpaces"></div>
+                            <div class="small text-muted">Characters (no spaces)</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="h4 fw-bold mb-0 text-secondary" x-text="words"></div>
+                            <div class="small text-muted">Words</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="h4 fw-bold mb-0 text-secondary" x-text="sentenceCount"></div>
+                            <div class="small text-muted">Sentences</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="h4 fw-bold mb-0 text-secondary" x-text="paragraphCount"></div>
+                            <div class="small text-muted">Paragraphs</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Text Area -->
+        <div class="col-12 col-lg-7 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <span class="fw-semibold">Your Text</span>
+                    <button
+                        @click="clearText()"
+                        class="btn btn-sm btn-outline-secondary"
+                        x-show="text.length > 0"
+                    >Clear</button>
+                </div>
+                <div class="card-body p-0">
+                    <textarea
+                        x-model="text"
+                        @input="analyze()"
+                        class="form-control border-0"
+                        style="min-height: 500px; resize: vertical; font-size: 1rem; line-height: 1.6;"
+                        placeholder="Type or paste your text here to count characters..."
+                    ></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Social Media Limits Sidebar -->
+        <div class="col-12 col-lg-5 mb-4">
+            <!-- Social Media Limits -->
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-white fw-semibold">Social Media Character Limits</div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        <template x-for="(platform, idx) in platforms" :key="idx">
+                            <div class="list-group-item px-3 py-2">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="small fw-semibold" x-text="platform.name"></span>
+                                    <span class="small" :class="characters > platform.limit ? 'text-danger fw-bold' : 'text-muted'">
+                                        <span x-text="characters"></span> / <span x-text="platform.limit.toLocaleString()"></span>
+                                    </span>
+                                </div>
+                                <div class="progress" style="height: 6px;">
+                                    <div
+                                        class="progress-bar"
+                                        :class="getProgressBarClass(characters, platform.limit)"
+                                        :style="'width: ' + Math.min((characters / platform.limit) * 100, 100) + '%'"
+                                        style="transition: width 0.2s ease;"
+                                    ></div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Time Estimates -->
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-white fw-semibold">Time Estimates</div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="me-1" viewBox="0 0 16 16">
+                                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                                <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1H8a.5.5 0 0 1-.5-.5v-3.5A.5.5 0 0 1 8 4z"/>
+                            </svg>
+                            Reading Time
+                        </span>
+                        <span class="fw-semibold" x-text="readingTime"></span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="me-1" viewBox="0 0 16 16">
+                                <path d="M8 3a5 5 0 0 0-5 5v1h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V8a6 6 0 1 1 12 0v5a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1V8a5 5 0 0 0-5-5z"/>
+                            </svg>
+                            Speaking Time
+                        </span>
+                        <span class="fw-semibold" x-text="speakingTime"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Character Limits Reference Table -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-white fw-semibold">Character Limits Reference</div>
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="small">Platform</th>
+                                <th class="small text-end">Limit</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="(platform, idx) in platforms" :key="'ref-' + idx">
+                                <tr>
+                                    <td class="small" x-text="platform.name"></td>
+                                    <td class="small text-end" x-text="platform.limit.toLocaleString()"></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SEO Content Section -->
+<div class="bg-light py-5">
+    <div class="container">
+        <h2 class="text-center fw-bold mb-5">Why Use Our Character Counter?</h2>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm p-4">
+                    <h5 class="fw-semibold mb-3">Social Media Optimization</h5>
+                    <p class="text-muted mb-0">Instantly see how your text fits within character limits for Twitter/X, Facebook, Instagram, LinkedIn, and more. Never exceed a platform's limit again.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm p-4">
+                    <h5 class="fw-semibold mb-3">SEO Title & Description</h5>
+                    <p class="text-muted mb-0">Craft perfect SEO meta titles (60 chars) and descriptions (160 chars) with real-time character counting and visual progress indicators.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm p-4">
+                    <h5 class="fw-semibold mb-3">Real-Time Counting</h5>
+                    <p class="text-muted mb-0">Characters, words, sentences, and paragraphs are counted instantly as you type. No buttons to click, no waiting -- just pure real-time analysis.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- FAQ Section -->
+<div class="container py-5">
+    <h2 class="text-center fw-bold mb-5">Frequently Asked Questions</h2>
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="accordion" id="faqAccordion">
+                <div class="accordion-item border-0 mb-2">
+                    <h3 class="accordion-header">
+                        <button class="accordion-button fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
+                            What is the character limit for Twitter/X?
+                        </button>
+                    </h3>
+                    <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body text-muted">
+                            Twitter/X has a character limit of 280 characters per tweet for free users. Twitter Blue/Premium subscribers can post up to 4,000 characters. Our character counter shows you in real time how close you are to the 280-character limit.
+                        </div>
+                    </div>
+                </div>
+                <div class="accordion-item border-0 mb-2">
+                    <h3 class="accordion-header">
+                        <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
+                            Does it count spaces as characters?
+                        </button>
+                    </h3>
+                    <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body text-muted">
+                            Yes, the main character count includes spaces, which is how most platforms count characters. We also show a separate "Characters (no spaces)" count for contexts where spaces are excluded.
+                        </div>
+                    </div>
+                </div>
+                <div class="accordion-item border-0 mb-2">
+                    <h3 class="accordion-header">
+                        <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
+                            What are the ideal SEO title and meta description lengths?
+                        </button>
+                    </h3>
+                    <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body text-muted">
+                            For SEO, Google typically displays the first 60 characters of a title tag and the first 160 characters of a meta description. Keeping your content within these limits ensures it appears properly in search results without being truncated.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/character-counter.js' %}?v={{ g.scripts_version }}"></script>
+{% endblock %}

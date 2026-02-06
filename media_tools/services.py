@@ -768,3 +768,273 @@ class PresentationService:
         if error:
             return None, error
         return text, None
+
+
+class ImageToolService:
+    """Service for all AI image tool prompt generation.
+
+    Each tool type has a unique system prompt optimized for that specific
+    image domain. The generate method routes to the correct prompt template
+    based on tool_key.
+    """
+
+    # Maps tool_key -> system_prompt
+    TOOL_PROMPTS = {
+        'art-generator': (
+            'You are an expert art director and AI prompt engineer specializing in fine art. '
+            'Given a description, create a detailed, vivid image generation prompt optimized for creating artwork. '
+            'Focus on art style (oil painting, watercolor, digital art, etc.), medium, composition, color palette, '
+            'lighting, mood, artistic movement (impressionism, surrealism, etc.), and texture. '
+            'Include technical art terms. Return ONLY the refined prompt text, nothing else.'
+        ),
+        'poster-generator': (
+            'You are an expert graphic designer specializing in poster design. '
+            'Given a description, create a detailed image generation prompt optimized for poster creation. '
+            'Focus on layout composition, typography placement areas, visual hierarchy, dimensions (standard poster sizes), '
+            'color scheme, contrast, eye-catching focal point, margins, and print-ready considerations. '
+            'Include details about headline area, subtext zones, and image placement. Return ONLY the refined prompt text.'
+        ),
+        'flyer-generator': (
+            'You are an expert marketing designer specializing in flyer and leaflet design. '
+            'Given a description, create a detailed image generation prompt for a flyer. '
+            'Focus on A4/letter layout, clear information hierarchy, call-to-action placement, '
+            'contact info area, brand colors, event details sections, eye-catching header, '
+            'fold-friendly design, and balanced white space. Return ONLY the refined prompt text.'
+        ),
+        'thumbnail-generator': (
+            'You are an expert digital content creator specializing in thumbnails for blogs, articles, and social media. '
+            'Given a description, create a detailed image generation prompt for a thumbnail image. '
+            'Focus on strong visual impact at small sizes, bold colors with high contrast, clear focal point, '
+            'minimal clutter, 16:9 or 1:1 aspect ratio, recognizable subjects even at thumbnail scale, '
+            'and emotional engagement. Return ONLY the refined prompt text.'
+        ),
+        'youtube-thumbnail': (
+            'You are an expert YouTube content strategist and thumbnail designer. '
+            'Given a description, create a detailed image generation prompt for a YouTube thumbnail (1280x720). '
+            'Focus on maximum clickbait appeal, expressive faces or reactions, bold contrasting colors '
+            '(especially red, yellow, blue), large readable text overlay areas, dramatic emotions, '
+            'rule of thirds composition, bright saturated colors, clear subject against simple background, '
+            'and curiosity-gap visual storytelling. Return ONLY the refined prompt text.'
+        ),
+        'icon-generator': (
+            'You are an expert UI/UX designer specializing in icon design. '
+            'Given a description, create a detailed image generation prompt for an icon. '
+            'Focus on extreme simplicity, clean geometric shapes, pixel-perfect alignment, '
+            'scalability from 16x16 to 512x512, consistent stroke weight, flat or subtle gradient style, '
+            'single focal metaphor, negative space usage, and adherence to modern icon design systems '
+            '(Material, iOS, Fluent). Return ONLY the refined prompt text.'
+        ),
+        'mockup-generator': (
+            'You are an expert product designer specializing in mockup creation. '
+            'Given a description, create a detailed image generation prompt for a product mockup. '
+            'Focus on realistic 3D perspective, proper lighting and shadows, device/product context '
+            '(phone screen, laptop, packaging, t-shirt, billboard, etc.), photorealistic materials, '
+            'brand placement areas, environmental context, professional studio lighting, '
+            'and presentation-ready quality. Return ONLY the refined prompt text.'
+        ),
+        'illustration-generator': (
+            'You are an expert illustrator and visual storytelling artist. '
+            'Given a description, create a detailed image generation prompt for an illustration. '
+            'Focus on illustration style (editorial, children\'s book, technical, fashion, botanical, etc.), '
+            'line quality, hatching/shading technique, narrative elements, character expressions, '
+            'scene composition, color story, stylistic consistency, and the emotional tone of the piece. '
+            'Return ONLY the refined prompt text.'
+        ),
+        'design-generator': (
+            'You are an expert graphic designer and visual communication specialist. '
+            'Given a description, create a detailed image generation prompt for a graphic design. '
+            'Focus on design principles (balance, contrast, alignment, repetition, proximity), '
+            'typography integration, grid systems, brand identity elements, modern design trends, '
+            'color theory application, visual weight distribution, and professional polish. '
+            'Return ONLY the refined prompt text.'
+        ),
+        'product-image-generator': (
+            'You are an expert commercial product photographer and e-commerce visual specialist. '
+            'Given a description, create a detailed image generation prompt for product photography. '
+            'Focus on studio lighting setup (key light, fill, rim), clean white or lifestyle background, '
+            'product hero angles, texture and material rendering, reflection and shadow quality, '
+            'e-commerce standards (Amazon, Shopify), lifestyle context shots, and detail close-ups. '
+            'Return ONLY the refined prompt text.'
+        ),
+        'avatar-generator': (
+            'You are an expert digital artist specializing in avatar and profile picture creation. '
+            'Given a description, create a detailed image generation prompt for an avatar. '
+            'Focus on head/shoulders framing, distinctive personality expression, consistent circular/square crop, '
+            'recognizable at small sizes, unique style (cartoon, pixel, 3D, painted), '
+            'vibrant background, character identity, memorable silhouette, and social media optimization. '
+            'Return ONLY the refined prompt text.'
+        ),
+        'portrait-generator': (
+            'You are an expert portrait artist and photographer. '
+            'Given a description, create a detailed image generation prompt for a portrait. '
+            'Focus on facial features and expression, Rembrandt or butterfly lighting, depth of field (bokeh), '
+            'skin texture and tone, eye detail and catchlights, pose and head angle, '
+            'background separation, color grading, emotional depth, and classical portrait composition. '
+            'Return ONLY the refined prompt text.'
+        ),
+        'wallpaper-generator': (
+            'You are an expert digital artist specializing in desktop and mobile wallpapers. '
+            'Given a description, create a detailed image generation prompt for a wallpaper. '
+            'Focus on ultra-high resolution quality (4K/8K), wide aspect ratios (16:9, 21:9) or mobile (9:16), '
+            'clean areas for desktop icons, subtle non-distracting composition, immersive atmosphere, '
+            'deep color gradients, panoramic depth, seamless edges, and ambient mood. '
+            'Return ONLY the refined prompt text.'
+        ),
+        'background-generator': (
+            'You are an expert digital artist specializing in backgrounds and environment design. '
+            'Given a description, create a detailed image generation prompt for a background image. '
+            'Focus on depth and layering (foreground, midground, background), atmospheric perspective, '
+            'versatile composition that works behind text or subjects, subtle texture, '
+            'color harmony, seamless tiling potential, abstract or concrete options, '
+            'and non-competing visual interest. Return ONLY the refined prompt text.'
+        ),
+        'infographic-generator': (
+            'You are an expert information designer specializing in infographics. '
+            'Given a description, create a detailed image generation prompt for an infographic layout. '
+            'Focus on data visualization elements (charts, graphs, icons), clear visual hierarchy, '
+            'numbered flow or timeline layout, icon-driven sections, statistic callouts, '
+            'color-coded categories, vertical scrolling format, header/footer areas, '
+            'and professional data storytelling aesthetics. Return ONLY the refined prompt text.'
+        ),
+        'book-cover-generator': (
+            'You are an expert book cover designer with deep knowledge of publishing aesthetics. '
+            'Given a description, create a detailed image generation prompt for a book cover. '
+            'Focus on genre-appropriate imagery (thriller, romance, sci-fi, literary, etc.), '
+            'title and author name placement zones, spine and back cover considerations, '
+            'emotional hook, thumbnail readability on Amazon, trim bleed area, '
+            'print-ready CMYK colors, and bookshelf standout factor. Return ONLY the refined prompt text.'
+        ),
+        'packaging-design-generator': (
+            'You are an expert packaging designer with knowledge of retail shelf impact. '
+            'Given a description, create a detailed image generation prompt for packaging design. '
+            'Focus on 3D package structure (box, bottle, bag, can), brand identity placement, '
+            'die-cut template awareness, material textures (matte, glossy, kraft), '
+            'shelf appeal from 5 feet away, regulatory label areas, '
+            'unboxing experience, sustainability cues, and retail display context. Return ONLY the refined prompt text.'
+        ),
+        'album-cover-generator': (
+            'You are an expert music visual designer specializing in album artwork. '
+            'Given a description, create a detailed image generation prompt for an album cover (square 3000x3000). '
+            'Focus on genre-appropriate aesthetics (hip-hop, rock, electronic, classical, indie), '
+            'artist name and album title zones, iconic and memorable imagery, '
+            'vinyl/CD/streaming thumbnail readability, mood matching the music, '
+            'photographic or illustrated style, and cultural visual references. Return ONLY the refined prompt text.'
+        ),
+        'tattoo-generator': (
+            'You are an expert tattoo artist and designer. '
+            'Given a description, create a detailed image generation prompt for a tattoo design. '
+            'Focus on tattoo style (traditional, neo-traditional, Japanese, blackwork, watercolor, '
+            'geometric, dotwork, realistic, tribal, minimalist), skin-friendly composition, '
+            'line weight for aging well, placement considerations (arm, back, chest, leg), '
+            'flow with body contours, scalability, and stencil-ready clean outlines. '
+            'Return ONLY the refined prompt text.'
+        ),
+        'pixel-art-generator': (
+            'You are an expert pixel artist specializing in retro and indie game aesthetics. '
+            'Given a description, create a detailed image generation prompt for pixel art. '
+            'Focus on pixel grid size (16x16, 32x32, 64x64, etc.), limited color palette '
+            '(NES, SNES, Game Boy, custom), dithering techniques, anti-aliasing at pixel level, '
+            'sprite animation readiness, isometric or top-down perspective, '
+            'retro game aesthetic, and clean readable pixels. Return ONLY the refined prompt text.'
+        ),
+        'pattern-generator': (
+            'You are an expert surface pattern designer and textile artist. '
+            'Given a description, create a detailed image generation prompt for a seamless repeating pattern. '
+            'Focus on seamless tile repetition, motif spacing and rhythm, half-drop or straight repeat, '
+            'color palette cohesion, scale of elements, negative space balance, '
+            'application context (fabric, wallpaper, wrapping paper, digital), '
+            'and style (botanical, geometric, abstract, ethnic). Return ONLY the refined prompt text.'
+        ),
+        '3d-model-generator': (
+            'You are an expert 3D artist and visualization specialist. '
+            'Given a description, create a detailed image generation prompt for a 3D model render. '
+            'Focus on 3D modeling style (low-poly, high-poly, sculpted), material/shader properties '
+            '(PBR metallic, roughness, subsurface scattering), studio lighting setup (HDRI, 3-point), '
+            'camera angle and lens focal length, render engine aesthetic (Blender, Unreal, Octane), '
+            'wireframe or solid, and turntable/hero shot composition. Return ONLY the refined prompt text.'
+        ),
+        'storyboard-generator': (
+            'You are an expert storyboard artist for film, animation, and advertising. '
+            'Given a description, create a detailed image generation prompt for a storyboard panel. '
+            'Focus on camera shot type (wide, medium, close-up, POV), camera angle (high, low, Dutch), '
+            'character staging and blocking, action arrows and motion lines, '
+            'sequential narrative clarity, panel border style, '
+            'rough vs. clean rendering, and cinematic composition. Return ONLY the refined prompt text.'
+        ),
+        'fantasy-map-generator': (
+            'You are an expert cartographer and fantasy world-builder. '
+            'Given a description, create a detailed image generation prompt for a fantasy map. '
+            'Focus on terrain features (mountains, forests, rivers, coastlines, deserts), '
+            'parchment/aged paper texture, compass rose, scale bar, cartographic labels area, '
+            'map style (Tolkien, medieval, pirate, political, topographic), '
+            'border decorations, legend/key area, and world-building geography. '
+            'Return ONLY the refined prompt text.'
+        ),
+        'cartoon-generator': (
+            'You are an expert cartoon artist and character designer. '
+            'Given a description, create a detailed image generation prompt for cartoon art. '
+            'Focus on cartoon style (Saturday morning, anime-influenced, Pixar-esque, newspaper strip, '
+            'adult animation, chibi), exaggerated proportions, expressive features, '
+            'bold outlines, flat or cell-shaded colors, comedic poses, '
+            'visual gags, and character appeal (the Disney "appeal" principle). '
+            'Return ONLY the refined prompt text.'
+        ),
+        'comic-generator': (
+            'You are an expert comic book artist and sequential art designer. '
+            'Given a description, create a detailed image generation prompt for comic art. '
+            'Focus on comic style (Marvel/DC superhero, manga, indie, webcomic, graphic novel), '
+            'panel layout and composition, dynamic action poses, speed lines, '
+            'speech bubble placement areas, halftone/ben-day dots, dramatic perspective, '
+            'ink line weight, splash page impact, and sequential storytelling clarity. '
+            'Return ONLY the refined prompt text.'
+        ),
+        'action-figure-generator': (
+            'You are an expert toy designer and action figure concept artist. '
+            'Given a description, create a detailed image generation prompt for an action figure design. '
+            'Focus on articulation points, toy-grade proportions (slightly heroic/stylized), '
+            'plastic material appearance, packaging blister card context, '
+            'accessories and weapons, base/stand, paint application detail, '
+            'collectible display pose, scale (6-inch, 12-inch), and retail shelf appeal. '
+            'Return ONLY the refined prompt text.'
+        ),
+    }
+
+    @classmethod
+    def generate_prompt(cls, tool_key, description, style='', additional='', use_premium=False):
+        """
+        Generate a detailed image generation prompt for a specific tool type.
+
+        Args:
+            tool_key: The tool identifier (e.g. 'art-generator').
+            description: User's description of what they want.
+            style: Optional style preference.
+            additional: Optional additional notes.
+            use_premium: If True, use premium LLM model.
+
+        Returns:
+            Tuple of (refined_prompt, error).
+        """
+        if not description or not description.strip():
+            return None, 'Please enter a description.'
+
+        system_prompt = cls.TOOL_PROMPTS.get(tool_key)
+        if not system_prompt:
+            return None, 'Unknown tool type.'
+
+        user_content = f'Description: {description}'
+        if style:
+            user_content += f'\nPreferred style: {style}'
+        if additional:
+            user_content += f'\nAdditional notes: {additional}'
+
+        text, error = LLMClient.generate(
+            system_prompt=system_prompt,
+            messages=[
+                {'role': 'user', 'content': user_content}
+            ],
+            max_tokens=1024,
+            use_premium=use_premium,
+        )
+        if error:
+            return None, error
+        return text, None

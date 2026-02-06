@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'courses',
     'blog',
     'seo',
+    'converter',
     'api',
 ]
 
@@ -191,6 +192,7 @@ TOOL_LIMITS = {
     'plagiarism': {'premium_monthly_words': 30000},
     'ai_chat': {'free_daily': 20},
     'ai_search': {'free_daily': 10},
+    'proofreader': {'free_words': 5000},
 }
 
 # Logging

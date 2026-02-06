@@ -18,12 +18,15 @@ class AISummarizerService:
         5: 50,
     }
 
-    def summarize(self, text, mode='paragraph', length=3, use_premium=False):
+    def summarize(self, text, mode='paragraph', length=3, use_premium=False,
+                  custom_instructions=None, keywords=None):
         """
         Summarize the given text.
-        mode: 'key_sentences' or 'paragraph'
+        mode: 'key_sentences', 'paragraph', or 'custom'
         length: 1-5 (shortest to longest)
         use_premium: whether to use premium model
+        custom_instructions: custom instructions for 'custom' mode (premium only)
+        keywords: list of keywords to emphasize in the summary
         Returns (result_dict, error_string).
         """
         length = max(1, min(5, int(length)))
@@ -32,7 +35,21 @@ class AISummarizerService:
         word_count = len(text.split())
         target_words = max(20, int(word_count * target_pct / 100))
 
-        if mode == 'key_sentences':
+        # Build keyword instruction if provided
+        keyword_instruction = ''
+        if keywords and isinstance(keywords, list) and len(keywords) > 0:
+            keyword_list = ', '.join(f'"{k}"' for k in keywords[:20])  # Cap at 20 keywords
+            keyword_instruction = f"""
+Pay special attention to and emphasize content related to these keywords: {keyword_list}.
+Ensure the summary covers information related to these topics/terms when present in the text."""
+
+        if mode == 'custom' and custom_instructions:
+            mode_instruction = f"""Follow these custom instructions for summarizing:
+{custom_instructions}
+
+Target approximately {target_words} words for the output.
+Return the result as a string under the key "paragraph"."""
+        elif mode == 'key_sentences':
             mode_instruction = f"""Extract the most important sentences from the text.
 Return them as a JSON array of strings under the key "sentences".
 Select approximately {target_words} words worth of key sentences.
@@ -44,9 +61,13 @@ The summary should be approximately {target_words} words.
 Use clear, concise language that captures all key points.
 Return the summary as a string under the key "paragraph"."""
 
+        # For custom mode, use paragraph format for output
+        output_mode = 'key_sentences' if mode == 'key_sentences' else 'paragraph'
+
         prompt = f"""You are an expert text summarizer. Summarize the following text.
 
 {mode_instruction}
+{keyword_instruction}
 
 Text to summarize:
 \"\"\"
@@ -55,7 +76,7 @@ Text to summarize:
 
 Return ONLY a valid JSON object with this structure:
 {{
-  {"'sentences': ['sentence 1', 'sentence 2', ...]" if mode == 'key_sentences' else "'paragraph': 'Your summary paragraph here.'"}
+  {"'sentences': ['sentence 1', 'sentence 2', ...]" if output_mode == 'key_sentences' else "'paragraph': 'Your summary paragraph here.'"}
 }}
 
 Return ONLY valid JSON, no markdown formatting or extra text."""
@@ -88,6 +109,7 @@ Return ONLY valid JSON, no markdown formatting or extra text."""
                 summary_text = '\n'.join(f'- {s}' for s in sentences) if sentences else ''
                 sentence_count = len(sentences)
             else:
+                # Both 'paragraph' and 'custom' modes use paragraph output
                 summary_text = result.get('paragraph', '')
                 sentence_count = len([s for s in summary_text.split('.') if s.strip()])
 
@@ -98,7 +120,7 @@ Return ONLY valid JSON, no markdown formatting or extra text."""
             return {
                 'summary': summary_text,
                 'mode': mode,
-                'sentences': result.get('sentences', []) if mode == 'key_sentences' else [],
+                'sentences': result.get('sentences', []) if output_mode == 'key_sentences' else [],
                 'stats': {
                     'original_words': original_words,
                     'summary_words': summary_words,

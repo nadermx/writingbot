@@ -41,6 +41,9 @@ anthropic>=0.42  # Claude API
 PyMuPDF>=1.25  # PDF manipulation
 pdfplumber>=0.11  # PDF text extraction
 
+# Document Processing
+python-docx>=1.1  # DOCX read/write for proofreader
+
 # Markdown & Text Processing
 markdown>=3.7
 bleach>=6.2  # HTML sanitization

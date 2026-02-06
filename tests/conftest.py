@@ -44,6 +44,13 @@ MOCK_SUMMARY_RESPONSE = json.dumps({
 })
 
 MOCK_AI_DETECT_RESPONSE = json.dumps({
+    'classification': 'human_written_ai_refined',
+    'category_confidences': {
+        'ai_generated': 5,
+        'ai_generated_ai_refined': 15,
+        'human_written_ai_refined': 55,
+        'human_written': 25,
+    },
     'sentences': [
         {'text': 'This is a test sentence.', 'score': 45},
         {'text': 'Another sentence here.', 'score': 20},

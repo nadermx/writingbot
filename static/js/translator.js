@@ -1,9 +1,9 @@
-function translator(initialLanguages) {
+function translator(initialLanguages, defaultSource, defaultTarget) {
     return {
         inputText: '',
         translatedText: '',
-        sourceLang: 'auto',
-        targetLang: 'es',
+        sourceLang: defaultSource || 'auto',
+        targetLang: defaultTarget || 'es',
         charCount: 0,
         loading: false,
         error: '',

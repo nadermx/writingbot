@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block head %}
+<style>
+    /* Guide-specific styles */
+    .guide-content h2 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-top: 2.5rem;
+        margin-bottom: 1rem;
+        padding-top: 1rem;
+    }
+    .guide-content h3 {
+        font-size: 1.15rem;
+        font-weight: 600;
+        margin-top: 1.5rem;
+        margin-bottom: 0.75rem;
+    }
+    .guide-content p {
+        line-height: 1.8;
+        margin-bottom: 1rem;
+        color: #374151;
+    }
+    .guide-content ul, .guide-content ol {
+        margin-bottom: 1rem;
+        padding-left: 1.5rem;
+    }
+    .guide-content li {
+        line-height: 1.8;
+        margin-bottom: 0.5rem;
+        color: #374151;
+    }
+    .guide-content code {
+        background: #f1f5f9;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 0.9em;
+        color: #1e40af;
+    }
+    .guide-content .card {
+        margin-bottom: 1rem;
+    }
+    .guide-content .table {
+        font-size: 0.9rem;
+    }
+
+    /* Table of Contents */
+    .toc-sidebar {
+        position: sticky;
+        top: 80px;
+    }
+    .toc-link {
+        display: block;
+        padding: 0.4rem 0.75rem;
+        color: #6b7280;
+        text-decoration: none;
+        font-size: 0.85rem;
+        border-left: 2px solid transparent;
+        transition: all 0.15s ease;
+    }
+    .toc-link:hover, .toc-link.active {
+        color: #1a3fff;
+        border-left-color: #1a3fff;
+        background: #f0f4ff;
+    }
+
+    /* CTA Box */
+    .guide-cta {
+        background: linear-gradient(135deg, #eff3ff 0%, #e0eaff 100%);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin: 2rem 0;
+        border: 1px solid #c7d7fe;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Breadcrumbs -->
+<div class="bg-light border-bottom">
+    <div class="container py-2">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0 small">
+                <li class="breadcrumb-item"><a href="/" class="text-decoration-none">Home</a></li>
+                <li class="breadcrumb-item"><a href="/guides/" class="text-decoration-none">Guides</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{{ guide.h1 }}</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<!-- Guide Content -->
+<div class="container py-4 py-lg-5">
+    <div class="row">
+
+        <!-- Table of Contents - Desktop Sidebar -->
+        <div class="col-lg-3 d-none d-lg-block">
+            <div class="toc-sidebar">
+                <h6 class="fw-bold text-uppercase text-muted small mb-3">On This Page</h6>
+                <nav>
+                    {% for section in guide.sections %}
+                    <a href="#section-{{ forloop.counter }}" class="toc-link">{{ section.heading }}</a>
+                    {% endfor %}
+                </nav>
+
+                <hr class="my-4">
+
+                <h6 class="fw-bold text-uppercase text-muted small mb-3">All Guides</h6>
+                <nav>
+                    {% for g_item in all_guides %}
+                    <a href="{{ g_item.url }}" class="toc-link {% if g_item.active %}active{% endif %}">{{ g_item.title }}</a>
+                    {% endfor %}
+                </nav>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-lg-9">
+            <!-- Title -->
+            <h1 class="display-6 fw-bold mb-3">{{ guide.h1 }}</h1>
+            <p class="lead text-muted mb-4" style="line-height: 1.8;">{{ guide.intro }}</p>
+
+            <!-- Mobile Table of Contents -->
+            <div class="d-lg-none mb-4">
+                <div class="card border-0 bg-light">
+                    <div class="card-body p-3" x-data="{ tocOpen: false }">
+                        <button class="btn btn-sm btn-outline-secondary w-100 d-flex justify-content-between align-items-center" @click="tocOpen = !tocOpen">
+                            <span class="fw-semibold small">Table of Contents</span>
+                            <svg :class="tocOpen ? 'rotate-180' : ''" style="width:16px;height:16px;transition:transform 0.2s" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                        </button>
+                        <nav x-show="tocOpen" x-transition class="mt-2">
+                            {% for section in guide.sections %}
+                            <a href="#section-{{ forloop.counter }}" class="toc-link" @click="tocOpen = false">{{ section.heading }}</a>
+                            {% endfor %}
+                        </nav>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sections -->
+            <div class="guide-content">
+                {% for section in guide.sections %}
+                <section id="section-{{ forloop.counter }}">
+                    <h2>{{ section.heading }}</h2>
+                    {{ section.content|safe }}
+                </section>
+
+                {% if forloop.counter == 2 or forloop.counter == 4 %}
+                <!-- CTA Box after 2nd and 4th sections -->
+                <div class="guide-cta">
+                    <div class="d-flex flex-column flex-sm-row align-items-start align-items-sm-center gap-3">
+                        <div class="flex-grow-1">
+                            <h5 class="fw-bold mb-1">Try Our {{ guide.related_tool_name }}</h5>
+                            <p class="text-muted mb-0 small">Put what you have learned into practice with our free AI-powered {{ guide.related_tool_name|lower }}.</p>
+                        </div>
+                        <a href="{{ guide.related_tool }}" class="btn btn-primary flex-shrink-0">
+                            Try It Free
+                            <svg class="ms-1" style="width:16px;height:16px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+
+            <!-- Bottom CTA -->
+            <div class="guide-cta mt-5">
+                <div class="text-center py-3">
+                    <h4 class="fw-bold mb-2">Ready to Put This Into Practice?</h4>
+                    <p class="text-muted mb-3">Use our free {{ guide.related_tool_name|lower }} to apply the techniques from this guide.</p>
+                    <a href="{{ guide.related_tool }}" class="btn btn-primary btn-lg px-4">
+                        Open {{ guide.related_tool_name }}
+                        <svg class="ms-2" style="width:18px;height:18px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Related Guides -->
+            <div class="mt-5">
+                <h3 class="fw-bold mb-4">More Writing Guides</h3>
+                <div class="row g-3">
+                    {% for g_item in all_guides %}
+                    {% if not g_item.active %}
+                    <div class="col-md-6">
+                        <a href="{{ g_item.url }}" class="text-decoration-none">
+                            <div class="card border-0 bg-light h-100 hover-lift-sm">
+                                <div class="card-body p-3">
+                                    <h6 class="fw-semibold text-dark mb-0">{{ g_item.title }}</h6>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .hover-lift-sm {
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .hover-lift-sm:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 .25rem .75rem rgba(0,0,0,.08) !important;
+    }
+</style>
+{% endblock %}

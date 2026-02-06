@@ -10,6 +10,23 @@ function wordCounterApp() {
         readabilityLabel: 'N/A',
         keywords: [],
 
+        // Social media character limits
+        socialLimits: [
+            { name: 'Twitter / X', limit: 280 },
+            { name: 'Instagram Caption', limit: 2200 },
+            { name: 'Facebook Post', limit: 63206 },
+            { name: 'LinkedIn Post', limit: 3000 },
+            { name: 'Pinterest Pin', limit: 500 },
+            { name: 'Reddit Title', limit: 300 },
+            { name: 'YouTube Title', limit: 100 },
+            { name: 'YouTube Description', limit: 5000 },
+            { name: 'TikTok Caption', limit: 2200 },
+            { name: 'SMS Message', limit: 160 },
+            { name: 'SEO Title', limit: 60 },
+            { name: 'SEO Description', limit: 160 },
+            { name: 'eBay Title', limit: 80 },
+        ],
+
         // Common English stop words to exclude from keyword density
         stopWords: new Set([
             'the', 'be', 'to', 'of', 'and', 'a', 'in', 'that', 'have', 'i',

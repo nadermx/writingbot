@@ -9,6 +9,13 @@
             <div class="col-lg-8 text-center">
                 <h1 class="display-5 fw-bold mb-3">{{ seo.h1 }}</h1>
                 <p class="lead text-muted mb-0">{{ seo.subtitle }}</p>
+                {% if seo.tool_url %}
+                <div class="mt-4">
+                    <a href="{{ seo.tool_url }}" class="btn btn-primary btn-lg px-5 shadow-sm">
+                        {{ seo.tool_cta|default:"Try the Full Tool" }}
+                    </a>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>

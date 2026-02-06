@@ -121,6 +121,42 @@
                 </div>
             </div>
 
+            <!-- Social Media Character Limits -->
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-white fw-semibold">Social Media Limits</div>
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="small">Platform</th>
+                                <th class="small text-center">Limit</th>
+                                <th class="small text-end">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="(platform, idx) in socialLimits" :key="idx">
+                                <tr>
+                                    <td class="small" x-text="platform.name"></td>
+                                    <td class="text-center small" x-text="platform.limit.toLocaleString()"></td>
+                                    <td class="text-end">
+                                        <div class="d-flex align-items-center justify-content-end gap-1">
+                                            <div class="progress flex-grow-1" style="height: 6px; max-width: 50px;">
+                                                <div
+                                                    class="progress-bar"
+                                                    :class="characters > platform.limit ? 'bg-danger' : (characters > platform.limit * 0.9 ? 'bg-warning' : 'bg-success')"
+                                                    :style="'width: ' + Math.min((characters / platform.limit) * 100, 100) + '%'"
+                                                ></div>
+                                            </div>
+                                            <span class="small" :class="characters > platform.limit ? 'text-danger fw-semibold' : 'text-muted'" x-text="characters + '/' + platform.limit.toLocaleString()"></span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- Top Keywords -->
             <div class="card shadow-sm">
                 <div class="card-header bg-white fw-semibold">Top Keywords</div>

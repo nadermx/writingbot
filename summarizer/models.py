@@ -6,6 +6,7 @@ class SummaryHistory(models.Model):
     MODE_CHOICES = [
         ('key_sentences', 'Key Sentences'),
         ('paragraph', 'Paragraph'),
+        ('custom', 'Custom'),
     ]
 
     user = models.ForeignKey(

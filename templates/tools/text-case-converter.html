@@ -1,0 +1,180 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4" x-data="textCaseConverterApp()" x-init="init()">
+
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12 text-center">
+            <h1 class="h2 fw-bold">Text Case Converter</h1>
+            <p class="text-muted">Convert text between UPPERCASE, lowercase, Title Case, camelCase, snake_case, and more with a single click.</p>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Input Card -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <span class="fw-semibold">Input Text</span>
+                    <div class="d-flex gap-2">
+                        <span class="text-muted small" x-text="charCount + ' characters'"></span>
+                        <button
+                            @click="clearText()"
+                            class="btn btn-sm btn-outline-secondary"
+                            x-show="inputText.length > 0"
+                        >Clear</button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <textarea
+                        x-model="inputText"
+                        class="form-control border-0"
+                        style="min-height: 200px; resize: vertical; font-size: 1rem; line-height: 1.6;"
+                        placeholder="Type or paste your text here..."
+                    ></textarea>
+                </div>
+            </div>
+
+            <!-- Conversion Buttons -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white fw-semibold">Convert To</div>
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-2">
+                        <button @click="convert('uppercase')" class="btn btn-outline-primary" :disabled="!inputText.trim()">
+                            UPPERCASE
+                        </button>
+                        <button @click="convert('lowercase')" class="btn btn-outline-primary" :disabled="!inputText.trim()">
+                            lowercase
+                        </button>
+                        <button @click="convert('titlecase')" class="btn btn-outline-primary" :disabled="!inputText.trim()">
+                            Title Case
+                        </button>
+                        <button @click="convert('sentencecase')" class="btn btn-outline-primary" :disabled="!inputText.trim()">
+                            Sentence case
+                        </button>
+                        <button @click="convert('camelcase')" class="btn btn-outline-primary" :disabled="!inputText.trim()">
+                            camelCase
+                        </button>
+                        <button @click="convert('snakecase')" class="btn btn-outline-primary" :disabled="!inputText.trim()">
+                            snake_case
+                        </button>
+                        <button @click="convert('kebabcase')" class="btn btn-outline-primary" :disabled="!inputText.trim()">
+                            kebab-case
+                        </button>
+                        <button @click="convert('constantcase')" class="btn btn-outline-primary" :disabled="!inputText.trim()">
+                            CONSTANT_CASE
+                        </button>
+                        <button @click="convert('alternating')" class="btn btn-outline-primary" :disabled="!inputText.trim()">
+                            aLtErNaTiNg
+                        </button>
+                        <button @click="convert('inverse')" class="btn btn-outline-primary" :disabled="!inputText.trim()">
+                            iNVERSE cASE
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Output Card -->
+            <div class="card shadow-sm mb-4" x-show="outputText">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <span class="fw-semibold">
+                        Result
+                        <span class="badge bg-primary ms-2" x-text="activeMode"></span>
+                    </span>
+                    <button @click="copyOutput()" class="btn btn-sm btn-outline-success">
+                        <span x-text="copied ? 'Copied!' : 'Copy'"></span>
+                    </button>
+                </div>
+                <div class="card-body">
+                    <textarea
+                        x-model="outputText"
+                        readonly
+                        class="form-control"
+                        style="min-height: 200px; resize: vertical; font-size: 1rem; line-height: 1.6; background-color: #f8f9fa;"
+                    ></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SEO Content: Features -->
+<div class="bg-light py-5">
+    <div class="container">
+        <h2 class="text-center fw-bold mb-5">Why Use Our Text Case Converter?</h2>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm p-4">
+                    <h5 class="fw-semibold mb-3">10 Conversion Modes</h5>
+                    <p class="text-muted mb-0">Convert text to UPPERCASE, lowercase, Title Case, Sentence case, camelCase, snake_case, kebab-case, CONSTANT_CASE, alternating case, and inverse case.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm p-4">
+                    <h5 class="fw-semibold mb-3">Instant Conversion</h5>
+                    <p class="text-muted mb-0">All conversions happen instantly in your browser. No server calls, no waiting, no data sent anywhere. Your text stays completely private.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm p-4">
+                    <h5 class="fw-semibold mb-3">Developer Friendly</h5>
+                    <p class="text-muted mb-0">Need camelCase for JavaScript variables, snake_case for Python, or CONSTANT_CASE for environment variables? Convert between programming naming conventions instantly.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- FAQ Section -->
+<div class="container py-5">
+    <h2 class="text-center fw-bold mb-5">Frequently Asked Questions</h2>
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="accordion" id="faqAccordion">
+                <div class="accordion-item border-0 mb-2">
+                    <h3 class="accordion-header">
+                        <button class="accordion-button fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
+                            What is Title Case?
+                        </button>
+                    </h3>
+                    <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body text-muted">
+                            Title Case capitalizes the first letter of each word while keeping the rest lowercase. For example, "the quick brown fox" becomes "The Quick Brown Fox." This is commonly used for headlines, book titles, and headings.
+                        </div>
+                    </div>
+                </div>
+                <div class="accordion-item border-0 mb-2">
+                    <h3 class="accordion-header">
+                        <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
+                            What is the difference between camelCase and snake_case?
+                        </button>
+                    </h3>
+                    <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body text-muted">
+                            camelCase joins words together with each new word starting with an uppercase letter (e.g., "myVariableName"). snake_case joins words with underscores in all lowercase (e.g., "my_variable_name"). camelCase is common in JavaScript and Java, while snake_case is preferred in Python and Ruby.
+                        </div>
+                    </div>
+                </div>
+                <div class="accordion-item border-0 mb-2">
+                    <h3 class="accordion-header">
+                        <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
+                            Is my text stored or sent to a server?
+                        </button>
+                    </h3>
+                    <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body text-muted">
+                            No. All text case conversions are performed entirely in your browser using JavaScript. Your text is never sent to our servers or stored anywhere. This makes the tool completely private and works even without an internet connection once the page is loaded.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/text-case-converter.js' %}?v={{ g.scripts_version }}"></script>
+{% endblock %}

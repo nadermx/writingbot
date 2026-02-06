@@ -38,6 +38,25 @@
                             >
                                 Paragraph
                             </button>
+                            {% if is_premium %}
+                            <button
+                                type="button"
+                                class="btn"
+                                :class="mode === 'custom' ? 'btn-primary' : 'btn-outline-secondary'"
+                                @click="mode = 'custom'"
+                            >
+                                Custom <span class="badge bg-warning text-dark ms-1" style="font-size: 0.65em;">PRO</span>
+                            </button>
+                            {% else %}
+                            <button
+                                type="button"
+                                class="btn btn-outline-secondary"
+                                @click="showUpgradeForCustom()"
+                                title="Premium feature"
+                            >
+                                Custom <span class="badge bg-warning text-dark ms-1" style="font-size: 0.65em;">PRO</span>
+                            </button>
+                            {% endif %}
                         </div>
                     </div>
 
@@ -70,6 +89,62 @@
                         {% if not is_premium %}
                         <a href="/pricing/" class="btn btn-sm btn-outline-primary ms-2">Upgrade</a>
                         {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Instructions (shown only in custom mode) -->
+    <div class="row mb-3" x-show="mode === 'custom'" x-transition>
+        <div class="col-12">
+            <div class="card shadow-sm border-primary">
+                <div class="card-body py-3">
+                    <label class="form-label fw-semibold mb-2">
+                        Custom Instructions
+                        <span class="badge bg-warning text-dark ms-1">PRO</span>
+                    </label>
+                    <textarea
+                        x-model="customInstructions"
+                        class="form-control"
+                        rows="2"
+                        placeholder="e.g., Summarize as bullet points, Focus on financial data, Write in first person, Extract action items..."
+                        style="resize: vertical;"
+                    ></textarea>
+                    <small class="text-muted mt-1 d-block">Tell the AI exactly how you want your summary formatted or what to focus on.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Keyword Focus -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body py-2">
+                    <div class="d-flex align-items-start gap-2">
+                        <label class="small text-muted mb-0 pt-1 text-nowrap">Keywords:</label>
+                        <div class="flex-grow-1">
+                            <div class="d-flex flex-wrap gap-1 align-items-center">
+                                <template x-for="(keyword, idx) in keywords" :key="idx">
+                                    <span class="badge bg-primary d-flex align-items-center gap-1 py-1 px-2">
+                                        <span x-text="keyword"></span>
+                                        <button type="button" class="btn-close btn-close-white" style="font-size: 0.5em;" @click="removeKeyword(idx)"></button>
+                                    </span>
+                                </template>
+                                <input
+                                    type="text"
+                                    class="border-0 flex-grow-1"
+                                    style="min-width: 120px; outline: none; font-size: 0.875rem;"
+                                    placeholder="Type a keyword and press Enter..."
+                                    x-model="keywordInput"
+                                    @keydown.enter.prevent="addKeyword()"
+                                    @keydown.comma.prevent="addKeyword()"
+                                    @keydown.backspace="if (!keywordInput && keywords.length) removeKeyword(keywords.length - 1)"
+                                >
+                            </div>
+                            <small class="text-muted" x-show="keywords.length === 0">Add keywords to emphasize specific topics in the summary (press Enter to add)</small>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -163,8 +238,8 @@
                         </div>
                     </template>
 
-                    <!-- Paragraph output -->
-                    <template x-if="summary && (mode === 'paragraph' || sentences.length === 0)">
+                    <!-- Paragraph / Custom output -->
+                    <template x-if="summary && (mode === 'paragraph' || mode === 'custom' || sentences.length === 0)">
                         <div style="line-height: 1.8; white-space: pre-wrap;" x-text="summary"></div>
                     </template>
                 </div>

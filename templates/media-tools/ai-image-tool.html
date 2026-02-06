@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container py-5" x-data="imageToolApp()" x-init="init()">
+    <div class="text-center mb-4">
+        <h1 class="display-6 fw-bold mb-2">{{ tool_h1 }}</h1>
+        <p class="text-muted lead">{{ tool_subtitle }}</p>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+
+                    <!-- Description Input -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Describe what you want *</label>
+                        <textarea class="form-control" rows="4" x-model="description"
+                            placeholder="{{ placeholder }}"
+                            maxlength="2000"></textarea>
+                        <div class="form-text"><span x-text="description.length"></span>/2000 characters</div>
+                    </div>
+
+                    <!-- Style Selection -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Style</label>
+                            <select class="form-select" x-model="style">
+                                <option value="">Auto (AI chooses best)</option>
+                                {% for key, label in style_options.items %}
+                                <option value="{{ label }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Additional Notes</label>
+                            <input type="text" class="form-control" x-model="additional"
+                                placeholder="Colors, mood, specific requirements...">
+                        </div>
+                    </div>
+
+                    <!-- Generate Button -->
+                    <button class="btn btn-primary btn-lg w-100"
+                        @click="generatePrompt()"
+                        :disabled="processing || !description.trim()">
+                        <span x-show="!processing">Generate Prompt</span>
+                        <span x-show="processing">
+                            <span class="spinner-border spinner-border-sm me-2"></span>Generating...
+                        </span>
+                    </button>
+
+                    <!-- Error -->
+                    <div x-show="error" class="alert alert-danger mt-3" x-text="error"></div>
+
+                    <!-- Generated Prompt Result -->
+                    <div x-show="generatedPrompt" class="mt-4 p-3 bg-light rounded-3">
+                        <label class="form-label fw-semibold">Generated Image Prompt</label>
+                        <p class="mb-2" x-text="generatedPrompt" style="white-space: pre-wrap;"></p>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-primary" @click="copyPrompt()">
+                                <span x-show="!copied">Copy to Clipboard</span>
+                                <span x-show="copied">Copied!</span>
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" @click="resetTool()">Generate Another</button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Features Section -->
+    <div class="row mt-5 pt-4 g-4">
+        {% for feature in features %}
+        <div class="col-md-4 text-center">
+            <div class="p-3">
+                <div class="mb-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="#6366f1" viewBox="0 0 24 24"><path d="M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25L19 9zm-7.5.5L9 4 6.5 9.5 1 12l5.5 2.5L9 20l2.5-5.5L17 12l-5.5-2.5z"/></svg>
+                </div>
+                <h5 class="fw-semibold">{{ feature.title }}</h5>
+                <p class="text-muted small">{{ feature.desc }}</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- How It Works -->
+    <div class="mt-5 pt-4">
+        <h2 class="text-center fw-bold mb-4">How It Works</h2>
+        <div class="row g-4">
+            <div class="col-md-4 text-center">
+                <div class="rounded-circle bg-primary bg-opacity-10 d-inline-flex align-items-center justify-content-center mb-3" style="width:60px;height:60px;">
+                    <span class="fw-bold text-primary fs-4">1</span>
+                </div>
+                <h5 class="fw-semibold">Describe Your Vision</h5>
+                <p class="text-muted small">Enter a description of the image you want to create. Be as detailed or brief as you like.</p>
+            </div>
+            <div class="col-md-4 text-center">
+                <div class="rounded-circle bg-primary bg-opacity-10 d-inline-flex align-items-center justify-content-center mb-3" style="width:60px;height:60px;">
+                    <span class="fw-bold text-primary fs-4">2</span>
+                </div>
+                <h5 class="fw-semibold">Choose a Style</h5>
+                <p class="text-muted small">Select from our curated style options or let the AI choose the best approach automatically.</p>
+            </div>
+            <div class="col-md-4 text-center">
+                <div class="rounded-circle bg-primary bg-opacity-10 d-inline-flex align-items-center justify-content-center mb-3" style="width:60px;height:60px;">
+                    <span class="fw-bold text-primary fs-4">3</span>
+                </div>
+                <h5 class="fw-semibold">Get Your Prompt</h5>
+                <p class="text-muted small">Copy the optimized prompt and use it with DALL-E, Midjourney, Stable Diffusion, or any AI image tool.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- FAQ Section -->
+    <div class="mt-5 pt-4">
+        <h2 class="text-center fw-bold mb-4">Frequently Asked Questions</h2>
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="accordion" id="faqAccordion">
+                    {% for faq in faqs %}
+                    <div class="accordion-item border-0 mb-2">
+                        <h3 class="accordion-header">
+                            <button class="accordion-button {% if not forloop.first %}collapsed{% endif %} fw-semibold"
+                                type="button" data-bs-toggle="collapse"
+                                data-bs-target="#faq{{ forloop.counter }}">
+                                {{ faq.q }}
+                            </button>
+                        </h3>
+                        <div id="faq{{ forloop.counter }}"
+                            class="accordion-collapse collapse {% if forloop.first %}show{% endif %}"
+                            data-bs-parent="#faqAccordion">
+                            <div class="accordion-body text-muted">
+                                {{ faq.a }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function imageToolApp() {
+    return {
+        toolKey: '{{ tool_key }}',
+        description: '',
+        style: '',
+        additional: '',
+        processing: false,
+        error: '',
+        generatedPrompt: '',
+        copied: false,
+
+        init() {},
+
+        async generatePrompt() {
+            if (!this.description.trim()) return;
+            this.processing = true;
+            this.error = '';
+            this.generatedPrompt = '';
+            this.copied = false;
+
+            try {
+                const response = await fetch('/api/media/image-tool/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCsrfToken()
+                    },
+                    body: JSON.stringify({
+                        tool_key: this.toolKey,
+                        description: this.description,
+                        style: this.style,
+                        additional: this.additional,
+                    })
+                });
+
+                const data = await response.json();
+                if (!response.ok) {
+                    this.error = data.error || 'Failed to generate prompt.';
+                } else {
+                    this.generatedPrompt = data.prompt;
+                }
+            } catch (e) {
+                this.error = 'Network error. Please try again.';
+            }
+            this.processing = false;
+        },
+
+        copyPrompt() {
+            if (this.generatedPrompt) {
+                navigator.clipboard.writeText(this.generatedPrompt);
+                this.copied = true;
+                setTimeout(() => { this.copied = false; }, 2000);
+            }
+        },
+
+        resetTool() {
+            this.description = '';
+            this.style = '';
+            this.additional = '';
+            this.generatedPrompt = '';
+            this.error = '';
+            this.copied = false;
+        },
+
+        getCsrfToken() {
+            const el = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (el) return el.value;
+            const match = document.cookie.match(/csrftoken=([^;]+)/);
+            return match ? match[1] : '';
+        }
+    };
+}
+</script>
+{% endblock %}

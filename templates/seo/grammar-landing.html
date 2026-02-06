@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<!-- SEO Hero Section -->
+<div class="bg-light py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 text-center">
+                <h1 class="display-5 fw-bold mb-3">{{ seo.h1 }}</h1>
+                <p class="lead text-muted mb-0">{{ seo.subtitle }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Embedded Grammar Checker Tool -->
+<div class="container py-5" x-data="seoGrammarChecker()" x-init="init()">
+    {% csrf_token %}
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <!-- Editor Area -->
+                    <div class="row g-4">
+                        <!-- Text Input with Highlights -->
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label fw-semibold mb-0">Your {{ seo.language_name }} Text</label>
+                                <span class="text-muted small"><span x-text="wordCount"></span> / {{ word_limit }} words</span>
+                            </div>
+                            <div class="position-relative" style="min-height: 250px;">
+                                <!-- Highlight layer -->
+                                <div
+                                    class="position-absolute top-0 start-0 w-100 h-100 p-3 border rounded"
+                                    style="pointer-events: none; white-space: pre-wrap; word-wrap: break-word; font-family: inherit; font-size: 1rem; line-height: 1.6; color: transparent; overflow: auto;"
+                                    x-html="highlightedHtml"
+                                ></div>
+                                <!-- Textarea -->
+                                <textarea
+                                    x-model="text"
+                                    @input="onTextInput()"
+                                    class="form-control h-100"
+                                    style="min-height: 250px; resize: vertical; background: transparent; position: relative; z-index: 1; font-size: 1rem; line-height: 1.6;"
+                                    :placeholder="'Type or paste your {{ seo.language_name }} text here to check for grammar errors...'"
+                                ></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Controls -->
+                    <div class="row mt-3 align-items-end g-3">
+                        <div class="col-md-8">
+                            <!-- Corrections Summary -->
+                            <div x-show="hasChecked && corrections.length === 0" class="text-success">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="me-1" viewBox="0 0 16 16">
+                                    <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
+                                </svg>
+                                No errors found. Great writing!
+                            </div>
+                            <div x-show="corrections.length > 0" class="d-flex flex-wrap gap-2">
+                                <template x-for="(group, gIdx) in groupedCorrections" :key="gIdx">
+                                    <span class="badge rounded-pill" :class="getTypeBadgeClass(group.type)">
+                                        <span class="text-capitalize" x-text="formatType(group.type)"></span>: <span x-text="group.items.length"></span>
+                                    </span>
+                                </template>
+                                <button
+                                    @click="fixAll()"
+                                    :disabled="fixingAll"
+                                    class="btn btn-sm btn-success ms-2"
+                                    x-show="corrections.length > 0"
+                                >
+                                    <span x-show="fixingAll" class="spinner-border spinner-border-sm me-1"></span>
+                                    <span x-text="fixingAll ? 'Fixing...' : 'Fix All (' + corrections.length + ')'"></span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-primary btn-lg w-100" @click="checkGrammar()" :disabled="loading || !text.trim()">
+                                <span x-show="!loading">Check {{ seo.language_name }} Grammar</span>
+                                <span x-show="loading">
+                                    <span class="spinner-border spinner-border-sm me-2"></span>Checking...
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Corrections List -->
+                    <div x-show="corrections.length > 0" class="mt-4">
+                        <h6 class="fw-semibold mb-3">Corrections Found</h6>
+                        <div class="list-group">
+                            <template x-for="(correction, cIdx) in corrections" :key="cIdx">
+                                <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex align-items-center gap-2 mb-1">
+                                            <span class="text-decoration-line-through text-danger small" x-text="correction.original"></span>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+                                                <path fill-rule="evenodd" d="M1 8a.5.5 0 0 1 .5-.5h11.793l-3.147-3.146a.5.5 0 0 1 .708-.708l4 4a.5.5 0 0 1 0 .708l-4 4a.5.5 0 0 1-.708-.708L13.293 8.5H1.5A.5.5 0 0 1 1 8z"/>
+                                            </svg>
+                                            <span class="text-success small fw-semibold" x-text="correction.suggestion"></span>
+                                        </div>
+                                        <div class="text-muted small" x-text="correction.explanation"></div>
+                                    </div>
+                                    <button
+                                        @click="applySingle(correction)"
+                                        class="btn btn-sm btn-outline-success ms-2 flex-shrink-0"
+                                        title="Apply fix"
+                                    >Fix</button>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Error -->
+                    <div x-show="errorMessage" class="alert alert-danger mt-3" x-text="errorMessage"></div>
+
+                    {% if not is_premium %}
+                    <div class="text-center mt-3">
+                        <small class="text-muted">Free: {{ word_limit }} words per check. <a href="/pricing/">Upgrade for unlimited access</a>.</small>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Features Section -->
+<div class="bg-light py-5">
+    <div class="container">
+        <h2 class="text-center fw-bold mb-5">Why Choose Our {{ seo.h1 }}?</h2>
+        <div class="row g-4">
+            {% for feature in seo.features %}
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm p-4">
+                    <h5 class="fw-semibold mb-3">{{ feature.title }}</h5>
+                    <p class="text-muted mb-0">{{ feature.text }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Comparison Table -->
+<div class="container py-5">
+    <h2 class="text-center fw-bold mb-5">Free vs Premium</h2>
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Feature</th>
+                            <th class="text-center">Free</th>
+                            <th class="text-center bg-primary bg-opacity-10">Premium</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Word Limit</td>
+                            <td class="text-center">{{ word_limit }} words</td>
+                            <td class="text-center">Unlimited</td>
+                        </tr>
+                        <tr>
+                            <td>{{ seo.language_name }} Grammar Check</td>
+                            <td class="text-center">Yes</td>
+                            <td class="text-center">Yes</td>
+                        </tr>
+                        <tr>
+                            <td>Writing Score</td>
+                            <td class="text-center">Basic</td>
+                            <td class="text-center">Advanced</td>
+                        </tr>
+                        <tr>
+                            <td>Auto-Fix All Errors</td>
+                            <td class="text-center">Yes</td>
+                            <td class="text-center">Yes</td>
+                        </tr>
+                        <tr>
+                            <td>History</td>
+                            <td class="text-center">No</td>
+                            <td class="text-center">Yes</td>
+                        </tr>
+                        <tr>
+                            <td>Priority Processing</td>
+                            <td class="text-center">No</td>
+                            <td class="text-center">Yes</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="text-center mt-3">
+                <a href="/pricing/" class="btn btn-primary">View Pricing</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- FAQ Section -->
+<div class="bg-light py-5">
+    <div class="container">
+        <h2 class="text-center fw-bold mb-5">Frequently Asked Questions</h2>
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="accordion" id="faqAccordion">
+                    {% for faq in seo.faqs %}
+                    <div class="accordion-item border-0 mb-2">
+                        <h3 class="accordion-header">
+                            <button class="accordion-button {% if not forloop.first %}collapsed{% endif %} fw-semibold"
+                                    type="button" data-bs-toggle="collapse"
+                                    data-bs-target="#faq{{ forloop.counter }}">
+                                {{ faq.q }}
+                            </button>
+                        </h3>
+                        <div id="faq{{ forloop.counter }}"
+                             class="accordion-collapse collapse {% if forloop.first %}show{% endif %}"
+                             data-bs-parent="#faqAccordion">
+                            <div class="accordion-body text-muted">
+                                {{ faq.a }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/seo-grammar.js' %}?v={{ g.scripts_version }}"></script>
+{% endblock %}

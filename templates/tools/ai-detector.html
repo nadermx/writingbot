@@ -11,188 +11,409 @@
     {% csrf_token %}
 
     <div x-data="aiDetector()" x-cloak>
-        <!-- Input Area -->
-        <div class="row justify-content-center">
+        <!-- Tabs -->
+        <div class="row justify-content-center mb-3">
             <div class="col-lg-10">
-                <div class="card shadow-sm mb-4">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <label class="form-label fw-semibold mb-0">Paste your text below</label>
-                            <div class="d-flex align-items-center gap-3">
-                                <small class="text-muted">
-                                    <span :class="wordCount < 80 ? 'text-danger' : 'text-success'" x-text="wordCount"></span>
-                                    words
-                                    <span x-show="wordCount < 80" class="text-danger">(min 80)</span>
-                                    {% if not is_premium %}
-                                    <span class="text-muted">/ 1,200 max</span>
-                                    {% endif %}
-                                </small>
-                                <label class="btn btn-sm btn-outline-secondary mb-0">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/></svg>
-                                    Upload
-                                    <input type="file" accept=".txt,.doc,.docx" class="d-none" @change="handleFileUpload($event)">
-                                </label>
-                            </div>
-                        </div>
-                        <textarea
-                            class="form-control"
-                            rows="10"
-                            x-model="inputText"
-                            @input="updateWordCount()"
-                            placeholder="Enter or paste your text here to check if it was written by AI... (minimum 80 words)"
-                            style="resize: vertical; font-size: 15px; line-height: 1.7;"
-                        ></textarea>
-
-                        <div class="d-flex justify-content-between align-items-center mt-3">
-                            <button
-                                class="btn btn-primary btn-lg px-5"
-                                @click="detectAI()"
-                                :disabled="loading || wordCount < 80"
-                            >
-                                <span x-show="!loading">Detect AI</span>
-                                <span x-show="loading">
-                                    <span class="spinner-border spinner-border-sm me-1" role="status"></span>
-                                    Analyzing...
-                                </span>
-                            </button>
-                            <button
-                                class="btn btn-outline-secondary"
-                                @click="clearAll()"
-                                x-show="inputText.length > 0"
-                            >Clear</button>
-                        </div>
-
-                        <!-- Error Message -->
-                        <div x-show="error" class="alert alert-danger mt-3 mb-0" x-text="error"></div>
-                    </div>
-                </div>
+                <ul class="nav nav-tabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button
+                            class="nav-link"
+                            :class="activeTab === 'single' ? 'active' : ''"
+                            @click="activeTab = 'single'"
+                            type="button"
+                        >
+                            Text Analysis
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button
+                            class="nav-link"
+                            :class="activeTab === 'bulk' ? 'active' : ''"
+                            @click="activeTab = 'bulk'"
+                            type="button"
+                        >
+                            Bulk Analysis
+                            <span class="badge bg-warning text-dark ms-1" style="font-size: 0.7em;">PRO</span>
+                        </button>
+                    </li>
+                </ul>
             </div>
         </div>
 
-        <!-- Results Section -->
-        <div x-show="hasResults" class="row justify-content-center">
-            <div class="col-lg-10">
-                <!-- Overall Score -->
-                <div class="card shadow-sm mb-4">
-                    <div class="card-body text-center py-4">
-                        <h5 class="fw-semibold mb-3">Detection Result</h5>
-                        <div class="row align-items-center">
-                            <div class="col-md-4">
-                                <!-- Gauge -->
-                                <div class="position-relative d-inline-block" style="width: 160px; height: 160px;">
-                                    <svg viewBox="0 0 120 120" class="w-100 h-100">
-                                        <!-- Background circle -->
-                                        <circle cx="60" cy="60" r="50" fill="none" stroke="#e9ecef" stroke-width="10"
-                                            stroke-dasharray="235.6" stroke-dashoffset="0"
-                                            transform="rotate(-90 60 60)" stroke-linecap="round"/>
-                                        <!-- Progress circle -->
-                                        <circle cx="60" cy="60" r="50" fill="none"
-                                            :stroke="getScoreColor(overallScore)" stroke-width="10"
-                                            stroke-dasharray="235.6"
-                                            :stroke-dashoffset="235.6 - (235.6 * (overallScore / 100))"
-                                            transform="rotate(-90 60 60)" stroke-linecap="round"
-                                            style="transition: stroke-dashoffset 1s ease-in-out;"/>
-                                    </svg>
-                                    <div class="position-absolute top-50 start-50 translate-middle text-center">
-                                        <span class="display-6 fw-bold" :style="'color:' + getScoreColor(overallScore)" x-text="overallScore + '%'"></span>
+        <!-- Single Text Analysis Tab -->
+        <div x-show="activeTab === 'single'">
+            <!-- Input Area -->
+            <div class="row justify-content-center">
+                <div class="col-lg-10">
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label fw-semibold mb-0">Paste your text below</label>
+                                <div class="d-flex align-items-center gap-3">
+                                    <small class="text-muted">
+                                        <span :class="wordCount < 80 ? 'text-danger' : 'text-success'" x-text="wordCount"></span>
+                                        words
+                                        <span x-show="wordCount < 80" class="text-danger">(min 80)</span>
+                                        {% if not is_premium %}
+                                        <span class="text-muted">/ 1,200 max</span>
+                                        {% endif %}
+                                    </small>
+                                    <label class="btn btn-sm btn-outline-secondary mb-0">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/></svg>
+                                        Upload
+                                        <input type="file" accept=".txt,.doc,.docx" class="d-none" @change="handleFileUpload($event)">
+                                    </label>
+                                </div>
+                            </div>
+                            <textarea
+                                class="form-control"
+                                rows="10"
+                                x-model="inputText"
+                                @input="updateWordCount()"
+                                placeholder="Enter or paste your text here to check if it was written by AI... (minimum 80 words)"
+                                style="resize: vertical; font-size: 15px; line-height: 1.7;"
+                            ></textarea>
+
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                <button
+                                    class="btn btn-primary btn-lg px-5"
+                                    @click="detectAI()"
+                                    :disabled="loading || wordCount < 80"
+                                >
+                                    <span x-show="!loading">Detect AI</span>
+                                    <span x-show="loading">
+                                        <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                        Analyzing...
+                                    </span>
+                                </button>
+                                <button
+                                    class="btn btn-outline-secondary"
+                                    @click="clearAll()"
+                                    x-show="inputText.length > 0"
+                                >Clear</button>
+                            </div>
+
+                            <!-- Error Message -->
+                            <div x-show="error" class="alert alert-danger mt-3 mb-0" x-text="error"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div x-show="hasResults" class="row justify-content-center">
+                <div class="col-lg-10">
+                    <!-- Overall Score + 4-Category Confidence Bars -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-body py-4">
+                            <h5 class="fw-semibold mb-3 text-center">Detection Result</h5>
+                            <div class="row align-items-center">
+                                <div class="col-md-4 text-center">
+                                    <!-- Gauge -->
+                                    <div class="position-relative d-inline-block" style="width: 160px; height: 160px;">
+                                        <svg viewBox="0 0 120 120" class="w-100 h-100">
+                                            <!-- Background circle -->
+                                            <circle cx="60" cy="60" r="50" fill="none" stroke="#e9ecef" stroke-width="10"
+                                                stroke-dasharray="235.6" stroke-dashoffset="0"
+                                                transform="rotate(-90 60 60)" stroke-linecap="round"/>
+                                            <!-- Progress circle -->
+                                            <circle cx="60" cy="60" r="50" fill="none"
+                                                :stroke="getScoreColor(overallScore)" stroke-width="10"
+                                                stroke-dasharray="235.6"
+                                                :stroke-dashoffset="235.6 - (235.6 * (overallScore / 100))"
+                                                transform="rotate(-90 60 60)" stroke-linecap="round"
+                                                style="transition: stroke-dashoffset 1s ease-in-out;"/>
+                                        </svg>
+                                        <div class="position-absolute top-50 start-50 translate-middle text-center">
+                                            <span class="display-6 fw-bold" :style="'color:' + getScoreColor(overallScore)" x-text="overallScore + '%'"></span>
+                                        </div>
+                                    </div>
+                                    <p class="text-muted mt-2 mb-0">AI Probability</p>
+                                </div>
+                                <div class="col-md-4">
+                                    <!-- Classification Badge + Description -->
+                                    <div class="text-center py-3">
+                                        <span class="badge fs-6 px-4 py-2"
+                                            :class="getClassificationBadgeClass()"
+                                            x-text="classificationLabel">
+                                        </span>
+                                        <p class="text-muted small mt-2 mb-0" x-text="classificationDescription"></p>
+                                        <p class="mt-2 mb-0"><strong>Words analyzed:</strong> <span x-text="resultWordCount"></span></p>
                                     </div>
                                 </div>
-                                <p class="text-muted mt-2 mb-0">AI Probability</p>
-                            </div>
-                            <div class="col-md-4">
-                                <!-- Classification Badge -->
-                                <div class="py-3">
-                                    <span class="badge fs-6 px-4 py-2"
-                                        :class="{
-                                            'bg-danger': classification === 'ai_generated',
-                                            'bg-warning text-dark': classification === 'ai_refined',
-                                            'bg-warning bg-opacity-50 text-dark': classification === 'human_refined',
-                                            'bg-success': classification === 'human_written'
-                                        }"
-                                        x-text="classificationLabel">
-                                    </span>
-                                </div>
-                                <p class="text-muted small mb-0" x-text="getClassificationDescription()"></p>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="py-3">
-                                    <p class="mb-1"><strong>Words analyzed:</strong> <span x-text="resultWordCount"></span></p>
-                                    <div class="mt-2">
-                                        <div class="d-flex gap-2 flex-wrap justify-content-center">
-                                            <span class="badge bg-danger">AI Generated</span>
-                                            <span class="badge bg-warning text-dark">AI Refined</span>
-                                            <span class="badge" style="background-color: #ffc10780;">Human Refined</span>
-                                            <span class="badge bg-success">Human Written</span>
+                                <div class="col-md-4">
+                                    <!-- 4-Category Confidence Bars -->
+                                    <div class="py-2">
+                                        <div class="mb-2">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <small class="fw-semibold text-danger">AI-Generated</small>
+                                                <small class="fw-bold" x-text="(categoryConfidences.ai_generated || 0) + '%'"></small>
+                                            </div>
+                                            <div class="progress" style="height: 8px;">
+                                                <div class="progress-bar bg-danger" role="progressbar"
+                                                    :style="'width: ' + (categoryConfidences.ai_generated || 0) + '%'"
+                                                    style="transition: width 0.8s ease-in-out;"></div>
+                                            </div>
+                                        </div>
+                                        <div class="mb-2">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <small class="fw-semibold" style="color: #fd7e14;">AI-Gen & AI-Refined</small>
+                                                <small class="fw-bold" x-text="(categoryConfidences.ai_generated_ai_refined || 0) + '%'"></small>
+                                            </div>
+                                            <div class="progress" style="height: 8px;">
+                                                <div class="progress-bar" role="progressbar" style="background-color: #fd7e14; transition: width 0.8s ease-in-out;"
+                                                    :style="'width: ' + (categoryConfidences.ai_generated_ai_refined || 0) + '%'"></div>
+                                            </div>
+                                        </div>
+                                        <div class="mb-2">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <small class="fw-semibold" style="color: #b8860b;">Human & AI-Refined</small>
+                                                <small class="fw-bold" x-text="(categoryConfidences.human_written_ai_refined || 0) + '%'"></small>
+                                            </div>
+                                            <div class="progress" style="height: 8px;">
+                                                <div class="progress-bar" role="progressbar" style="background-color: #ffc107; transition: width 0.8s ease-in-out;"
+                                                    :style="'width: ' + (categoryConfidences.human_written_ai_refined || 0) + '%'"></div>
+                                            </div>
+                                        </div>
+                                        <div class="mb-0">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <small class="fw-semibold text-success">Human-Written</small>
+                                                <small class="fw-bold" x-text="(categoryConfidences.human_written || 0) + '%'"></small>
+                                            </div>
+                                            <div class="progress" style="height: 8px;">
+                                                <div class="progress-bar bg-success" role="progressbar"
+                                                    :style="'width: ' + (categoryConfidences.human_written || 0) + '%'"
+                                                    style="transition: width 0.8s ease-in-out;"></div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Highlighted Text -->
-                <div class="card shadow-sm mb-4">
-                    <div class="card-header bg-white">
-                        <h5 class="mb-0 fw-semibold">Sentence-by-Sentence Analysis</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="highlighted-text" style="line-height: 2; font-size: 15px;">
-                            <template x-for="(sentence, index) in sentences" :key="index">
-                                <span
-                                    class="highlighted-sentence px-1 rounded"
-                                    :style="'background-color:' + getSentenceBgColor(sentence.color) + '; cursor: pointer;'"
-                                    :title="sentence.label + ' (' + sentence.score + '%)'"
-                                    @click="selectedSentence = index"
-                                    :class="{'border border-2 border-dark': selectedSentence === index}"
-                                    x-text="sentence.text + ' '"
-                                ></span>
-                            </template>
+                    <!-- Highlighted Text -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-white">
+                            <h5 class="mb-0 fw-semibold">Sentence-by-Sentence Analysis</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="highlighted-text" style="line-height: 2; font-size: 15px;">
+                                <template x-for="(sentence, index) in sentences" :key="index">
+                                    <span
+                                        class="highlighted-sentence px-1 rounded"
+                                        :style="'background-color:' + getSentenceBgColor(sentence.color) + '; cursor: pointer;'"
+                                        :title="sentence.label + ' (' + sentence.score + '%)'"
+                                        @click="selectedSentence = index"
+                                        :class="{'border border-2 border-dark': selectedSentence === index}"
+                                        x-text="sentence.text + ' '"
+                                    ></span>
+                                </template>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Sentence Breakdown -->
-                <div class="card shadow-sm mb-4">
-                    <div class="card-header bg-white">
-                        <h5 class="mb-0 fw-semibold">Breakdown</h5>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-hover mb-0">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th style="width: 50px;">#</th>
-                                        <th>Sentence</th>
-                                        <th style="width: 100px;" class="text-center">Score</th>
-                                        <th style="width: 140px;" class="text-center">Label</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <template x-for="(sentence, index) in sentences" :key="'row-' + index">
-                                        <tr :class="{'table-active': selectedSentence === index}" @click="selectedSentence = index" style="cursor: pointer;">
-                                            <td class="text-muted" x-text="index + 1"></td>
-                                            <td style="font-size: 14px;" x-text="sentence.text"></td>
-                                            <td class="text-center">
-                                                <span class="fw-bold" :style="'color:' + getScoreColor(sentence.score)" x-text="sentence.score + '%'"></span>
-                                            </td>
-                                            <td class="text-center">
-                                                <span class="badge"
-                                                    :class="{
-                                                        'bg-danger': sentence.color === 'red',
-                                                        'bg-warning text-dark': sentence.color === 'orange',
-                                                        'bg-warning bg-opacity-50 text-dark': sentence.color === 'yellow',
-                                                        'bg-success': sentence.color === 'green'
-                                                    }"
-                                                    x-text="sentence.label">
-                                                </span>
-                                            </td>
+                    <!-- Sentence Breakdown -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0 fw-semibold">Breakdown</h5>
+                            <div class="d-flex gap-2 flex-wrap">
+                                <span class="badge bg-danger">AI-Generated</span>
+                                <span class="badge" style="background-color: #fd7e14;">AI-Gen & AI-Refined</span>
+                                <span class="badge" style="background-color: #ffc107; color: #333;">Human & AI-Refined</span>
+                                <span class="badge bg-success">Human-Written</span>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="width: 50px;">#</th>
+                                            <th>Sentence</th>
+                                            <th style="width: 100px;" class="text-center">Score</th>
+                                            <th style="width: 180px;" class="text-center">Label</th>
                                         </tr>
-                                    </template>
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                        <template x-for="(sentence, index) in sentences" :key="'row-' + index">
+                                            <tr :class="{'table-active': selectedSentence === index}" @click="selectedSentence = index" style="cursor: pointer;">
+                                                <td class="text-muted" x-text="index + 1"></td>
+                                                <td style="font-size: 14px;" x-text="sentence.text"></td>
+                                                <td class="text-center">
+                                                    <span class="fw-bold" :style="'color:' + getScoreColor(sentence.score)" x-text="sentence.score + '%'"></span>
+                                                </td>
+                                                <td class="text-center">
+                                                    <span class="badge"
+                                                        :class="{
+                                                            'bg-danger': sentence.color === 'red',
+                                                            'bg-warning text-dark': sentence.color === 'orange',
+                                                            'bg-warning bg-opacity-50 text-dark': sentence.color === 'yellow',
+                                                            'bg-success': sentence.color === 'green'
+                                                        }"
+                                                        x-text="sentence.label">
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bulk Analysis Tab -->
+        <div x-show="activeTab === 'bulk'">
+            <div class="row justify-content-center">
+                <div class="col-lg-10">
+                    {% if is_premium %}
+                    <!-- Dropzone -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-body">
+                            <div
+                                class="border border-2 border-dashed rounded p-5 text-center"
+                                :class="bulkDragOver ? 'border-primary bg-light' : 'border-secondary'"
+                                @dragover.prevent="bulkDragOver = true"
+                                @dragleave.prevent="bulkDragOver = false"
+                                @drop.prevent="handleBulkDrop($event)"
+                                style="cursor: pointer;"
+                                @click="$refs.bulkFileInput.click()"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" class="text-muted mb-3" viewBox="0 0 16 16">
+                                    <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                                    <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
+                                </svg>
+                                <h5 class="text-muted">Drag and drop files here or click to browse</h5>
+                                <p class="text-muted small mb-0">Supported formats: TXT, PDF, DOCX (max 10 files, 5 MB each)</p>
+                                <input
+                                    type="file"
+                                    x-ref="bulkFileInput"
+                                    class="d-none"
+                                    accept=".txt,.pdf,.docx"
+                                    multiple
+                                    @change="handleBulkFileSelect($event)"
+                                >
+                            </div>
+
+                            <!-- Selected Files List -->
+                            <div x-show="bulkFiles.length > 0" class="mt-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="fw-semibold" x-text="bulkFiles.length + ' file(s) selected'"></span>
+                                    <button class="btn btn-sm btn-outline-secondary" @click="clearBulkFiles()">Clear All</button>
+                                </div>
+                                <ul class="list-group">
+                                    <template x-for="(file, idx) in bulkFiles" :key="idx">
+                                        <li class="list-group-item d-flex justify-content-between align-items-center py-2">
+                                            <div>
+                                                <span x-text="file.name"></span>
+                                                <small class="text-muted ms-2" x-text="formatFileSize(file.size)"></small>
+                                            </div>
+                                            <button class="btn btn-sm btn-outline-danger" @click="removeBulkFile(idx)">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/></svg>
+                                            </button>
+                                        </li>
+                                    </template>
+                                </ul>
+
+                                <button
+                                    class="btn btn-primary btn-lg mt-3 w-100"
+                                    @click="runBulkAnalysis()"
+                                    :disabled="bulkLoading || bulkFiles.length === 0"
+                                >
+                                    <span x-show="!bulkLoading">Analyze All Files</span>
+                                    <span x-show="bulkLoading">
+                                        <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                        Analyzing <span x-text="bulkProgress"></span> / <span x-text="bulkFiles.length"></span>...
+                                    </span>
+                                </button>
+                            </div>
+
+                            <!-- Bulk Error -->
+                            <div x-show="bulkError" class="alert alert-danger mt-3 mb-0" x-text="bulkError"></div>
+                        </div>
+                    </div>
+
+                    <!-- Bulk Results Table -->
+                    <div x-show="bulkResults.length > 0 || bulkErrors.length > 0" class="card shadow-sm mb-4">
+                        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0 fw-semibold">Bulk Analysis Results</h5>
+                            <div class="d-flex gap-2">
+                                <span class="badge bg-success" x-text="bulkResults.length + ' successful'"></span>
+                                <span class="badge bg-danger" x-show="bulkErrors.length > 0" x-text="bulkErrors.length + ' failed'"></span>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Filename</th>
+                                            <th class="text-center" style="width: 100px;">Words</th>
+                                            <th class="text-center" style="width: 100px;">AI Score</th>
+                                            <th class="text-center" style="width: 220px;">Classification</th>
+                                            <th style="width: 200px;">Confidence</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <template x-for="(r, idx) in bulkResults" :key="'br-' + idx">
+                                            <tr>
+                                                <td class="fw-semibold" x-text="r.filename"></td>
+                                                <td class="text-center" x-text="r.word_count"></td>
+                                                <td class="text-center">
+                                                    <span class="fw-bold" :style="'color:' + getScoreColor(r.overall_score)" x-text="r.overall_score + '%'"></span>
+                                                </td>
+                                                <td class="text-center">
+                                                    <span class="badge"
+                                                        :class="getBulkClassBadge(r.classification)"
+                                                        x-text="r.classification_label">
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <div class="d-flex gap-1 align-items-center" style="min-width: 180px;">
+                                                        <div class="progress flex-grow-1" style="height: 16px;">
+                                                            <div class="progress-bar bg-danger" :style="'width:' + (r.category_confidences.ai_generated || 0) + '%'" :title="'AI-Generated: ' + (r.category_confidences.ai_generated || 0) + '%'"></div>
+                                                            <div class="progress-bar" style="background-color:#fd7e14;" :style="'width:' + (r.category_confidences.ai_generated_ai_refined || 0) + '%'" :title="'AI-Gen & AI-Refined: ' + (r.category_confidences.ai_generated_ai_refined || 0) + '%'"></div>
+                                                            <div class="progress-bar bg-warning" :style="'width:' + (r.category_confidences.human_written_ai_refined || 0) + '%'" :title="'Human & AI-Refined: ' + (r.category_confidences.human_written_ai_refined || 0) + '%'"></div>
+                                                            <div class="progress-bar bg-success" :style="'width:' + (r.category_confidences.human_written || 0) + '%'" :title="'Human-Written: ' + (r.category_confidences.human_written || 0) + '%'"></div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                        <!-- Error rows -->
+                                        <template x-for="(e, idx) in bulkErrors" :key="'be-' + idx">
+                                            <tr class="table-danger">
+                                                <td class="fw-semibold" x-text="e.filename"></td>
+                                                <td colspan="4" class="text-danger" x-text="e.error"></td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <!-- Premium Upsell -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-body text-center py-5">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" class="text-warning mb-3" viewBox="0 0 16 16">
+                                <path d="M2.5.5A.5.5 0 0 1 3 0h10a.5.5 0 0 1 .5.5c0 .538-.012 1.05-.034 1.536a3 3 0 1 1-1.133 5.89c-.79 1.865-1.878 2.777-2.833 3.011v2.173l1.425.356c.194.048.377.135.537.255L13.3 15.1a.5.5 0 0 1-.3.9H3a.5.5 0 0 1-.3-.9l1.838-1.379c.16-.12.343-.207.537-.255L6.5 13.11v-2.173c-.955-.234-2.043-1.146-2.833-3.012a3 3 0 1 1-1.132-5.89A33.076 33.076 0 0 1 2.5.5zm.099 2.54a2 2 0 0 0 .72 3.935c-.333-1.398-.588-2.797-.72-3.935zm10.083 3.935a2 2 0 0 0 .72-3.935c-.133 1.138-.388 2.537-.72 3.935z"/>
+                            </svg>
+                            <h4 class="fw-bold">Bulk Analysis - Premium Feature</h4>
+                            <p class="text-muted mb-3">Upload multiple TXT, PDF, and DOCX files for batch AI detection analysis.</p>
+                            <ul class="list-unstyled text-muted mb-4">
+                                <li>Upload up to 10 files at once</li>
+                                <li>Support for TXT, PDF, and DOCX formats</li>
+                                <li>Summary table with classification for each file</li>
+                                <li>Stacked confidence bar visualization</li>
+                            </ul>
+                            <a href="/pricing/" class="btn btn-primary btn-lg px-5">Upgrade to Premium</a>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>

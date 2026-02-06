@@ -106,7 +106,7 @@
                     ></textarea>
                 </div>
                 <div class="card-footer d-flex justify-content-between align-items-center py-2">
-                    <button class="btn btn-sm btn-outline-danger" @click="inputText = ''; outputHtml = ''; outputText = ''; updateInputWordCount(); frozenWords = [];" x-show="inputText.length > 0">
+                    <button class="btn btn-sm btn-outline-danger" @click="inputText = ''; outputHtml = ''; outputText = ''; diffHtml = ''; showDiff = false; compareResults = []; updateInputWordCount(); frozenWords = [];" x-show="inputText.length > 0">
                         Clear
                     </button>
                     <div class="d-flex align-items-center gap-2">
@@ -136,11 +136,11 @@
                         </div>
                     </div>
 
-                    <!-- Output with diff highlighting -->
+                    <!-- Output with optional diff highlighting -->
                     <div
                         class="p-3"
                         style="min-height: 400px; font-size: 0.95rem; line-height: 1.7; overflow-y: auto; cursor: default;"
-                        x-html="outputHtml || '<span class=\'text-muted\'>Your paraphrased text will appear here...</span>'"
+                        x-html="showDiff ? diffHtml : (outputHtml || '<span class=\'text-muted\'>Your paraphrased text will appear here...</span>')"
                         @click="handleOutputClick($event)"
                     ></div>
 
@@ -163,7 +163,17 @@
                     </div>
                 </div>
                 <div class="card-footer d-flex justify-content-between align-items-center py-2">
-                    <span></span>
+                    <div class="d-flex align-items-center gap-2" x-show="outputText.length > 0">
+                        <button
+                            class="btn btn-sm"
+                            :class="showDiff ? 'btn-success' : 'btn-outline-success'"
+                            @click="toggleDiff()"
+                            title="Toggle color-coded diff view"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="me-1" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/></svg>
+                            <span x-text="showDiff ? 'Diff On' : 'Show Diff'"></span>
+                        </button>
+                    </div>
                     <button class="btn btn-sm btn-outline-secondary" @click="copyOutput()" x-show="outputText.length > 0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="me-1" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/></svg>
                         <span x-text="copyLabel">Copy</span>
@@ -198,17 +208,68 @@
         </div>
     </div>
 
-    <!-- Paraphrase Button -->
+    <!-- Paraphrase Button + Compare Button -->
     <div class="row mb-4">
-        <div class="col text-center">
+        <div class="col text-center d-flex justify-content-center gap-3 flex-wrap">
             <button
                 class="btn btn-primary btn-lg px-5"
                 @click="paraphrase()"
-                :disabled="isLoading || inputText.trim().length === 0"
+                :disabled="isLoading || isComparing || inputText.trim().length === 0"
             >
                 <span x-show="isLoading" class="spinner-border spinner-border-sm me-2" role="status"></span>
                 <span x-text="isLoading ? 'Paraphrasing...' : 'Paraphrase'"></span>
             </button>
+            <button
+                class="btn btn-outline-primary btn-lg px-4"
+                @click="compareParaphrase()"
+                :disabled="isLoading || isComparing || inputText.trim().length === 0"
+                x-show="outputText.length > 0"
+                x-transition
+            >
+                <span x-show="isComparing" class="spinner-border spinner-border-sm me-2" role="status"></span>
+                <svg x-show="!isComparing" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="me-1" viewBox="0 0 16 16"><path d="M0 2a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v2h2a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9H2a2 2 0 0 1-2-2V2zm5.354 7.146a.5.5 0 0 0-.708.708l2 2a.5.5 0 0 0 .708 0l4-4a.5.5 0 0 0-.708-.708L7 10.793 5.354 9.146z"/></svg>
+                <span x-text="isComparing ? 'Comparing...' : 'Compare Modes'"></span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Compare Results Section -->
+    <div class="row mb-4" x-show="compareResults.length > 0" x-transition>
+        <div class="col">
+            <div class="card">
+                <div class="card-header py-2 d-flex justify-content-between align-items-center">
+                    <span class="fw-semibold small">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="me-1" viewBox="0 0 16 16"><path d="M0 2a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v2h2a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9H2a2 2 0 0 1-2-2V2z"/></svg>
+                        Compare Results <span class="text-muted fw-normal">-- pick the version you prefer</span>
+                    </span>
+                    <button class="btn btn-sm btn-outline-secondary" @click="compareResults = []">
+                        Close
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <div class="row g-0">
+                        <template x-for="(cr, crIdx) in compareResults" :key="crIdx">
+                            <div class="col-md-4" :class="crIdx < 2 ? 'border-end' : ''">
+                                <div class="p-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="badge bg-primary" x-text="cr.mode.charAt(0).toUpperCase() + cr.mode.slice(1)"></span>
+                                        <span class="text-muted small" x-text="cr.wordCount + ' words'"></span>
+                                    </div>
+                                    <div class="small" style="line-height: 1.7; max-height: 300px; overflow-y: auto;" x-text="cr.text"></div>
+                                    <div class="mt-2 d-flex gap-2">
+                                        <button class="btn btn-sm btn-primary" @click="useCompareResult(crIdx)">
+                                            Use This
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-secondary" @click="copyCompareResult(crIdx)">
+                                            <span x-text="cr.copyLabel || 'Copy'"></span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 

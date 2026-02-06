@@ -4,10 +4,10 @@ from django.conf import settings
 
 class DetectionResult(models.Model):
     CLASSIFICATION_CHOICES = [
-        ('ai_generated', 'AI Generated'),
-        ('ai_refined', 'AI Refined'),
-        ('human_refined', 'Human Refined'),
-        ('human_written', 'Human Written'),
+        ('ai_generated', 'AI-Generated'),
+        ('ai_generated_ai_refined', 'AI-Generated & AI-Refined'),
+        ('human_written_ai_refined', 'Human-Written & AI-Refined'),
+        ('human_written', 'Human-Written'),
     ]
 
     user = models.ForeignKey(
@@ -21,7 +21,7 @@ class DetectionResult(models.Model):
     results = models.JSONField(default=dict, help_text='Sentence-level scores and labels')
     overall_score = models.FloatField(default=0.0, help_text='0-100, where 100 = fully AI generated')
     classification = models.CharField(
-        max_length=20,
+        max_length=30,
         choices=CLASSIFICATION_CHOICES,
         default='human_written'
     )
