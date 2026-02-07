@@ -36,6 +36,14 @@ ansible -i servers all -m shell -a "cd /home/www/writingbot && venv/bin/python m
 
 ## Architecture
 
+### Apps Overview
+
+**20+ Django apps.** Infrastructure: `core`, `accounts`, `translations`, `finances`, `contact_messages`, `api`. Writing tools: `paraphraser`, `grammar`, `summarizer`, `ai_detector`, `humanizer`, `plagiarism`, `translator`, `citations`, `flow`, `word_counter`. Content/SEO: `ai_tools` (98 generators), `media_tools` (27 image prompt generators), `pdf_tools`, `converter` (150+ format pairs), `seo`, `blog`, `courses`.
+
+### URL Routing (`app/urls.py`)
+
+Tool app URL includes come before `core` (catch-all) — **order matters**. When adding new apps, include them before the `core` line. Custom 404/500 handlers in `core.views`.
+
 ### LLMClient — Central AI Routing (`core/llm_client.py`)
 
 All AI calls go through a single class:
@@ -49,7 +57,7 @@ LLMClient.generate(system_prompt, messages, max_tokens=4096,
 
 ### Service Pattern — `(result, error)` Tuples
 
-Every app has a `services.py` that returns 2-tuples. Success: `(result, None)`. Failure: `(None, "User-facing message")`.
+Every app has a `services.py` (17 total) returning 2-tuples. Success: `(result, None)`. Failure: `(None, "User-facing message")`. Services never raise exceptions to views.
 
 ```python
 # Paraphraser
@@ -65,7 +73,7 @@ AIToolsService.generate(slug, params, user, ip, user_agent) -> (str, error)
 
 ### View Pattern — GlobalVars Context
 
-Every view calls `GlobalVars.get_globals(request)` which returns a dict with i18n strings, project settings, language info, and currency. This requires a `Language` record with iso='en' in the database.
+`GlobalVars` lives in `accounts/views.py`. Every view calls `GlobalVars.get_globals(request)` which returns a dict with i18n strings, project settings, language info, and currency. **This requires a `Language` record with iso='en' in the database** — without it, views crash. Not a Django context processor; must be called manually in each view.
 
 ```python
 class SomePage(View):
@@ -83,9 +91,10 @@ class SomePage(View):
 
 98 generators across 11 categories share a `BaseGenerator` pattern:
 - Each generator defines `slug`, `name`, `category`, `fields` (form schema), and `system_prompt` (with `{field_name}` placeholders)
-- `GENERATOR_REGISTRY` dict maps slug → generator instance
+- `GENERATOR_REGISTRY` dict in `registry.py` (~1200 lines) maps slug → generator instance
 - Single API endpoint `/api/ai-tools/generate/` serves all generators
 - View reads slug from URL, looks up generator, renders shared `generator.html` template
+- Generator category files: `academic.py`, `business.py`, `marketing.py`, `content.py`, `creative.py`, `professional.py`, `social_media.py`, `utility.py`
 
 ### SEO Landing Pages Pattern
 
@@ -99,24 +108,42 @@ SEO_PAGES = {
     }
 }
 ```
-A generic view class with a `page_key` attribute renders the shared template. Converter pages auto-generate content from format pair dicts (150+ combinations).
+A generic view class with a `page_key` attribute renders the shared template. Converter pages auto-generate features/FAQs from format pair dicts (150+ combinations). Translator has three page types: main index, language page (`/translate/spanish/`), and pair page (`/translate/english-to-spanish/`).
+
+### Converter Architecture (`converter/views.py`)
+
+Format registries (`IMAGE_FORMATS`, `DOCUMENT_FORMATS`) drive auto-generated pairs. Cross-document conversions (e.g., Word→Excel) route through PDF as intermediate format. Dynamic content generators produce features, FAQs, and how-to steps per pair. API routing maps pairs to `/api/media/convert-image/` or `/api/pdf/convert/`.
+
+### Public API (`api/`)
+
+REST API at `/api/v1/` with `APIKeyAuthentication` (Bearer token from `CustomUser.api_token`). Endpoints: `/api/v1/paraphrase/`, `/api/v1/grammar/`, `/api/v1/summarize/`, `/api/v1/ai-detect/`, `/api/v1/translate/`. Custom throttling per plan. API docs at `/api/docs/`.
 
 ### Frontend Stack
 
-- **Bootstrap 5.3** (CDN) + custom `static/css/styles.css`
-- **Alpine.js** (CDN) for all interactive components — each tool has a JS file returning an Alpine data function
+- **Bootstrap 5.3** (CDN) + custom `static/css/styles.css` (single CSS file, no preprocessor)
+- **Alpine.js** (CDN) for all interactive components — each tool has a JS file in `static/js/` returning an Alpine data function
 - No build step. JS files versioned via `?v={{ g.scripts_version }}` query param
 - CSRF token via `document.querySelector('[name=csrfmiddlewaretoken]')` or `meta[name="csrf-token"]`
+- Base template (`templates/base.html`) has navbar with 4 dropdown menus, footer, auth buttons, language switcher
+- Frontend error logging: JS errors POST to `/api/accounts/log-error/`
 
 ### Configuration
 
 - `config.py` (gitignored) — secrets, API keys, DB credentials. Copy from `config_example.py`
-- `app/settings.py` — imports `config.py`, defines `TOOL_LIMITS` dict for free tier limits
+- `app/settings.py` — imports `config.py` via `from config import *`, defines `TOOL_LIMITS` dict for free tier limits
 - Key settings: `ANTHROPIC_API_KEY`, `WRITINGBOT_API_KEY`, `TRANSLATEAPI_KEY`
+- `TOOL_LIMITS` dict defines per-tool free tier constraints (word counts, daily limits). When adding a new tool, add its limits here.
+- Redis for caching (languages, select2), sessions, and Django-RQ background job queues (`default`, `high`, `low`)
+
+### Translation System
+
+Custom i18n (NOT Django's built-in). `Language` and `Translation` models in `translations/` app. `GlobalVars.get_globals()` fetches i18n dict for current language. Languages cached in Redis. Templates use `{{ g.i18n.code_name|default:"Fallback" }}`.
 
 ## Testing
 
-Tests mock `core.llm_client.LLMClient.generate` via `@patch`. Mock responses defined in `tests/conftest.py`. Every test class needs `Language.objects.create(name='English', iso='en')` in `setUpTestData` for `GlobalVars` to work.
+Tests mock `core.llm_client.LLMClient.generate` via `@patch`. Mock responses defined in `tests/conftest.py` — the `mock_llm_generate` function dispatches based on keywords in `system_prompt` (e.g., 'paraphras' → paraphrase response, 'grammar' → grammar response). When adding a new service that calls `LLMClient`, add a matching keyword branch in `mock_llm_generate`.
+
+Every test class needs `Language.objects.create(name='English', iso='en')` in `setUpTestData` for `GlobalVars` to work.
 
 ```python
 from tests.conftest import mock_llm_generate

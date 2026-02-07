@@ -1,9 +1,21 @@
 server_tokens off;
 
+# Redirect www to non-www
 server {
-    listen [::]:80;
-    listen 80;
-    server_name {{ domain }} www.{{domain}};
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    server_name www.{{ domain }};
+
+    ssl_certificate /etc/letsencrypt/live/{{ domain }}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/{{ domain }}/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    return 301 https://{{ domain }}$request_uri;
+}
+
+server {
+    server_name {{ domain }};
 
     client_max_body_size 10000m;
     gzip_disable "msie6";
@@ -22,9 +34,47 @@ server {
        alias /var/log/nginx/report.html;
     }
 
+    ### CLICKY ANTI-ADBLOCK PROXY - https://clicky.com/help/proxy
+
+    # DNS RESOLVER
+    resolver 1.1.1.1;
+
+    # COOKIES - override cookie header to just send the service-related first party cookies.
+    set $cookie "";
+    if ($cookie__cky_ignore) {
+        set $cookie "_cky_ignore=$cookie__cky_ignore; _cky_osa=$cookie__cky_osa";
+    }
+
+    # JAVASCRIPT TRACKING CODE
+    location = /6a22b0deac1afff1191.js {
+        proxy_pass https://static.getclicky.com/js?in=%2F9c627659cf99d074998;
+        proxy_connect_timeout 10s;
+        proxy_http_version 1.1;
+        proxy_ssl_server_name on;
+        proxy_set_header Host static.getclicky.com;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Cookie "";
+    }
+
+    # JAVASCRIPT BEACON
+    location = /9c627659cf99d074998 {
+        proxy_pass https://in.getclicky.com/in.php;
+        proxy_connect_timeout 10s;
+        proxy_http_version 1.1;
+        proxy_ssl_server_name on;
+        proxy_set_header Host in.getclicky.com;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host  $host;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header Cookie $cookie;
+    }
+
+    ### / CLICKY
+
     location / {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header Host $host;
         proxy_set_header X-NginX-Proxy false;
         real_ip_header X-Real-IP;
@@ -33,14 +83,25 @@ server {
     }
 
     location /static/ {
-        alias /home/www/{{location}}/static/;
+        alias /home/www/{{ location }}/static/;
         expires 35d;
         add_header Pragma public;
         add_header Cache-Control "public, must-revalidate, proxy-revalidate";
         access_log off;
     }
+
+    listen [::]:443 ssl ipv6only=on;
+    listen 443 ssl;
+    ssl_certificate /etc/letsencrypt/live/{{ domain }}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/{{ domain }}/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 }
 
-
-
-
+# HTTP to HTTPS redirect
+server {
+    listen 80;
+    listen [::]:80;
+    server_name {{ domain }} www.{{ domain }};
+    return 301 https://{{ domain }}$request_uri;
+}
