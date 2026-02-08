@@ -213,3 +213,259 @@ class PublicPageTests(TestCase):
     # ------------------------------------------------------------------
     def test_api_docs(self):
         self._get('/api/docs/')
+
+
+# ======================================================================
+# Dynamic test classes — iterate registries to cover ALL pages
+# ======================================================================
+
+class AIToolPageTests(TestCase):
+    """Test every AI writing tool page (98 generators) returns 200."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from translations.models.language import Language
+        Language.objects.get_or_create(
+            iso='en',
+            defaults={'name': 'English', 'en_label': 'English'}
+        )
+
+    def setUp(self):
+        self.client = Client()
+
+    def test_all_ai_tool_pages(self):
+        from ai_tools.generators.registry import GENERATOR_REGISTRY
+        for slug in GENERATOR_REGISTRY:
+            url = f'/ai-writing-tools/{slug}/'
+            response = self.client.get(url)
+            self.assertEqual(
+                response.status_code, 200,
+                f'AI tool page {url} returned {response.status_code}'
+            )
+
+
+class PDFToolPageTests(TestCase):
+    """Test every PDF tool page (16 tools) returns 200."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from translations.models.language import Language
+        Language.objects.get_or_create(
+            iso='en',
+            defaults={'name': 'English', 'en_label': 'English'}
+        )
+
+    def setUp(self):
+        self.client = Client()
+
+    def test_all_pdf_tool_pages(self):
+        from pdf_tools.views import PDF_TOOLS
+        for tool in PDF_TOOLS:
+            url = f'/pdf-tools/{tool["slug"]}/'
+            response = self.client.get(url)
+            self.assertEqual(
+                response.status_code, 200,
+                f'PDF tool page {url} returned {response.status_code}'
+            )
+
+
+class MediaToolPageTests(TestCase):
+    """Test every media/image tool page (27 tools) returns 200."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from translations.models.language import Language
+        Language.objects.get_or_create(
+            iso='en',
+            defaults={'name': 'English', 'en_label': 'English'}
+        )
+
+    def setUp(self):
+        self.client = Client()
+
+    def test_all_media_tool_pages(self):
+        from media_tools.views import IMAGE_TOOLS
+        for slug in IMAGE_TOOLS:
+            url = f'/tools/{slug}/'
+            response = self.client.get(url)
+            self.assertEqual(
+                response.status_code, 200,
+                f'Media tool page {url} returned {response.status_code}'
+            )
+
+
+class ConverterPairPageTests(TestCase):
+    """Test a representative sample of converter pair pages returns 200."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from translations.models.language import Language
+        Language.objects.get_or_create(
+            iso='en',
+            defaults={'name': 'English', 'en_label': 'English'}
+        )
+
+    def setUp(self):
+        self.client = Client()
+
+    # Representative sample of image-to-image, doc-to-doc, and cross-type pairs
+    SAMPLE_PAIRS = [
+        # Image-to-image
+        ('jpg', 'png'), ('png', 'webp'), ('webp', 'jpg'), ('gif', 'png'),
+        ('bmp', 'jpg'), ('heic', 'jpg'), ('avif', 'png'), ('tiff', 'jpg'),
+        # Document-to-document
+        ('pdf', 'word'), ('word', 'pdf'), ('excel', 'csv'), ('csv', 'excel'),
+        ('pdf', 'txt'), ('html', 'pdf'), ('odt', 'pdf'), ('rtf', 'pdf'),
+        # Cross-type
+        ('pdf', 'jpg'), ('pdf', 'png'), ('jpg', 'pdf'), ('png', 'pdf'),
+    ]
+
+    def test_converter_index(self):
+        response = self.client.get('/convert/')
+        self.assertEqual(response.status_code, 200)
+
+    def test_sample_converter_pairs(self):
+        for source, target in self.SAMPLE_PAIRS:
+            url = f'/convert/{source}-to-{target}/'
+            response = self.client.get(url)
+            self.assertEqual(
+                response.status_code, 200,
+                f'Converter pair page {url} returned {response.status_code}'
+            )
+
+
+class TranslatorPageTests(TestCase):
+    """Test translator language pages and pair pages return 200."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from translations.models.language import Language
+        Language.objects.get_or_create(
+            iso='en',
+            defaults={'name': 'English', 'en_label': 'English'}
+        )
+
+    def setUp(self):
+        self.client = Client()
+
+    SAMPLE_LANGUAGES = ['spanish', 'french', 'german', 'japanese', 'arabic']
+    SAMPLE_PAIRS = [
+        ('english', 'spanish'),
+        ('english', 'french'),
+        ('spanish', 'english'),
+        ('french', 'german'),
+        ('japanese', 'english'),
+    ]
+
+    def test_language_pages(self):
+        for lang in self.SAMPLE_LANGUAGES:
+            url = f'/translate/{lang}/'
+            response = self.client.get(url)
+            self.assertEqual(
+                response.status_code, 200,
+                f'Translator language page {url} returned {response.status_code}'
+            )
+
+    def test_pair_pages(self):
+        for source, target in self.SAMPLE_PAIRS:
+            url = f'/translate/{source}-to-{target}/'
+            response = self.client.get(url)
+            self.assertEqual(
+                response.status_code, 200,
+                f'Translator pair page {url} returned {response.status_code}'
+            )
+
+
+class SEOGrammarPageTests(TestCase):
+    """Test all 10 language-specific grammar check SEO pages return 200."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from translations.models.language import Language
+        Language.objects.get_or_create(
+            iso='en',
+            defaults={'name': 'English', 'en_label': 'English'}
+        )
+
+    def setUp(self):
+        self.client = Client()
+
+    GRAMMAR_PAGES = [
+        'german', 'french', 'spanish', 'portuguese', 'dutch',
+        'italian', 'polish', 'swedish', 'russian', 'japanese',
+    ]
+
+    def test_all_grammar_seo_pages(self):
+        for lang in self.GRAMMAR_PAGES:
+            url = f'/{lang}-grammar-check/'
+            response = self.client.get(url)
+            self.assertEqual(
+                response.status_code, 200,
+                f'Grammar SEO page {url} returned {response.status_code}'
+            )
+
+
+class GuidesPageTests(TestCase):
+    """Test guides index + all 10 guide pages return 200."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from translations.models.language import Language
+        Language.objects.get_or_create(
+            iso='en',
+            defaults={'name': 'English', 'en_label': 'English'}
+        )
+
+    def setUp(self):
+        self.client = Client()
+
+    GUIDE_KEYS = [
+        'paraphrasing', 'grammar', 'ai-writing-assistant',
+        'apa-citation', 'mla-citation', 'chicago-citation',
+        'academic-writing', 'business-writing', 'essay-writing',
+        'plagiarism-prevention',
+    ]
+
+    def test_guides_index(self):
+        response = self.client.get('/guides/')
+        self.assertEqual(response.status_code, 200)
+
+    def test_all_guide_pages(self):
+        for key in self.GUIDE_KEYS:
+            url = f'/guides/{key}/'
+            response = self.client.get(url)
+            self.assertEqual(
+                response.status_code, 200,
+                f'Guide page {url} returned {response.status_code}'
+            )
+
+
+class MiscPageTests(TestCase):
+    """Test miscellaneous tool pages that aren't covered above."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from translations.models.language import Language
+        Language.objects.get_or_create(
+            iso='en',
+            defaults={'name': 'English', 'en_label': 'English'}
+        )
+
+    def setUp(self):
+        self.client = Client()
+
+    def test_proofreader(self):
+        response = self.client.get('/proofreader/')
+        self.assertEqual(response.status_code, 200)
+
+    def test_character_counter(self):
+        response = self.client.get('/character-counter/')
+        self.assertEqual(response.status_code, 200)
+
+    def test_text_case_converter(self):
+        response = self.client.get('/text-case-converter/')
+        self.assertEqual(response.status_code, 200)
+
+    def test_speech_to_text(self):
+        response = self.client.get('/speech-to-text/')
+        self.assertEqual(response.status_code, 200)

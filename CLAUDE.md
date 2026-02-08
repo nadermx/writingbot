@@ -8,6 +8,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Server:** 38.248.6.212 (VPS.org, Ubuntu 24.04). Deploy path: `/home/www/writingbot/`
 
+**DNS:** Managed via VPS.org API (`~/.credentials/vps_org_api_key`). Zone UUID: `6b025f8a-88fa-472a-85c0-9510239ab05e`. API base: `https://admin.vps.org/api/v1/dns-zones/{uuid}/records/` with Bearer token auth.
+
 ## Commands
 
 ```bash
@@ -159,6 +161,8 @@ class MyServiceTests(TestCase):
 
 - Migrations are gitignored — run `makemigrations <app_name>` on server (specify app names explicitly)
 - After deploy, `collectstatic` runs automatically via `gitpull.yml`
-- Restart: `supervisorctl restart writingbot`
+- `gitpull.yml` does NOT update nginx — deploy nginx config separately: `ansible -i servers all -m template -a "src=files/nginx.conf.j2 dest=/etc/nginx/sites-available/writingbot.conf mode=0644" --become` then `ansible -i servers all -m shell -a "nginx -t && systemctl reload nginx" --become`
+- Restart app: `supervisorctl restart writingbot`
 - Logs: `/var/log/writingbot/writingbot.err.log` (Gunicorn startup only; runtime errors need `DEBUG=True` or test via RequestFactory)
 - DB user needs `CREATEDB` permission for running tests: `ALTER USER writingbot CREATEDB;`
+- **Nginx template gotcha:** `ansible/files/nginx.conf.j2` is processed by Ansible's Jinja2 engine. Any nginx `set`, `if`, or `$variable` directives that conflict with Jinja2 must be wrapped in `{% raw %}...{% endraw %}` blocks (see the Clicky proxy section for an example).

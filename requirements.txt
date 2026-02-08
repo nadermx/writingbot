@@ -50,3 +50,7 @@ bleach>=6.2  # HTML sanitization
 
 # Citation Processing
 citeproc-py>=0.6  # CSL citation formatting
+
+# E2E Testing
+playwright>=1.49
+pytest-playwright>=0.6
