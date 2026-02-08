@@ -1,9 +1,8 @@
-import json
 import logging
-import re
 import math
+import re
 
-from core.llm_client import LLMClient, extract_json
+from core.llm_client import LLMClient
 
 logger = logging.getLogger('app')
 
@@ -124,14 +123,26 @@ class AIDetectorService:
         return min(uniformity_score + vocab_score + phrase_score, 50)
 
     @staticmethod
+    def _score_to_confidences(score):
+        """Derive 4-category confidence distribution from a blended score (0-100)."""
+        if score >= 80:
+            return {'ai_generated': 70, 'ai_generated_ai_refined': 20, 'human_written_ai_refined': 7, 'human_written': 3}
+        elif score >= 60:
+            return {'ai_generated': 20, 'ai_generated_ai_refined': 55, 'human_written_ai_refined': 18, 'human_written': 7}
+        elif score >= 30:
+            return {'ai_generated': 5, 'ai_generated_ai_refined': 15, 'human_written_ai_refined': 55, 'human_written': 25}
+        else:
+            return {'ai_generated': 3, 'ai_generated_ai_refined': 7, 'human_written_ai_refined': 20, 'human_written': 70}
+
+    @staticmethod
     def detect(text, use_premium=False):
         """
-        Analyze text for AI-generated content using LLM + perplexity heuristics.
+        Analyze text for AI-generated content using DeBERTa classifier + heuristics.
         Returns 4-category classification with confidence for each category.
 
         Args:
             text: Text to analyze
-            use_premium: Whether to use premium tier for LLM calls
+            use_premium: Whether to use premium tier (unused, kept for API compat)
 
         Returns:
             tuple: (result_dict, error_string)
@@ -141,143 +152,70 @@ class AIDetectorService:
         if not sentences:
             return None, 'No sentences found in the provided text.'
 
-        # Get heuristic base score
+        # Get heuristic score
         heuristic_score = AIDetectorService._compute_perplexity_heuristics(text)
 
-        try:
-            prompt = f"""Analyze the following text and determine if it was written by AI or a human.
+        # Call DeBERTa model on GPU server
+        model_result, error = LLMClient.detect_ai_text(text)
 
-Classify the text into one of these 4 categories:
-1. "ai_generated" - 100% AI written, no human involvement
-2. "ai_generated_ai_refined" - AI written, then further polished/edited by AI tools
-3. "human_written_ai_refined" - Human written, then edited/polished using AI tools
-4. "human_written" - 100% human written, no AI assistance
+        if error:
+            # Fallback to heuristics-only if model unavailable
+            logger.warning(f'AI detect model unavailable, falling back to heuristics: {error}')
+            blended_score = max(0, min(100, round(heuristic_score)))
+            category_confidences = AIDetectorService._score_to_confidences(blended_score)
+            classification = max(category_confidences, key=category_confidences.get)
 
-For each sentence, provide a probability score from 0 to 100 indicating how likely it is AI-generated (100 = definitely AI, 0 = definitely human).
-
-Consider these factors:
-- Sentence structure patterns (AI tends to be more uniform)
-- Vocabulary choices (AI uses certain words more frequently like "delve", "tapestry", "multifaceted")
-- Transition phrases (AI relies heavily on "Furthermore", "Moreover", "Additionally")
-- Natural imperfections (humans make more varied sentence constructions)
-- Personal voice and style (humans tend to have more unique voice)
-- Specificity vs generality (AI tends to be more general)
-- Signs of AI refinement (overly polished human text, inconsistent style within text)
-
-Return your analysis as a JSON object with this exact format:
-{{
-    "classification": "one of: ai_generated, ai_generated_ai_refined, human_written_ai_refined, human_written",
-    "category_confidences": {{
-        "ai_generated": 15,
-        "ai_generated_ai_refined": 25,
-        "human_written_ai_refined": 40,
-        "human_written": 20
-    }},
-    "sentences": [
-        {{"text": "sentence text here", "score": 75}},
-        ...
-    ],
-    "overall_score": 65
-}}
-
-The category_confidences must sum to 100 and represent the probability that the text belongs to each category.
-
-Text to analyze:
-{text}
-
-Return ONLY the JSON object, no other text."""
-
-            response_text, error = LLMClient.generate(
-                system_prompt=None,
-                messages=[{"role": "user", "content": prompt}],
-                max_tokens=4096,
-                use_premium=use_premium
-            )
-
-            if error:
-                logger.error(f'LLM error in AI detector: {error}')
-                return None, 'AI detection service is temporarily unavailable. Please try again.'
-
-            result = extract_json(response_text)
-
-            # Blend Claude's score with heuristic score
-            claude_score = result.get('overall_score', 50)
-            blended_score = round((claude_score * 0.7) + (heuristic_score * 0.3))
-            blended_score = max(0, min(100, blended_score))
-
-            # Extract category confidences from LLM
-            raw_confidences = result.get('category_confidences', {})
-            category_confidences = {}
-            for cat in AIDetectorService.CATEGORIES:
-                category_confidences[cat] = max(0, min(100, int(raw_confidences.get(cat, 0))))
-
-            # Normalize confidences to sum to 100
-            total = sum(category_confidences.values())
-            if total > 0 and total != 100:
-                for cat in category_confidences:
-                    category_confidences[cat] = round(category_confidences[cat] * 100 / total)
-                # Fix rounding errors
-                diff = 100 - sum(category_confidences.values())
-                if diff != 0:
-                    # Add difference to the highest confidence category
-                    max_cat = max(category_confidences, key=category_confidences.get)
-                    category_confidences[max_cat] += diff
-            elif total == 0:
-                # Fallback: derive from blended score
-                if blended_score >= 80:
-                    category_confidences = {'ai_generated': 70, 'ai_generated_ai_refined': 20, 'human_written_ai_refined': 7, 'human_written': 3}
-                elif blended_score >= 60:
-                    category_confidences = {'ai_generated': 20, 'ai_generated_ai_refined': 55, 'human_written_ai_refined': 18, 'human_written': 7}
-                elif blended_score >= 30:
-                    category_confidences = {'ai_generated': 5, 'ai_generated_ai_refined': 15, 'human_written_ai_refined': 55, 'human_written': 25}
-                else:
-                    category_confidences = {'ai_generated': 3, 'ai_generated_ai_refined': 7, 'human_written_ai_refined': 20, 'human_written': 70}
-
-            # Determine final classification from LLM or from highest confidence
-            llm_classification = result.get('classification', '')
-            if llm_classification in AIDetectorService.CATEGORIES:
-                classification = llm_classification
-            else:
-                classification = max(category_confidences, key=category_confidences.get)
-
-            classification_label = AIDetectorService.CATEGORY_LABELS.get(classification, 'Unknown')
-
-            # Process sentences
             analyzed_sentences = []
-            for item in result.get('sentences', []):
-                score = max(0, min(100, item.get('score', 50)))
+            for s in sentences:
                 analyzed_sentences.append({
-                    'text': item.get('text', ''),
-                    'score': score,
-                    'label': AIDetectorService._get_label(score),
-                    'color': AIDetectorService._get_color(score),
+                    'text': s,
+                    'score': blended_score,
+                    'label': AIDetectorService._get_label(blended_score),
+                    'color': AIDetectorService._get_color(blended_score),
                 })
-
-            # If LLM returned fewer sentences than we have, fill in
-            if len(analyzed_sentences) < len(sentences):
-                for i in range(len(analyzed_sentences), len(sentences)):
-                    analyzed_sentences.append({
-                        'text': sentences[i],
-                        'score': blended_score,
-                        'label': AIDetectorService._get_label(blended_score),
-                        'color': AIDetectorService._get_color(blended_score),
-                    })
 
             return {
                 'overall_score': blended_score,
                 'classification': classification,
-                'classification_label': classification_label,
+                'classification_label': AIDetectorService.CATEGORY_LABELS.get(classification, 'Unknown'),
                 'classification_description': AIDetectorService.CATEGORY_DESCRIPTIONS.get(classification, ''),
                 'category_confidences': category_confidences,
                 'sentences': analyzed_sentences,
             }, None
 
-        except (ValueError, json.JSONDecodeError) as e:
-            logger.error(f'JSON decode error in AI detector: {str(e)}')
-            return None, 'Failed to parse AI detection results.'
-        except Exception as e:
-            logger.error(f'Unexpected error in AI detector: {str(e)}')
-            return None, 'An unexpected error occurred. Please try again.'
+        # Blend: model score (85%) + heuristic score (15%)
+        model_score = model_result.get('score', 50)
+        blended_score = round((model_score * 0.85) + (heuristic_score * 0.15))
+        blended_score = max(0, min(100, blended_score))
+
+        # Derive category confidences from blended score
+        category_confidences = AIDetectorService._score_to_confidences(blended_score)
+        classification = max(category_confidences, key=category_confidences.get)
+        classification_label = AIDetectorService.CATEGORY_LABELS.get(classification, 'Unknown')
+
+        # Build sentence-level analysis using heuristic per-sentence scoring
+        analyzed_sentences = []
+        for s in sentences:
+            # Use heuristic to approximate per-sentence score,
+            # anchored to the overall model score
+            sentence_heuristic = AIDetectorService._compute_perplexity_heuristics(s)
+            sentence_score = round((model_score * 0.85) + (sentence_heuristic * 0.15))
+            sentence_score = max(0, min(100, sentence_score))
+            analyzed_sentences.append({
+                'text': s,
+                'score': sentence_score,
+                'label': AIDetectorService._get_label(sentence_score),
+                'color': AIDetectorService._get_color(sentence_score),
+            })
+
+        return {
+            'overall_score': blended_score,
+            'classification': classification,
+            'classification_label': classification_label,
+            'classification_description': AIDetectorService.CATEGORY_DESCRIPTIONS.get(classification, ''),
+            'category_confidences': category_confidences,
+            'sentences': analyzed_sentences,
+        }, None
 
     @staticmethod
     def detect_text_from_file(file_content, filename, use_premium=False):

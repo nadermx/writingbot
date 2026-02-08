@@ -98,6 +98,52 @@ class LLMClient:
         return cls._call_open_source(system_prompt, messages, max_tokens, temperature)
 
     @classmethod
+    def detect_ai_text(cls, text):
+        """
+        Detect AI-generated text using the DeBERTa classifier on the GPU server.
+
+        Args:
+            text: Text to analyze.
+
+        Returns:
+            Tuple of (dict, error). Dict has 'score', 'label', 'chunks'.
+        """
+        api_url = getattr(settings, 'WRITINGBOT_API_URL', '')
+        api_key = getattr(settings, 'WRITINGBOT_API_KEY', '')
+
+        if not api_url:
+            return None, 'AI detection service is not configured.'
+
+        try:
+            resp = requests.post(
+                f'{api_url.rstrip("/")}/v1/text/ai-detect-model/',
+                json={'text': text},
+                headers={
+                    'Authorization': f'Bearer {api_key}',
+                    'Content-Type': 'application/json',
+                },
+                timeout=120,
+            )
+
+            if resp.status_code != 200:
+                error_data = resp.json() if resp.headers.get('content-type', '').startswith('application/json') else {}
+                error_msg = error_data.get('error', f'AI detection service returned {resp.status_code}')
+                logger.error(f'AI detect model error: {resp.status_code} - {error_msg}')
+                return None, 'AI detection service is temporarily unavailable. Please try again.'
+
+            return resp.json(), None
+
+        except requests.exceptions.Timeout:
+            logger.error('AI detect model request timed out')
+            return None, 'The request timed out. Please try again.'
+        except requests.exceptions.ConnectionError:
+            logger.error('Cannot connect to AI detect model service')
+            return None, 'AI detection service is temporarily unavailable. Please try again.'
+        except Exception as e:
+            logger.error(f'AI detect model unexpected error: {e}')
+            return None, 'An unexpected error occurred. Please try again.'
+
+    @classmethod
     def _call_open_source(cls, system_prompt, messages, max_tokens, temperature):
         """Call the open-source LLM via api.writingbot.ai."""
         api_url = getattr(settings, 'WRITINGBOT_API_URL', '')

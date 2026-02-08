@@ -58,6 +58,13 @@ MOCK_AI_DETECT_RESPONSE = json.dumps({
     'overall_score': 32,
 })
 
+# Response from DeBERTa model endpoint (used by LLMClient.detect_ai_text)
+MOCK_AI_DETECT_MODEL_RESPONSE = {
+    'score': 72.5,
+    'label': 'ai',
+    'chunks': [72.5],
+}
+
 MOCK_HUMANIZE_SCORE_RESPONSE = '75'
 
 MOCK_HUMANIZE_TEXT_RESPONSE = 'The cat sat on the mat, you know, just chilling there.'
