@@ -23,9 +23,9 @@
                                     x-model="sourceLang"
                                     style="background-color: transparent;"
                                 >
-                                    <option value="auto">Auto-Detect</option>
+                                    <option value="auto" :selected="sourceLang === 'auto'">Auto-Detect</option>
                                     <template x-for="lang in languages" :key="'src-' + lang.code">
-                                        <option :value="lang.code" x-text="lang.name"></option>
+                                        <option :value="lang.code" x-text="lang.name" :selected="lang.code === sourceLang"></option>
                                     </template>
                                 </select>
                             </div>
@@ -50,7 +50,7 @@
                                 >
                                     <option value="" disabled>Select language</option>
                                     <template x-for="lang in languages" :key="'tgt-' + lang.code">
-                                        <option :value="lang.code" x-text="lang.name"></option>
+                                        <option :value="lang.code" x-text="lang.name" :selected="lang.code === targetLang"></option>
                                     </template>
                                 </select>
                             </div>
