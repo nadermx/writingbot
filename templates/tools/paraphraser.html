@@ -7,7 +7,7 @@
 <input type="hidden" id="freeModes" value='{{ free_modes|join:"," }}'>
 {% csrf_token %}
 
-<div class="container-fluid px-3 px-md-5 py-4" x-data="paraphraser()" x-init="init()">
+<div class="container-fluid px-3 px-md-5 py-4" x-data="paraphraser()" x-init="init()" x-cloak>
 
     <!-- Header -->
     <div class="row mb-3">
@@ -142,7 +142,7 @@
                         style="min-height: 400px; font-size: 0.95rem; line-height: 1.7; overflow-y: auto; cursor: default;"
                         x-html="showDiff ? diffHtml : (outputHtml || '<span class=\'text-muted\'>Your paraphrased text will appear here...</span>')"
                         @click="handleOutputClick($event)"
-                    ></div>
+                    ><span class="text-muted">Your paraphrased text will appear here...</span></div>
 
                     <!-- Synonym Popup -->
                     <div
