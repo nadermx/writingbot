@@ -1,0 +1,26 @@
+<div class="text-center py-3 mt-3" x-data="{ linkCopied: false }">
+    <p class="text-muted small mb-2">Love this tool? Share it with friends!</p>
+    <div class="d-flex justify-content-center gap-2 align-items-center">
+        <a :href="'https://twitter.com/intent/tweet?url=' + encodeURIComponent(window.location.href) + '&text=' + encodeURIComponent('Check out this free writing tool!')"
+           target="_blank" rel="noopener" class="text-decoration-none" title="Share on X/Twitter">
+            {% include 'svgs/twitter.html' %}
+        </a>
+        <a :href="'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(window.location.href)"
+           target="_blank" rel="noopener" class="text-decoration-none" title="Share on Facebook">
+            {% include 'svgs/facebook.html' %}
+        </a>
+        <a :href="'https://wa.me/?text=' + encodeURIComponent('Check out this free writing tool! ' + window.location.href)"
+           target="_blank" rel="noopener" class="text-decoration-none" title="Share on WhatsApp">
+            {% include 'svgs/whatsapp.html' %}
+        </a>
+        <a :href="'https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(window.location.href)"
+           target="_blank" rel="noopener" class="text-decoration-none" title="Share on LinkedIn">
+            {% include 'svgs/linkedin.html' %}
+        </a>
+        <button
+            class="btn btn-sm btn-outline-secondary ms-1"
+            @click="navigator.clipboard.writeText(window.location.href); linkCopied = true; setTimeout(() => linkCopied = false, 2000)"
+            x-text="linkCopied ? 'Copied!' : 'Copy Link'"
+        ></button>
+    </div>
+</div>

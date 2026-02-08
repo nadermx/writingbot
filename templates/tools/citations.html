@@ -225,6 +225,11 @@
         </div>
     </div>
 
+    <!-- Share CTA -->
+    <div x-show="citationList.length > 0" x-cloak>
+        {% include 'shared/share-cta.html' %}
+    </div>
+
     <!-- Why Use Section -->
     <div class="bg-light py-5">
         <div class="container">

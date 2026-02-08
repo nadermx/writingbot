@@ -263,6 +263,11 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Share CTA -->
+            <div x-show="hasResults" x-cloak>
+                {% include 'shared/share-cta.html' %}
+            </div>
         </div>
 
         <!-- Bulk Analysis Tab -->

@@ -156,6 +156,11 @@
             </div>
         </div>
     </div>
+
+    <!-- Share CTA -->
+    <div x-show="translatedText && !loading" x-cloak>
+        {% include 'shared/share-cta.html' %}
+    </div>
 </div>
     <!-- Supported Languages -->
     {% if language_links %}

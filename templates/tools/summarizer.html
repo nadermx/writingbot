@@ -267,6 +267,11 @@
         </div>
     </div>
 
+    <!-- Share CTA -->
+    <div x-show="summary.length > 0" x-cloak>
+        {% include 'shared/share-cta.html' %}
+    </div>
+
     <!-- Error alert -->
     <template x-if="errorMessage">
         <div class="row">

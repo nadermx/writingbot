@@ -194,6 +194,11 @@
         </div>
     </div>
 
+    <!-- Share CTA -->
+    <div x-show="hasScores" x-cloak>
+        {% include 'shared/share-cta.html' %}
+    </div>
+
     <!-- Error alert -->
     <template x-if="errorMessage">
         <div class="row">

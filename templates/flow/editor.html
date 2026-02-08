@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block content %}
-<div x-data="flowEditor()" x-init="init()" class="d-flex flex-column bg-light" style="height: calc(100vh - 140px)" x-cloak>
+<div x-data="flowEditor({{ is_authenticated|yesno:'true,false' }})" x-init="init()" class="d-flex flex-column bg-light" style="height: calc(100vh - 140px)" x-cloak>
     {% csrf_token %}
 
     {% if is_shared_view %}
@@ -400,7 +400,7 @@
 
     <!-- Smart Start Overlay -->
     {% if not is_shared_view %}
-    <div x-show="showSmartStart" x-transition class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:rgba(0,0,0,0.5); z-index:50">
+    <div x-show="showSmartStart" x-transition x-cloak class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:rgba(0,0,0,0.5); z-index:50">
         <div @click.away="showSmartStart = false" class="bg-white rounded-3 shadow-lg w-100 mx-3" style="max-width:32rem">
             <div class="p-4">
                 <div class="d-flex align-items-center justify-content-between mb-3">
@@ -439,7 +439,7 @@
 
     <!-- Share Link Modal -->
     {% if not is_shared_view %}
-    <div x-show="showShareModal" x-transition class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:rgba(0,0,0,0.5); z-index:50">
+    <div x-show="showShareModal" x-transition x-cloak class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:rgba(0,0,0,0.5); z-index:50">
         <div @click.away="showShareModal = false" class="bg-white rounded-3 shadow-lg w-100 mx-3" style="max-width:28rem">
             <div class="p-4">
                 <h2 class="fs-5 fw-bold text-dark mb-3">Share Document</h2>
@@ -450,7 +450,8 @@
                     </button>
                 </div>
                 <p class="text-muted mt-2" style="font-size:0.75rem">Anyone with this link can view your document.</p>
-                <div class="d-flex justify-content-end mt-3">
+                <div class="d-flex justify-content-between mt-3">
+                    <button @click="unshareDocument()" class="px-3 py-2 small text-danger border border-danger rounded-3 bg-white btn-cancel-hover">Unshare</button>
                     <button @click="showShareModal = false" class="px-3 py-2 small text-body-secondary border rounded-3 bg-white btn-cancel-hover">Close</button>
                 </div>
             </div>

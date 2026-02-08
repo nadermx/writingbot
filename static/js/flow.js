@@ -3,9 +3,10 @@
  * Handles document CRUD, auto-save, rich text formatting, AI features,
  * research, notes, citations, export, and sharing.
  */
-function flowEditor() {
+function flowEditor(isAuthenticated) {
     return {
         // ---- State ----
+        isAuthenticated: isAuthenticated || false,
         documents: [],
         currentDoc: {
             uuid: null,
@@ -60,14 +61,16 @@ function flowEditor() {
 
         // ---- Init ----
         init() {
-            this.loadDocuments();
+            if (this.isAuthenticated) {
+                this.loadDocuments();
 
-            // Auto-save every 30 seconds
-            this.autoSaveInterval = setInterval(() => {
-                if (this.currentDoc.uuid && this.saveStatus === 'Unsaved changes') {
-                    this.saveDocument();
-                }
-            }, 30000);
+                // Auto-save every 30 seconds
+                this.autoSaveInterval = setInterval(() => {
+                    if (this.currentDoc.uuid && this.saveStatus === 'Unsaved changes') {
+                        this.saveDocument();
+                    }
+                }, 30000);
+            }
 
             // Auto-clear error messages after 5 seconds
             this.$watch('errorMsg', (val) => {
@@ -516,12 +519,22 @@ function flowEditor() {
         // ---- Share ----
         async toggleShare() {
             if (!this.currentDoc.uuid) return;
+
+            // If already shared, show the existing share URL without unsharing
+            if (this.currentDoc.is_shared && this.currentDoc.share_token) {
+                this.shareUrl = window.location.origin + '/flow/shared/' + this.currentDoc.share_token + '/';
+                this.showShareModal = true;
+                this.shareCopied = false;
+                return;
+            }
+
             try {
                 var data = await this.apiRequest('/api/flow/share/', 'POST', {
                     uuid: this.currentDoc.uuid,
                 });
                 this.currentDoc.is_shared = data.is_shared;
                 if (data.is_shared && data.share_url) {
+                    this.currentDoc.share_token = data.share_token;
                     this.shareUrl = data.share_url;
                     this.showShareModal = true;
                     this.shareCopied = false;
@@ -531,6 +544,21 @@ function flowEditor() {
                 }
             } catch (e) {
                 this.errorMsg = e.message || 'Failed to toggle sharing.';
+            }
+        },
+
+        async unshareDocument() {
+            if (!this.currentDoc.uuid) return;
+            try {
+                var data = await this.apiRequest('/api/flow/share/', 'POST', {
+                    uuid: this.currentDoc.uuid,
+                });
+                this.currentDoc.is_shared = false;
+                this.currentDoc.share_token = null;
+                this.shareUrl = '';
+                this.showShareModal = false;
+            } catch (e) {
+                this.errorMsg = e.message || 'Failed to unshare document.';
             }
         },
 

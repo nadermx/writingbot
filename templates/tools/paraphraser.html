@@ -183,6 +183,11 @@
         </div>
     </div>
 
+    <!-- Share CTA -->
+    <div x-show="outputText.length > 0" x-cloak>
+        {% include 'shared/share-cta.html' %}
+    </div>
+
     <!-- Freeze Words UI -->
     <div class="row mb-3" x-show="inputText.length > 0">
         <div class="col">
