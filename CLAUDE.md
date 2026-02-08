@@ -54,9 +54,11 @@ All AI calls go through a single class:
 ```python
 LLMClient.generate(system_prompt, messages, max_tokens=4096,
                    temperature=0.7, use_premium=False) -> (str, Optional[str])
+LLMClient.detect_ai_text(text) -> (dict, Optional[str])
 ```
-- `use_premium=False` → Mistral 7B via `https://api.writingbot.ai/v1/text/generate/` (GPU server at 38.248.6.142)
+- `use_premium=False` → Qwen 2.5 14B via `https://api.writingbot.ai/v1/text/generate/` (GPU server at 38.248.6.142)
 - `use_premium=True` → Claude API via Anthropic SDK
+- `detect_ai_text()` → DeBERTa classifier via `/v1/text/ai-detect-model/` — returns `({"score": 72.5, "label": "ai", "chunks": [...]}, None)`
 - Returns `(text, None)` on success, `(None, "error message")` on failure
 
 ### Service Pattern — `(result, error)` Tuples
@@ -145,7 +147,7 @@ Custom i18n (NOT Django's built-in). `Language` and `Translation` models in `tra
 
 ## Testing
 
-Tests mock `core.llm_client.LLMClient.generate` via `@patch`. Mock responses defined in `tests/conftest.py` — the `mock_llm_generate` function dispatches based on keywords in `system_prompt` (e.g., 'paraphras' → paraphrase response, 'grammar' → grammar response). When adding a new service that calls `LLMClient`, add a matching keyword branch in `mock_llm_generate`.
+Tests mock `core.llm_client.LLMClient.generate` via `@patch`. Mock responses defined in `tests/conftest.py` — the `mock_llm_generate` function dispatches based on keywords in `system_prompt` (e.g., 'paraphras' → paraphrase response, 'grammar' → grammar response). When adding a new service that calls `LLMClient`, add a matching keyword branch in `mock_llm_generate`. AI detector tests mock `LLMClient.detect_ai_text` (not `generate`) since it uses the DeBERTa endpoint directly.
 
 Every test class needs `Language.objects.create(name='English', iso='en')` in `setUpTestData` for `GlobalVars` to work.
 
