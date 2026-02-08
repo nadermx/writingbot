@@ -108,6 +108,10 @@ MOCK_PDF_CHAT_RESPONSE = 'Based on the PDF content, the answer is...'
 
 MOCK_IMAGE_PROMPT_RESPONSE = 'A photorealistic image of a sunset over mountains...'
 
+MOCK_TRANSLATION_RESPONSE = 'Hola, como estas?'
+
+MOCK_LANGUAGE_DETECT_RESPONSE = 'en'
+
 
 def mock_llm_generate(system_prompt='', messages=None, max_tokens=4096,
                       temperature=0.7, use_premium=False):
@@ -152,6 +156,10 @@ def mock_llm_generate(system_prompt='', messages=None, max_tokens=4096,
         return MOCK_PDF_CHAT_RESPONSE, None
     if 'image' in prompt_lower:
         return MOCK_IMAGE_PROMPT_RESPONSE, None
+    if 'language detection' in prompt_lower or ('detect' in prompt_lower and 'language' in prompt_lower):
+        return MOCK_LANGUAGE_DETECT_RESPONSE, None
+    if 'translat' in prompt_lower:
+        return MOCK_TRANSLATION_RESPONSE, None
 
     # Default fallback
     return 'Mock LLM response for testing.', None

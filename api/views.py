@@ -259,16 +259,17 @@ class TranslateAPIv1(BasePublicAPIView):
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        translated, error = TranslationService.translate(
+        result, error = TranslationService.translate(
             text=text, source_lang=source_lang, target_lang=target_lang,
+            use_premium=is_premium,
         )
 
         if error:
             return Response({'error': error}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response({
-            'translated_text': translated,
-            'source_lang': source_lang,
-            'target_lang': target_lang,
+            'translated_text': result['translated_text'],
+            'source_lang': result['source_lang'],
+            'target_lang': result['target_lang'],
             'character_count': len(text),
         })

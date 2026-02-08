@@ -1,8 +1,7 @@
 import json
 import logging
 
-import requests
-from django.conf import settings
+from core.llm_client import LLMClient
 
 logger = logging.getLogger('app')
 
@@ -75,7 +74,6 @@ LANGUAGES = {
 
 
 class TranslationService:
-    API_URL = 'https://translateapi.ai/api/v1'
 
     @staticmethod
     def get_languages():
@@ -88,46 +86,45 @@ class TranslationService:
     @staticmethod
     def detect_language(text):
         """
-        Auto-detect the source language of the text using translateapi.ai.
+        Auto-detect the source language using the LLM.
 
         Returns:
             tuple: (language_code, error_string)
         """
-        try:
-            response = requests.post(
-                f'{TranslationService.API_URL}/detect/',
-                headers={
-                    'Authorization': f'Bearer {settings.TRANSLATEAPI_KEY}',
-                    'Content-Type': 'application/json',
-                },
-                json={'text': text[:500]},
-                timeout=10,
-            )
+        system_prompt = (
+            'You are a language detection tool. Identify the language of the given text. '
+            'Respond with ONLY the ISO 639-1 two-letter language code (e.g., "en", "es", "fr", "de", "zh"). '
+            'Do not include any other text, explanation, or punctuation.'
+        )
+        messages = [{'role': 'user', 'content': text[:500]}]
 
-            if response.status_code == 200:
-                data = response.json()
-                lang_code = data.get('language', data.get('detected_language', 'en'))
-                return lang_code, None
-            else:
-                logger.error(f'TranslateAPI detect error: {response.status_code} - {response.text}')
-                return 'en', None  # Default to English on error
+        result, error = LLMClient.generate(
+            system_prompt=system_prompt,
+            messages=messages,
+            max_tokens=10,
+            temperature=0.1,
+        )
 
-        except requests.Timeout:
-            logger.error('TranslateAPI detect timeout')
-            return 'en', None
-        except Exception as e:
-            logger.error(f'TranslateAPI detect error: {str(e)}')
-            return 'en', None
+        if error or not result:
+            logger.error(f'Language detection failed: {error}')
+            return 'en', None  # Default to English on error
+
+        lang_code = result.strip().lower().replace('"', '').replace("'", '')[:2]
+        if lang_code in LANGUAGES:
+            return lang_code, None
+
+        return 'en', None
 
     @staticmethod
-    def translate(text, source_lang, target_lang):
+    def translate(text, source_lang, target_lang, use_premium=False):
         """
-        Translate text using translateapi.ai API.
+        Translate text using the LLM via api.writingbot.ai.
 
         Args:
             text: Text to translate
             source_lang: Source language code (or 'auto' for auto-detect)
             target_lang: Target language code
+            use_premium: Whether to use premium (Claude) model
 
         Returns:
             tuple: (result_dict, error_string)
@@ -151,48 +148,33 @@ class TranslationService:
                 'target_lang': target_lang,
             }, None
 
-        try:
-            response = requests.post(
-                f'{TranslationService.API_URL}/translate/',
-                headers={
-                    'Authorization': f'Bearer {settings.TRANSLATEAPI_KEY}',
-                    'Content-Type': 'application/json',
-                },
-                json={
-                    'text': text,
-                    'source_language': detected_lang,
-                    'target_language': target_lang,
-                },
-                timeout=30,
-            )
+        source_name = LANGUAGES.get(detected_lang, detected_lang)
+        target_name = LANGUAGES.get(target_lang, target_lang)
 
-            if response.status_code == 200:
-                data = response.json()
-                translated_text = data.get('translated_text', data.get('translation', ''))
+        system_prompt = (
+            f'You are a professional translator. Translate the following text from {source_name} to {target_name}. '
+            f'Provide ONLY the translated text. Do not include any explanations, notes, or the original text. '
+            f'Preserve the original formatting, paragraph breaks, and punctuation style.'
+        )
+        messages = [{'role': 'user', 'content': text}]
 
-                if not translated_text:
-                    return None, 'Translation returned empty result. Please try again.'
+        result, error = LLMClient.generate(
+            system_prompt=system_prompt,
+            messages=messages,
+            max_tokens=min(len(text) * 3, 8192),
+            temperature=0.3,
+            use_premium=use_premium,
+        )
 
-                return {
-                    'translated_text': translated_text,
-                    'source_lang': detected_lang,
-                    'target_lang': target_lang,
-                }, None
-            elif response.status_code == 429:
-                return None, 'Translation rate limit reached. Please wait a moment and try again.'
-            elif response.status_code == 401:
-                logger.error('TranslateAPI authentication failed')
-                return None, 'Translation service configuration error. Please contact support.'
-            else:
-                logger.error(f'TranslateAPI error: {response.status_code} - {response.text}')
-                return None, 'Translation service is temporarily unavailable. Please try again.'
+        if error:
+            logger.error(f'Translation LLM error: {error}')
+            return None, 'Translation service is temporarily unavailable. Please try again.'
 
-        except requests.Timeout:
-            logger.error('TranslateAPI translate timeout')
-            return None, 'Translation request timed out. Please try again with shorter text.'
-        except requests.ConnectionError:
-            logger.error('TranslateAPI connection error')
-            return None, 'Could not connect to translation service. Please try again.'
-        except Exception as e:
-            logger.error(f'TranslateAPI unexpected error: {str(e)}')
-            return None, 'An unexpected error occurred. Please try again.'
+        if not result or not result.strip():
+            return None, 'Translation returned empty result. Please try again.'
+
+        return {
+            'translated_text': result.strip(),
+            'source_lang': detected_lang,
+            'target_lang': target_lang,
+        }, None

@@ -20,10 +20,12 @@ python manage.py migrate
 python manage.py set_languages   # Needs translations/json/languages.json
 python manage.py runserver
 
-# Tests (14 files, 131+ tests)
+# Tests (16 files, 221+ tests)
 python manage.py test                    # Run all
 python manage.py test tests.test_paraphraser  # Single test file
 python manage.py test tests.test_pages   # All URL smoke tests
+python manage.py test tests.test_api_endpoints  # API integration tests
+python manage.py test tests.test_user_flow  # User signup/login/credits tests
 
 # Seed content
 python manage.py seed_blog    # 31 blog posts (--clear to reset)
@@ -133,7 +135,7 @@ REST API at `/api/v1/` with `APIKeyAuthentication` (Bearer token from `CustomUse
 
 - `config.py` (gitignored) — secrets, API keys, DB credentials. Copy from `config_example.py`
 - `app/settings.py` — imports `config.py` via `from config import *`, defines `TOOL_LIMITS` dict for free tier limits
-- Key settings: `ANTHROPIC_API_KEY`, `WRITINGBOT_API_KEY`, `TRANSLATEAPI_KEY`
+- Key settings: `ANTHROPIC_API_KEY`, `WRITINGBOT_API_KEY`
 - `TOOL_LIMITS` dict defines per-tool free tier constraints (word counts, daily limits). When adding a new tool, add its limits here.
 - Redis for caching (languages, select2), sessions, and Django-RQ background job queues (`default`, `high`, `low`)
 

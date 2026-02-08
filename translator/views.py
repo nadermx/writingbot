@@ -274,7 +274,9 @@ class TranslateAPI(APIView):
             )
 
         # Run translation
-        result, error = TranslationService.translate(text, source_lang, target_lang)
+        result, error = TranslationService.translate(
+            text, source_lang, target_lang, use_premium=is_premium
+        )
 
         if error:
             return Response(
