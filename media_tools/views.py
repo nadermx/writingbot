@@ -1073,7 +1073,7 @@ MEDIA_TOOLS = [
         'description': 'Generate image prompts with AI to create stunning visuals.',
         'category': 'ai',
         'icon': 'ai',
-        'url': '/image-tools/',
+        'url': '/tools/ai-image-generator/',
     },
     {
         'slug': 'qr-code-generator',
@@ -1369,6 +1369,21 @@ class MediaToolsIndex(View):
             'page': 'media-tools',
             'g': g,
             'tools': MEDIA_TOOLS,
+        })
+
+
+class ImageToolsIndex(View):
+    """Renders the image tools index page listing all image/AI tools."""
+
+    def get(self, request):
+        g = GlobalVars.get_globals(request)
+        tools = [t for t in MEDIA_TOOLS if t.get('category') in ('image', 'ai')]
+        return render(request, 'media-tools/image-tools-index.html', {
+            'title': f'Free Online Image Tools | {config.PROJECT_NAME}',
+            'description': 'AI image generators, background remover, image converter, and 30+ creative design tools. All free.',
+            'page': 'image-tools',
+            'g': g,
+            'tools': tools,
         })
 
 
