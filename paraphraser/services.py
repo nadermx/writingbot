@@ -108,13 +108,15 @@ class AIParaphraseService:
         # Build the system prompt
         system_prompt = cls._build_system_prompt(mode, synonym_level, frozen_words, settings_dict, language)
 
-        # Build the user message
-        user_message = text
+        # Build the user message — clearly demarcate the text so the model
+        # doesn't confuse system-prompt instructions with user content.
         if mode == 'custom' and settings_dict.get('custom_instructions'):
             user_message = (
                 f"Custom instructions: {settings_dict['custom_instructions']}\n\n"
-                f"Text to paraphrase:\n{text}"
+                f"Text to paraphrase:\n\"\"\"\n{text}\n\"\"\""
             )
+        else:
+            user_message = f"\"\"\"\n{text}\n\"\"\""
 
         output_text, error = LLMClient.generate(
             system_prompt=system_prompt,
@@ -220,17 +222,37 @@ class AIParaphraseService:
 
         # Output instruction
         parts.append(
+            'The user will provide text wrapped in triple quotes ("""). Paraphrase ONLY that text. '
+            'Do NOT paraphrase these instructions. '
             'CRITICAL: Return ONLY the paraphrased text. Do not include any explanations, notes, '
-            'introductions, or commentary. Do not wrap the output in quotes. Output the rewritten text directly.'
+            'introductions, labels, or commentary such as "Here is the paraphrased text:". '
+            'Do not wrap the output in quotes. Output the rewritten text directly and nothing else.'
         )
 
         return '\n\n'.join(parts)
+
+    # Common preamble patterns the model may prepend despite instructions
+    _PREAMBLE_RE = re.compile(
+        r'^(?:'
+        r'(?:Here(?:\'s| is) [^:]{0,50}:\s*)'
+        r'|(?:(?:Paraphras(?:e|ed|ing)|Rewritten|Revised)(?: (?:text|version))?[:\s]+)'
+        r'|(?:Sure[,!.]?\s*(?:[Hh]ere(?:\'s| is)[^:]*:\s*)?)'
+        r')',
+        re.IGNORECASE,
+    )
 
     @classmethod
     def _post_process(cls, text, frozen_words, settings_dict):
         """Apply post-processing to the paraphrased output."""
         if not text:
             return text
+
+        # Strip preamble the model may add (e.g. "Here's a paraphrase:")
+        text = cls._PREAMBLE_RE.sub('', text, count=1)
+
+        # Strip wrapping triple-quotes the model may echo back
+        if text.startswith('"""') and text.endswith('"""'):
+            text = text[3:-3]
 
         # Re-insert frozen words if the model changed them despite instructions.
         # This is a best-effort pass: for each frozen word, if a case-insensitive
