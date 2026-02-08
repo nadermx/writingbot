@@ -400,63 +400,67 @@
 
     <!-- Smart Start Overlay -->
     {% if not is_shared_view %}
-    <div x-show="showSmartStart" x-transition x-cloak class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:rgba(0,0,0,0.5); z-index:50">
-        <div @click.away="showSmartStart = false" class="bg-white rounded-3 shadow-lg w-100 mx-3" style="max-width:32rem">
-            <div class="p-4">
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                    <h2 class="fs-5 fw-bold text-dark mb-0">
-                        <svg style="width:20px;height:20px;color:#9333ea" class="d-inline me-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                        </svg>
-                        Smart Start
-                    </h2>
-                    <button @click="showSmartStart = false" class="text-muted border-0 bg-transparent btn-close-hover">
-                        <svg style="width:20px;height:20px" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                    </button>
-                </div>
-                <p class="small text-muted mb-3">Enter keywords or a topic and AI will generate a structured outline to get you started.</p>
-                <textarea x-model="smartStartKeywords" rows="3"
-                          class="w-100 px-3 py-3 border rounded-3 small form-control"
-                          style="resize:none"
-                          placeholder="e.g. climate change impact on agriculture, renewable energy solutions"></textarea>
-                <div class="d-flex justify-content-end gap-2 mt-3">
-                    <button @click="showSmartStart = false" class="px-3 py-2 small text-body-secondary border rounded-3 bg-white btn-cancel-hover">Cancel</button>
-                    <button @click="runSmartStart()" :disabled="smartStartLoading"
-                            class="px-3 py-2 small text-white rounded-3 fw-medium border-0 btn-smart-start-go" style="background:#9333ea">
-                        <span x-show="!smartStartLoading">Generate Outline</span>
-                        <span x-show="smartStartLoading" class="d-flex align-items-center gap-2">
-                            <div class="spinner-border spinner-border-sm text-white" role="status"></div>
-                            Generating...
-                        </span>
-                    </button>
+    <template x-if="showSmartStart">
+        <div class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:rgba(0,0,0,0.5); z-index:50">
+            <div @click.away="showSmartStart = false" class="bg-white rounded-3 shadow-lg w-100 mx-3" style="max-width:32rem">
+                <div class="p-4">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h2 class="fs-5 fw-bold text-dark mb-0">
+                            <svg style="width:20px;height:20px;color:#9333ea" class="d-inline me-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                            </svg>
+                            Smart Start
+                        </h2>
+                        <button @click="showSmartStart = false" class="text-muted border-0 bg-transparent btn-close-hover">
+                            <svg style="width:20px;height:20px" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <p class="small text-muted mb-3">Enter keywords or a topic and AI will generate a structured outline to get you started.</p>
+                    <textarea x-model="smartStartKeywords" rows="3"
+                              class="w-100 px-3 py-3 border rounded-3 small form-control"
+                              style="resize:none"
+                              placeholder="e.g. climate change impact on agriculture, renewable energy solutions"></textarea>
+                    <div class="d-flex justify-content-end gap-2 mt-3">
+                        <button @click="showSmartStart = false" class="px-3 py-2 small text-body-secondary border rounded-3 bg-white btn-cancel-hover">Cancel</button>
+                        <button @click="runSmartStart()" :disabled="smartStartLoading"
+                                class="px-3 py-2 small text-white rounded-3 fw-medium border-0 btn-smart-start-go" style="background:#9333ea">
+                            <span x-show="!smartStartLoading">Generate Outline</span>
+                            <span x-show="smartStartLoading" class="d-flex align-items-center gap-2">
+                                <div class="spinner-border spinner-border-sm text-white" role="status"></div>
+                                Generating...
+                            </span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+    </template>
     {% endif %}
 
     <!-- Share Link Modal -->
     {% if not is_shared_view %}
-    <div x-show="showShareModal" x-transition x-cloak class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:rgba(0,0,0,0.5); z-index:50">
-        <div @click.away="showShareModal = false" class="bg-white rounded-3 shadow-lg w-100 mx-3" style="max-width:28rem">
-            <div class="p-4">
-                <h2 class="fs-5 fw-bold text-dark mb-3">Share Document</h2>
-                <div class="d-flex align-items-center gap-2">
-                    <input type="text" :value="shareUrl" readonly class="flex-grow-1 px-3 py-2 small border rounded-3 bg-light form-control">
-                    <button @click="copyShareLink()" class="px-3 py-2 bg-primary text-white small rounded-3 text-nowrap border-0 btn-copy-hover">
-                        <span x-text="shareCopied ? 'Copied!' : 'Copy'"></span>
-                    </button>
-                </div>
-                <p class="text-muted mt-2" style="font-size:0.75rem">Anyone with this link can view your document.</p>
-                <div class="d-flex justify-content-between mt-3">
-                    <button @click="unshareDocument()" class="px-3 py-2 small text-danger border border-danger rounded-3 bg-white btn-cancel-hover">Unshare</button>
-                    <button @click="showShareModal = false" class="px-3 py-2 small text-body-secondary border rounded-3 bg-white btn-cancel-hover">Close</button>
+    <template x-if="showShareModal">
+        <div class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:rgba(0,0,0,0.5); z-index:50">
+            <div @click.away="showShareModal = false" class="bg-white rounded-3 shadow-lg w-100 mx-3" style="max-width:28rem">
+                <div class="p-4">
+                    <h2 class="fs-5 fw-bold text-dark mb-3">Share Document</h2>
+                    <div class="d-flex align-items-center gap-2">
+                        <input type="text" :value="shareUrl" readonly class="flex-grow-1 px-3 py-2 small border rounded-3 bg-light form-control">
+                        <button @click="copyShareLink()" class="px-3 py-2 bg-primary text-white small rounded-3 text-nowrap border-0 btn-copy-hover">
+                            <span x-text="shareCopied ? 'Copied!' : 'Copy'"></span>
+                        </button>
+                    </div>
+                    <p class="text-muted mt-2" style="font-size:0.75rem">Anyone with this link can view your document.</p>
+                    <div class="d-flex justify-content-between mt-3">
+                        <button @click="unshareDocument()" class="px-3 py-2 small text-danger border border-danger rounded-3 bg-white btn-cancel-hover">Unshare</button>
+                        <button @click="showShareModal = false" class="px-3 py-2 small text-body-secondary border rounded-3 bg-white btn-cancel-hover">Close</button>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+    </template>
     {% endif %}
 
     <!-- Error Toast -->
