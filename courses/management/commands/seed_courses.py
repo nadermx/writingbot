@@ -695,7 +695,7 @@ COURSES = [
 <li>Use AI to handle mechanical tasks so you can focus on thinking</li>
 <li>Combine multiple tools: paraphraser for alternatives, grammar checker for correctness, and summarizer for research</li>
 </ul>
-<p>Try our suite of tools: <a href="/paraphrasing-tool/">paraphraser</a>, <a href="/grammar-check/">grammar checker</a>, <a href="/summarize/">summarizer</a>, and <a href="/ai-writing-tools/">100+ AI writing generators</a>.</p>"""},
+<p>Try our suite of tools: <a href="/paraphrasing-tool/">paraphraser</a>, <a href="/grammar-check/">grammar checker</a>, <a href="/summarize/">summarizer</a>, and <a href="/ai-writing-tools/">98 AI writing generators</a>.</p>"""},
         ]
     },
     {

@@ -909,7 +909,7 @@ POSTS = [
 <h2>Best Practices</h2>
 <p>Use AI translation as a starting point, then have a native speaker review for accuracy and naturalness. For important documents, always invest in professional human translation.</p>
 
-<p>Try our <a href="/translate/">AI translator</a> supporting 52+ languages with auto-detection.</p>"""
+<p>Try our <a href="/translate/">AI translator</a> supporting 63 languages with auto-detection.</p>"""
     },
 ]
 
