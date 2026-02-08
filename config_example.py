@@ -52,6 +52,9 @@ WRITINGBOT_API_KEY = ''  # Shared secret with GPU server
 # Premium LLM: set to True to use Claude for premium users
 USE_CLAUDE_FOR_PREMIUM = True
 
+# Internal API secret (shared with GPU server for API key validation)
+INTERNAL_API_SECRET = ''  # python -c "import secrets; print(secrets.token_urlsafe(32))"
+
 # Translation API
 TRANSLATEAPI_KEY = ''  # Get from https://translateapi.ai/
 

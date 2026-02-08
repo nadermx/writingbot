@@ -1,17 +1,113 @@
+import json
 import logging
 
+from django.conf import settings
+from django.http import JsonResponse
 from django.shortcuts import render
+from django.utils.decorators import method_decorator
+from django.views import View as DjangoView
+from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import View
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from accounts.models import CustomUser
 from accounts.views import GlobalVars
 from api.authentication import APIKeyAuthentication
 from api.throttling import APIRateThrottle
 import config
 
 logger = logging.getLogger('app')
+
+
+TOOL_LIMITS = {
+    'paraphrase': {'max_words': 500, 'premium_modes': True},
+    'grammar': {'max_words': 5000},
+    'summarize': {'max_words': 1200, 'premium_max_words': 6000},
+    'ai-detect': {'max_words': 1200},
+    'translate': {'max_chars': 5000},
+}
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class ValidateAPIKeyInternal(DjangoView):
+    """
+    POST /api/internal/validate/
+    Internal endpoint for the GPU server to validate API keys and check limits.
+    Secured by shared secret in X-Internal-Key header.
+    """
+
+    def post(self, request):
+        # Check internal secret
+        internal_key = request.META.get('HTTP_X_INTERNAL_KEY', '')
+        expected_key = getattr(config, 'INTERNAL_API_SECRET', '')
+        if not expected_key or internal_key != expected_key:
+            return JsonResponse({'valid': False, 'error': 'Unauthorized'}, status=401)
+
+        try:
+            body = json.loads(request.body)
+        except (json.JSONDecodeError, ValueError):
+            return JsonResponse({'valid': False, 'error': 'Invalid JSON'}, status=400)
+
+        api_key = body.get('api_key', '').strip()
+        tool = body.get('tool', '')
+        word_count = body.get('word_count', 0)
+        char_count = body.get('char_count', 0)
+        mode = body.get('mode', '')
+
+        if not api_key:
+            return JsonResponse({'valid': False, 'error': 'Invalid API key'}, status=401)
+
+        # Look up user by api_token
+        try:
+            user = CustomUser.objects.get(api_token=api_key, is_active=True)
+        except CustomUser.DoesNotExist:
+            return JsonResponse({'valid': False, 'error': 'Invalid API key'}, status=401)
+        except CustomUser.MultipleObjectsReturned:
+            logger.error('Multiple users found with the same API token')
+            return JsonResponse({'valid': False, 'error': 'Authentication error'}, status=500)
+
+        is_premium = user.is_plan_active
+
+        # Check tool-specific limits
+        limits = TOOL_LIMITS.get(tool)
+        if limits:
+            max_words = limits.get('max_words', 0)
+            max_chars = limits.get('max_chars', 0)
+
+            if is_premium:
+                max_words = limits.get('premium_max_words', 0)  # 0 = unlimited
+
+            if max_words and not is_premium and word_count > max_words:
+                return JsonResponse({
+                    'valid': False,
+                    'error': f'Free API users are limited to {max_words} words per request.',
+                    'upgrade': True,
+                }, status=403)
+
+            if max_chars and not is_premium and char_count > max_chars:
+                return JsonResponse({
+                    'valid': False,
+                    'error': f'Free API users are limited to {max_chars} characters per request.',
+                    'upgrade': True,
+                }, status=403)
+
+            # Check premium-only modes for paraphrase
+            if tool == 'paraphrase' and limits.get('premium_modes') and mode:
+                free_modes = ['standard', 'fluency']
+                if not is_premium and mode not in free_modes:
+                    return JsonResponse({
+                        'valid': False,
+                        'error': f'The "{mode}" mode requires a premium API plan.',
+                        'upgrade': True,
+                    }, status=403)
+
+        return JsonResponse({
+            'valid': True,
+            'user_id': user.id,
+            'is_premium': is_premium,
+        })
 
 
 class APIDocsPage(View):

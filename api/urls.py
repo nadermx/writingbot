@@ -2,6 +2,7 @@ from django.urls import path
 
 from api.views import (
     APIDocsPage,
+    ValidateAPIKeyInternal,
     ParaphraseAPIv1, GrammarAPIv1, SummarizeAPIv1,
     AIDetectAPIv1, TranslateAPIv1,
 )
@@ -9,6 +10,9 @@ from api.views import (
 urlpatterns = [
     # Documentation page
     path('docs/', APIDocsPage.as_view(), name='api_docs'),
+
+    # Internal validation endpoint (used by GPU server)
+    path('internal/validate/', ValidateAPIKeyInternal.as_view(), name='api_internal_validate'),
 
     # v1 API endpoints
     path('v1/paraphrase/', ParaphraseAPIv1.as_view(), name='api_v1_paraphrase'),
