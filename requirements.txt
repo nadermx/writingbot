@@ -38,11 +38,17 @@ pytz>=2024.2
 anthropic>=0.42  # Claude API
 
 # PDF Processing
-PyMuPDF>=1.25  # PDF manipulation
+PyMuPDF>=1.25  # PDF manipulation (fitz)
+pypdf>=4.0  # PDF merge/split/compress/rotate
 pdfplumber>=0.11  # PDF text extraction
+pdf2image>=1.17  # PDF to image conversion (requires poppler-utils)
 
 # Document Processing
 python-docx>=1.1  # DOCX read/write for proofreader
+
+# Media Tools
+qrcode>=8.0  # QR code generation
+edge-tts>=7.0  # Text-to-speech
 
 # Markdown & Text Processing
 markdown>=3.7

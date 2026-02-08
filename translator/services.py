@@ -75,7 +75,7 @@ LANGUAGES = {
 
 
 class TranslationService:
-    API_URL = 'https://api.translateapi.ai/v1'
+    API_URL = 'https://translateapi.ai/api/v1'
 
     @staticmethod
     def get_languages():
@@ -95,7 +95,7 @@ class TranslationService:
         """
         try:
             response = requests.post(
-                f'{TranslationService.API_URL}/detect',
+                f'{TranslationService.API_URL}/detect/',
                 headers={
                     'Authorization': f'Bearer {settings.TRANSLATEAPI_KEY}',
                     'Content-Type': 'application/json',
@@ -153,7 +153,7 @@ class TranslationService:
 
         try:
             response = requests.post(
-                f'{TranslationService.API_URL}/translate',
+                f'{TranslationService.API_URL}/translate/',
                 headers={
                     'Authorization': f'Bearer {settings.TRANSLATEAPI_KEY}',
                     'Content-Type': 'application/json',
