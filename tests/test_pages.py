@@ -133,8 +133,8 @@ class PublicPageTests(TestCase):
     def test_image_tools(self):
         self._get('/image-tools/')
 
-    def test_converter_tools(self):
-        self._get('/converter-tools/')
+    def test_image_converter(self):
+        self._get('/image-converter/')
 
     def test_background_remover(self):
         self._get('/background-remover/')

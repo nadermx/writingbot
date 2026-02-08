@@ -1057,7 +1057,7 @@ MEDIA_TOOLS = [
         'description': 'Convert images between JPG, PNG, WebP, GIF, BMP, and more.',
         'category': 'image',
         'icon': 'image',
-        'url': '/converter-tools/',
+        'url': '/image-converter/',
     },
     {
         'slug': 'background-remover',

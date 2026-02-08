@@ -84,11 +84,10 @@ function mediaTool() {
         init() {
             // Detect tool type from URL
             const path = window.location.pathname;
-            if (path.includes('image-tools')) this.toolType = 'image-converter';
+            if (path.includes('image-converter') || path.includes('converter-tools')) this.toolType = 'image-converter';
             else if (path.includes('background-remover')) this.toolType = 'background-remover';
             else if (path.includes('qr-code')) this.toolType = 'qr-code';
             else if (path.includes('ai-voice')) this.toolType = 'voice-generator';
-            else if (path.includes('converter-tools')) this.toolType = 'ai-image-generator';
             else if (path.includes('transcription') || path.includes('speech-to-text')) this.toolType = 'transcription';
             else if (path.includes('logo-generator')) this.toolType = 'logo-generator';
             else if (path.includes('character-generator')) this.toolType = 'character-generator';

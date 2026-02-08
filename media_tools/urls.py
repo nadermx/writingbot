@@ -1,4 +1,5 @@
 from django.urls import path
+from django.views.generic import RedirectView
 
 from media_tools.views import (
     MediaToolsIndex, ImageToolsIndex, ImageConverterPage, BackgroundRemoverPage,
@@ -16,7 +17,8 @@ urlpatterns = [
     # Page views
     path('image-tools/', ImageToolsIndex.as_view(), name='image_tools_index'),
     path('tools/ai-image-generator/', AIImageGeneratorPage.as_view(), name='ai_image_generator'),
-    path('converter-tools/', ImageConverterPage.as_view(), name='image_converter'),
+    path('image-converter/', ImageConverterPage.as_view(), name='image_converter'),
+    path('converter-tools/', RedirectView.as_view(url='/image-converter/', permanent=True)),
     path('background-remover/', BackgroundRemoverPage.as_view(), name='background_remover'),
     path('tools/qr-code-generator/', QRCodePage.as_view(), name='qr_code_generator'),
     path('tools/ai-voice-generator/', VoiceGeneratorPage.as_view(), name='voice_generator'),
