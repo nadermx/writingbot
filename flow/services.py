@@ -7,7 +7,7 @@ from urllib.parse import quote_plus
 import requests
 from django.conf import settings
 from django.utils import timezone
-from core.llm_client import LLMClient
+from core.llm_client import LLMClient, extract_json
 
 logger = logging.getLogger('app')
 
@@ -114,16 +114,10 @@ class FlowService:
             if error:
                 return None, error
 
-            raw = raw.strip()
-
-            # Handle markdown code block wrapping
-            if raw.startswith('```'):
-                raw = raw.split('\n', 1)[-1].rsplit('```', 1)[0].strip()
-
-            review = json.loads(raw)
+            review = extract_json(raw)
             return review, None
 
-        except json.JSONDecodeError:
+        except (ValueError, json.JSONDecodeError):
             logger.warning('Failed to parse AI review response as JSON')
             return None, 'Failed to parse the review. Please try again.'
         except Exception as e:
@@ -280,15 +274,10 @@ class FlowService:
             if error:
                 return None, error
 
-            raw = raw.strip()
-
-            if raw.startswith('```'):
-                raw = raw.split('\n', 1)[-1].rsplit('```', 1)[0].strip()
-
-            outline = json.loads(raw)
+            outline = extract_json(raw)
             return outline, None
 
-        except json.JSONDecodeError:
+        except (ValueError, json.JSONDecodeError):
             logger.warning('Failed to parse outline response as JSON')
             return None, 'Failed to parse the outline. Please try again.'
         except Exception as e:
@@ -475,12 +464,9 @@ class FlowService:
                     answer = answer[len('ANSWER:'):].strip()
 
                 sources_raw = parts[1].strip()
-                # Strip markdown code fences if present
-                if sources_raw.startswith('```'):
-                    sources_raw = sources_raw.split('\n', 1)[-1].rsplit('```', 1)[0].strip()
                 try:
-                    sources = json.loads(sources_raw)
-                except json.JSONDecodeError:
+                    sources = extract_json(sources_raw)
+                except (ValueError, json.JSONDecodeError):
                     logger.warning('Failed to parse AI search sources JSON')
                     sources = []
             elif 'ANSWER:' in raw:

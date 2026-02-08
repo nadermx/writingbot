@@ -3,7 +3,7 @@ import logging
 import re
 import math
 
-from core.llm_client import LLMClient
+from core.llm_client import LLMClient, extract_json
 
 logger = logging.getLogger('app')
 
@@ -198,14 +198,7 @@ Return ONLY the JSON object, no other text."""
                 logger.error(f'LLM error in AI detector: {error}')
                 return None, 'AI detection service is temporarily unavailable. Please try again.'
 
-            response_text = response_text.strip()
-
-            # Extract JSON from response
-            json_match = re.search(r'\{[\s\S]*\}', response_text)
-            if not json_match:
-                return None, 'Failed to parse AI detection results.'
-
-            result = json.loads(json_match.group())
+            result = extract_json(response_text)
 
             # Blend Claude's score with heuristic score
             claude_score = result.get('overall_score', 50)
@@ -279,7 +272,7 @@ Return ONLY the JSON object, no other text."""
                 'sentences': analyzed_sentences,
             }, None
 
-        except json.JSONDecodeError as e:
+        except (ValueError, json.JSONDecodeError) as e:
             logger.error(f'JSON decode error in AI detector: {str(e)}')
             return None, 'Failed to parse AI detection results.'
         except Exception as e:

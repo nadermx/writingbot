@@ -1,7 +1,7 @@
 import io
 import json
 import logging
-from core.llm_client import LLMClient
+from core.llm_client import LLMClient, extract_json
 
 logger = logging.getLogger('app')
 
@@ -69,14 +69,7 @@ Important rules:
             if error:
                 return None, error
 
-            # Strip markdown code fences if present
-            if response_text.startswith('```'):
-                lines = response_text.split('\n')
-                response_text = '\n'.join(lines[1:])
-                if response_text.endswith('```'):
-                    response_text = response_text[:-3].strip()
-
-            result = json.loads(response_text)
+            result = extract_json(response_text)
 
             # Validate structure
             if 'corrections' not in result:
@@ -98,7 +91,7 @@ Important rules:
 
             return result, None
 
-        except json.JSONDecodeError as e:
+        except (ValueError, json.JSONDecodeError) as e:
             logger.error(f"Grammar check JSON parse error: {e}")
             return None, "Failed to parse AI response"
         except Exception as e:
@@ -317,14 +310,7 @@ Important rules:
             if error:
                 return None, error
 
-            # Strip markdown code fences if present
-            if response_text.startswith('```'):
-                lines = response_text.split('\n')
-                response_text = '\n'.join(lines[1:])
-                if response_text.endswith('```'):
-                    response_text = response_text[:-3].strip()
-
-            result = json.loads(response_text)
+            result = extract_json(response_text)
 
             # Validate and sanitize structure
             if 'overall_score' not in result:
@@ -351,7 +337,7 @@ Important rules:
 
             return result, None
 
-        except json.JSONDecodeError as e:
+        except (ValueError, json.JSONDecodeError) as e:
             logger.error(f"Proofreader JSON parse error: {e}")
             return None, "Failed to parse AI response. Please try again."
         except Exception as e:

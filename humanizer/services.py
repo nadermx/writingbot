@@ -2,7 +2,7 @@ import json
 import logging
 import re
 
-from core.llm_client import LLMClient
+from core.llm_client import LLMClient, extract_json
 
 logger = logging.getLogger('app')
 
@@ -45,12 +45,15 @@ Text:
             if error:
                 return None, error
 
-            score_text = score_text.strip()
-            json_match = re.search(r'\{[\s\S]*?\}', score_text)
-            if json_match:
-                score_data = json.loads(json_match.group())
-                ai_score_before = max(0, min(100, score_data.get('ai_score', 70)))
-            else:
+            try:
+                score_data = extract_json(score_text)
+                if isinstance(score_data, dict):
+                    ai_score_before = max(0, min(100, int(score_data.get('ai_score', 70))))
+                elif isinstance(score_data, (int, float)):
+                    ai_score_before = max(0, min(100, int(score_data)))
+                else:
+                    ai_score_before = 70
+            except (ValueError, json.JSONDecodeError, TypeError):
                 ai_score_before = 70
 
             # Humanize the text based on mode
@@ -116,13 +119,15 @@ Text:
             if error:
                 return None, error
 
-            score_after_text = score_after_text.strip()
-            json_match = re.search(r'\{[\s\S]*?\}', score_after_text)
-            if json_match:
-                score_after_data = json.loads(json_match.group())
-                ai_score_after = max(0, min(100, score_after_data.get('ai_score', 30)))
-            else:
-                # Estimate reduction based on mode
+            try:
+                score_after_data = extract_json(score_after_text)
+                if isinstance(score_after_data, dict):
+                    ai_score_after = max(0, min(100, int(score_after_data.get('ai_score', 30))))
+                elif isinstance(score_after_data, (int, float)):
+                    ai_score_after = max(0, min(100, int(score_after_data)))
+                else:
+                    ai_score_after = max(5, ai_score_before - (40 if mode == 'advanced' else 25))
+            except (ValueError, json.JSONDecodeError, TypeError):
                 ai_score_after = max(5, ai_score_before - (40 if mode == 'advanced' else 25))
 
             return {

@@ -1,10 +1,72 @@
 import json
 import logging
+import re
 
 import requests
 from django.conf import settings
 
 logger = logging.getLogger('app')
+
+
+def extract_json(text):
+    """
+    Robustly extract a JSON object from LLM output that may contain
+    preamble text, markdown code fences, or trailing commentary.
+
+    Returns parsed dict/list on success, raises ValueError on failure.
+    """
+    if not text or not text.strip():
+        raise ValueError('Empty response')
+
+    s = text.strip()
+
+    # 1. Strip markdown code fences (```json ... ``` or ``` ... ```)
+    fence_match = re.search(r'```(?:json)?\s*\n([\s\S]*?)```', s)
+    if fence_match:
+        s = fence_match.group(1).strip()
+
+    # 2. Try parsing directly
+    try:
+        return json.loads(s)
+    except json.JSONDecodeError:
+        pass
+
+    # 3. Find the outermost { ... } or [ ... ] in the text
+    for open_ch, close_ch in [('{', '}'), ('[', ']')]:
+        start = s.find(open_ch)
+        if start == -1:
+            continue
+        depth = 0
+        in_string = False
+        escape = False
+        end = -1
+        for i in range(start, len(s)):
+            c = s[i]
+            if escape:
+                escape = False
+                continue
+            if c == '\\' and in_string:
+                escape = True
+                continue
+            if c == '"' and not escape:
+                in_string = not in_string
+                continue
+            if in_string:
+                continue
+            if c == open_ch:
+                depth += 1
+            elif c == close_ch:
+                depth -= 1
+                if depth == 0:
+                    end = i
+                    break
+        if end != -1:
+            try:
+                return json.loads(s[start:end + 1])
+            except json.JSONDecodeError:
+                pass
+
+    raise ValueError(f'No valid JSON found in response: {text[:200]}')
 
 
 class LLMClient:
