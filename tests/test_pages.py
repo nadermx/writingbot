@@ -104,10 +104,10 @@ class PublicPageTests(TestCase):
         self._get('/word-counter/')
 
     # ------------------------------------------------------------------
-    # Flow (requires auth, expect redirect)
+    # Flow (freemium, no login required)
     # ------------------------------------------------------------------
     def test_flow(self):
-        self._get('/flow/', expected_status=302)
+        self._get('/flow/')
 
     def test_ai_chat(self):
         self._get('/ai-chat/')

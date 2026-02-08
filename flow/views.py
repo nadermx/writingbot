@@ -33,13 +33,9 @@ def count_words(text):
 
 
 class FlowPage(View):
-    """Renders the main Flow co-writer editor page. Requires authentication."""
+    """Renders the main Flow co-writer editor page. Freemium — anonymous users get daily limits."""
 
     def get(self, request):
-        if not request.user.is_authenticated:
-            from django.shortcuts import redirect
-            return redirect(f'/login/?next=/flow/&lang={request.GET.get("lang", "en")}')
-
         g = GlobalVars.get_globals(request)
         is_premium = request.user.is_authenticated and request.user.is_plan_active
 
@@ -52,6 +48,7 @@ class FlowPage(View):
                 'page': 'flow',
                 'g': g,
                 'is_premium': is_premium,
+                'is_authenticated': request.user.is_authenticated,
             }
         )
 
@@ -229,10 +226,19 @@ class AISuggestAPI(APIView):
     """
 
     def post(self, request):
-        if not request.user.is_authenticated:
+        ip = Utils.get_ip(request)
+        user_agent = request.META.get('HTTP_USER_AGENT', '')
+        allowed, remaining, limit = FlowService.check_daily_limit(
+            'flow_suggest', request.user, ip, user_agent,
+        )
+
+        if not allowed:
             return Response(
-                {'error': 'Authentication required.'},
-                status=status.HTTP_401_UNAUTHORIZED
+                {
+                    'error': f'Daily limit of {limit} suggestions reached. Upgrade to Premium for unlimited access.',
+                    'upgrade': True,
+                },
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         data = request.data
@@ -242,7 +248,10 @@ class AISuggestAPI(APIView):
         # Strip HTML for the AI
         plain_text = strip_html(content)
 
-        is_premium = getattr(request.user, 'is_plan_active', False)
+        is_premium = (
+            request.user.is_authenticated
+            and getattr(request.user, 'is_plan_active', False)
+        )
         suggestion, error = FlowService.suggest_next(plain_text, cursor_position, use_premium=is_premium)
 
         if error:
@@ -250,6 +259,8 @@ class AISuggestAPI(APIView):
                 {'error': error},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+        FlowService.increment_daily_usage('flow_suggest', request.user, ip, user_agent)
 
         return Response({
             'suggestion': suggestion,
@@ -263,10 +274,19 @@ class AIReviewAPI(APIView):
     """
 
     def post(self, request):
-        if not request.user.is_authenticated:
+        ip = Utils.get_ip(request)
+        user_agent = request.META.get('HTTP_USER_AGENT', '')
+        allowed, remaining, limit = FlowService.check_daily_limit(
+            'flow_review', request.user, ip, user_agent,
+        )
+
+        if not allowed:
             return Response(
-                {'error': 'Authentication required.'},
-                status=status.HTTP_401_UNAUTHORIZED
+                {
+                    'error': f'Daily limit of {limit} reviews reached. Upgrade to Premium for unlimited access.',
+                    'upgrade': True,
+                },
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         data = request.data
@@ -281,7 +301,10 @@ class AIReviewAPI(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        is_premium = getattr(request.user, 'is_plan_active', False)
+        is_premium = (
+            request.user.is_authenticated
+            and getattr(request.user, 'is_plan_active', False)
+        )
         review, error = FlowService.ai_review(plain_text, use_premium=is_premium)
 
         if error:
@@ -289,6 +312,8 @@ class AIReviewAPI(APIView):
                 {'error': error},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+        FlowService.increment_daily_usage('flow_review', request.user, ip, user_agent)
 
         return Response({
             'review': review,
@@ -302,10 +327,19 @@ class SmartStartAPI(APIView):
     """
 
     def post(self, request):
-        if not request.user.is_authenticated:
+        ip = Utils.get_ip(request)
+        user_agent = request.META.get('HTTP_USER_AGENT', '')
+        allowed, remaining, limit = FlowService.check_daily_limit(
+            'flow_smart_start', request.user, ip, user_agent,
+        )
+
+        if not allowed:
             return Response(
-                {'error': 'Authentication required.'},
-                status=status.HTTP_401_UNAUTHORIZED
+                {
+                    'error': f'Daily limit of {limit} outlines reached. Upgrade to Premium for unlimited access.',
+                    'upgrade': True,
+                },
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         data = request.data
@@ -317,7 +351,10 @@ class SmartStartAPI(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        is_premium = getattr(request.user, 'is_plan_active', False)
+        is_premium = (
+            request.user.is_authenticated
+            and getattr(request.user, 'is_plan_active', False)
+        )
         outline, error = FlowService.smart_start(keywords, use_premium=is_premium)
 
         if error:
@@ -325,6 +362,8 @@ class SmartStartAPI(APIView):
                 {'error': error},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+        FlowService.increment_daily_usage('flow_smart_start', request.user, ip, user_agent)
 
         return Response({
             'outline': outline,

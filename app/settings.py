@@ -192,6 +192,9 @@ TOOL_LIMITS = {
     'plagiarism': {'premium_monthly_words': 30000},
     'ai_chat': {'free_daily': 20},
     'ai_search': {'free_daily': 10},
+    'flow_suggest': {'free_daily': 20},
+    'flow_review': {'free_daily': 5},
+    'flow_smart_start': {'free_daily': 5},
     'proofreader': {'free_words': 5000},
 }
 

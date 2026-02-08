@@ -11,11 +11,17 @@ from core.llm_client import LLMClient, extract_json
 
 logger = logging.getLogger('app')
 
-# Rate limits for chat and search
+# Rate limits for chat, search, and flow AI features
 CHAT_LIMITS = settings.TOOL_LIMITS.get('ai_chat', {})
 CHAT_FREE_DAILY = CHAT_LIMITS.get('free_daily', 20)
 SEARCH_LIMITS = settings.TOOL_LIMITS.get('ai_search', {})
 SEARCH_FREE_DAILY = SEARCH_LIMITS.get('free_daily', 10)
+FLOW_SUGGEST_LIMITS = settings.TOOL_LIMITS.get('flow_suggest', {})
+FLOW_SUGGEST_FREE_DAILY = FLOW_SUGGEST_LIMITS.get('free_daily', 20)
+FLOW_REVIEW_LIMITS = settings.TOOL_LIMITS.get('flow_review', {})
+FLOW_REVIEW_FREE_DAILY = FLOW_REVIEW_LIMITS.get('free_daily', 5)
+FLOW_SMART_START_LIMITS = settings.TOOL_LIMITS.get('flow_smart_start', {})
+FLOW_SMART_START_FREE_DAILY = FLOW_SMART_START_LIMITS.get('free_daily', 5)
 
 
 class FlowService:
@@ -311,7 +317,14 @@ class FlowService:
         if is_premium:
             return True, -1, -1
 
-        limit = CHAT_FREE_DAILY if tool == 'ai_chat' else SEARCH_FREE_DAILY
+        tool_limits = {
+            'ai_chat': CHAT_FREE_DAILY,
+            'ai_search': SEARCH_FREE_DAILY,
+            'flow_suggest': FLOW_SUGGEST_FREE_DAILY,
+            'flow_review': FLOW_REVIEW_FREE_DAILY,
+            'flow_smart_start': FLOW_SMART_START_FREE_DAILY,
+        }
+        limit = tool_limits.get(tool, 10)
 
         today = timezone.now().strftime('%Y-%m-%d')
         if user and user.is_authenticated:

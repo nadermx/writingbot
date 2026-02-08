@@ -10,7 +10,7 @@
 
     {% csrf_token %}
 
-    <div x-data='translator({{ languages_json|safe }})'>
+    <div x-data='translator({{ languages_json|safe }}, "auto", "es")'>
         <div class="row justify-content-center">
             <div class="col-lg-10">
                 <!-- Language Selection Bar -->
