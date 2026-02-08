@@ -243,7 +243,7 @@ function grammarChecker() {
 
                 // Highlighted error
                 var typeColor = getErrorColor(c.type);
-                html += '<mark style="background-color: ' + typeColor + '; border-radius: 2px; padding: 0 1px;">';
+                html += '<mark style="background-color: ' + typeColor + '; color: transparent; border-radius: 2px; padding: 0 1px;">';
                 html += escapeHtml(text.substring(start, end));
                 html += '</mark>';
 
