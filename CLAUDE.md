@@ -20,16 +20,23 @@ python manage.py migrate
 python manage.py set_languages   # Needs translations/json/languages.json
 python manage.py runserver
 
-# Tests (16 files, 221+ tests)
+# Tests (17 files, 230+ tests)
 python manage.py test                    # Run all
 python manage.py test tests.test_paraphraser  # Single test file
 python manage.py test tests.test_pages   # All URL smoke tests
-python manage.py test tests.test_api_endpoints  # API integration tests
+python manage.py test tests.test_api_endpoints  # API integration tests (uses REAL backends)
 python manage.py test tests.test_user_flow  # User signup/login/credits tests
+pytest tests/test_e2e.py                 # Playwright browser tests (requires: playwright install chromium)
 
 # Seed content
 python manage.py seed_blog    # 31 blog posts (--clear to reset)
 python manage.py seed_courses # 15 courses, 57 chapters (--clear to reset)
+
+# Other management commands
+python manage.py set_plans            # Initialize payment plans
+python manage.py rebill               # Daily subscription rebilling (cron: 6am)
+python manage.py expire_pro_users     # Expire lapsed pro users (cron: 6:30am)
+python manage.py run_translation      # Translate text bases (needs Google API key)
 
 # Deployment
 cd ansible
@@ -60,6 +67,7 @@ LLMClient.detect_ai_text(text) -> (dict, Optional[str])
 - `use_premium=True` → Claude API via Anthropic SDK
 - `detect_ai_text()` → DeBERTa classifier via `/v1/text/ai-detect-model/` — returns `({"score": 72.5, "label": "ai", "chunks": [...]}, None)`
 - Returns `(text, None)` on success, `(None, "error message")` on failure
+- `extract_json()` helper in same file robustly parses JSON from LLM responses (strips preamble, markdown fences)
 
 ### Service Pattern — `(result, error)` Tuples
 
@@ -139,7 +147,7 @@ REST API at `/api/v1/` with `APIKeyAuthentication` (Bearer token from `CustomUse
 - `app/settings.py` — imports `config.py` via `from config import *`, defines `TOOL_LIMITS` dict for free tier limits
 - Key settings: `ANTHROPIC_API_KEY`, `WRITINGBOT_API_KEY`
 - `TOOL_LIMITS` dict defines per-tool free tier constraints (word counts, daily limits). When adding a new tool, add its limits here.
-- Redis for caching (languages, select2), sessions, and Django-RQ background job queues (`default`, `high`, `low`)
+- Redis DB 0 for Django-RQ job queues (`default`, `high`, `low`), DB 1 for general cache, DB 2 for select2 widget cache. Sessions also in Redis.
 
 ### Translation System
 
@@ -149,7 +157,7 @@ Custom i18n (NOT Django's built-in). `Language` and `Translation` models in `tra
 
 Tests mock `core.llm_client.LLMClient.generate` via `@patch`. Mock responses defined in `tests/conftest.py` — the `mock_llm_generate` function dispatches based on keywords in `system_prompt` (e.g., 'paraphras' → paraphrase response, 'grammar' → grammar response). When adding a new service that calls `LLMClient`, add a matching keyword branch in `mock_llm_generate`. AI detector tests mock `LLMClient.detect_ai_text` (not `generate`) since it uses the DeBERTa endpoint directly.
 
-Every test class needs `Language.objects.create(name='English', iso='en')` in `setUpTestData` for `GlobalVars` to work.
+Every test class needs `Language.objects.create(name='English', iso='en')` in `setUpTestData` for `GlobalVars` to work. DRF throttle can cause 429s across test suites — clear via `SimpleRateThrottle.cache.clear()` in `setUp`.
 
 ```python
 from tests.conftest import mock_llm_generate
@@ -160,6 +168,21 @@ class MyServiceTests(TestCase):
     def setUpTestData(cls):
         Language.objects.create(name='English', iso='en', active=True, default=True)
 ```
+
+## Conventions
+
+- User-facing tool URLs are hyphenated: `/ai-content-detector/`, `/grammar-checker/`
+- Commit messages: short imperative subject lines starting with `Fix`, `Add`, `Update`, or `Refactor`
+- App structure: `models.py`, `views.py`, `services.py`, `urls.py` per app
+- Test files: `tests/test_<feature>.py`
+
+## Known Pitfalls
+
+- **Django `APPEND_SLASH`** redirects POST→GET (301) — always use trailing slashes in API URLs
+- **pypdf** `compress_content_streams()` must be called AFTER `add_page()`, not before
+- **Alpine.js `x-show`** elements flash on load — use `x-cloak` attribute
+- **`w-sm-auto`** is NOT a valid Bootstrap 5 class
+- **DRF throttle** causes 429s across test suites — clear cache in `setUp`
 
 ## Deployment Notes
 
