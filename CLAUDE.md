@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **WritingBot.ai** is an AI-powered writing assistant platform competing with QuillBot.com. Built on Django 6.x (forked from nadermx/djangobase). Live at https://writingbot.ai.
 
-**Server:** 38.248.6.212 (VPS.org, Ubuntu 24.04). Deploy path: `/home/www/writingbot/`
+**Server:** 38.248.6.212 (VPS.org, Ubuntu 24.04). Deploy path: `/home/www/writingbot/`. **ansible_user:** writingbot
 
 **DNS:** Managed via VPS.org API (`~/.credentials/vps_org_api_key`). Zone UUID: `6b025f8a-88fa-472a-85c0-9510239ab05e`. API base: `https://admin.vps.org/api/v1/dns-zones/{uuid}/records/` with Bearer token auth.
 
@@ -34,9 +34,16 @@ python manage.py seed_courses # 15 courses, 57 chapters (--clear to reset)
 
 # Other management commands
 python manage.py set_plans            # Initialize payment plans
+python manage.py create_paypal_product # Create PayPal product catalog
+python manage.py create_paypal_plans  # Create PayPal billing plans
 python manage.py rebill               # Daily subscription rebilling (cron: 6am)
 python manage.py expire_pro_users     # Expire lapsed pro users (cron: 6:30am)
-python manage.py run_translation      # Translate text bases (needs Google API key)
+python manage.py remove_pro_for_old_plans  # Remove pro status from old plan users
+python manage.py up_users_backup      # Restore users from accounts/json/users.json
+python manage.py set_languages        # Initialize UI language list
+python manage.py set_text_backup      # Load TextBase entries from translations/json/textbase.json
+python manage.py run_translation      # Translate text bases via translation API
+python manage.py delete_translations  # Clean orphaned UI translations
 
 # Deployment
 cd ansible
