@@ -314,3 +314,23 @@ The project already has the most comprehensive test suite. Below are gaps to fil
 5. **Add sitemap for AI tool pages** -- 98 generator URLs are high-value SEO targets
 6. **Add per-minute rate limiting** on AI generators to prevent GPU burst consumption
 7. **Build team workspace** as first major expansion (highest revenue potential with existing infrastructure)
+
+---
+
+
+---
+
+## Revenue Acceleration Addendum (February 2026)
+
+### Portfolio Conversion System (Apply Across Projects)
+1. Enforce a clear funnel: first free action -> email gate -> strict daily free cap -> paywall.
+2. Add in-product upgrade triggers at high intent moments (download/export/API usage/advanced options).
+3. Standardize paid packaging: one highlighted plan, annual discount, and role-based tiers (creator/pro/team).
+4. Add reactivation flows for abandoned usage (1 hour, 24 hour, 72 hour reminders with resume links).
+5. Add referral loop (invite to unlock credits) and clear usage counters for free limits.
+
+### Project-Specific Revenue + SEO Actions
+- Add vertical packs (saas, ecommerce, legal, real estate, agencies) at higher pricing.
+- Add team collaboration plans with brand voice controls and approval flow.
+- Add premium long-form and campaign bundle generation limits by plan.
+- Expand SEO by content type and funnel stage pages (product descriptions, cold emails, landing pages, blogs).
