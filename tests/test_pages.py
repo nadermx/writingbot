@@ -1,8 +1,12 @@
 """
 Test that all public page URLs return HTTP 200.
 Catches template rendering errors, missing context, broken imports, etc.
+
+Also tests authenticated page access, redirect behavior, and response content.
 """
 from django.test import TestCase, Client
+
+from accounts.models import CustomUser
 
 
 class PublicPageTests(TestCase):
@@ -72,6 +76,9 @@ class PublicPageTests(TestCase):
 
     def test_professionals(self):
         self._get('/professionals/')
+
+    def test_success_page(self):
+        self._get('/success/')
 
     # ------------------------------------------------------------------
     # Tool pages
@@ -216,7 +223,163 @@ class PublicPageTests(TestCase):
 
 
 # ======================================================================
-# Dynamic test classes — iterate registries to cover ALL pages
+# Authenticated page tests
+# ======================================================================
+
+class AuthenticatedPageTests(TestCase):
+    """Test pages that behave differently when user is logged in."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from translations.models.language import Language
+        Language.objects.get_or_create(
+            iso='en',
+            defaults={'name': 'English', 'en_label': 'English'}
+        )
+        cls.verified_user = CustomUser.objects.create_user(
+            email='verified@example.com', password='testpass123'
+        )
+        cls.verified_user.is_confirm = True
+        cls.verified_user.save()
+
+        cls.unverified_user = CustomUser.objects.create_user(
+            email='unverified@example.com', password='testpass123'
+        )
+
+    def setUp(self):
+        self.client = Client()
+
+    def test_account_requires_login(self):
+        response = self.client.get('/account/')
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('login', response.url)
+
+    def test_account_unverified_redirects_to_verify(self):
+        self.client.login(email='unverified@example.com', password='testpass123')
+        response = self.client.get('/account/')
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('verify', response.url)
+
+    def test_account_verified_loads(self):
+        self.client.login(email='verified@example.com', password='testpass123')
+        response = self.client.get('/account/')
+        self.assertEqual(response.status_code, 200)
+
+    def test_checkout_requires_login(self):
+        response = self.client.get('/checkout/', {'plan': 'pro'})
+        self.assertEqual(response.status_code, 302)
+
+    def test_checkout_unverified_redirects_to_verify(self):
+        self.client.login(email='unverified@example.com', password='testpass123')
+        response = self.client.get('/checkout/', {'plan': 'pro'})
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('verify', response.url)
+
+    def test_checkout_no_plan_redirects_to_pricing(self):
+        self.client.login(email='verified@example.com', password='testpass123')
+        response = self.client.get('/checkout/')
+        self.assertEqual(response.status_code, 302)
+
+    def test_delete_account_requires_login(self):
+        response = self.client.get('/delete-account/')
+        self.assertEqual(response.status_code, 302)
+
+    def test_delete_account_loads_when_logged_in(self):
+        self.client.login(email='verified@example.com', password='testpass123')
+        response = self.client.get('/delete-account/')
+        self.assertEqual(response.status_code, 200)
+
+    def test_cancel_requires_login(self):
+        response = self.client.get('/cancel/')
+        self.assertEqual(response.status_code, 302)
+
+    def test_cancel_loads_when_logged_in(self):
+        self.client.login(email='verified@example.com', password='testpass123')
+        response = self.client.get('/cancel/')
+        self.assertEqual(response.status_code, 200)
+
+    def test_verify_requires_login(self):
+        response = self.client.get('/verify/')
+        self.assertEqual(response.status_code, 302)
+
+    def test_verify_already_confirmed_redirects(self):
+        self.client.login(email='verified@example.com', password='testpass123')
+        response = self.client.get('/verify/')
+        self.assertEqual(response.status_code, 302)
+
+    def test_login_redirects_authenticated_user(self):
+        self.client.login(email='verified@example.com', password='testpass123')
+        response = self.client.get('/login/')
+        self.assertEqual(response.status_code, 302)
+
+    def test_signup_redirects_authenticated_user(self):
+        self.client.login(email='verified@example.com', password='testpass123')
+        response = self.client.get('/signup/')
+        self.assertEqual(response.status_code, 302)
+
+    def test_lost_password_redirects_authenticated_user(self):
+        self.client.login(email='verified@example.com', password='testpass123')
+        response = self.client.get('/lost-password/')
+        self.assertEqual(response.status_code, 302)
+
+    def test_restore_password_unauthenticated_no_token_redirects(self):
+        response = self.client.get('/restore-password/')
+        self.assertEqual(response.status_code, 302)
+
+    def test_restore_password_with_token_loads(self):
+        response = self.client.get('/restore-password/', {'token': 'abc123'})
+        self.assertEqual(response.status_code, 200)
+
+
+# ======================================================================
+# Page response content checks
+# ======================================================================
+
+class PageContentTests(TestCase):
+    """Test that pages contain expected HTML elements and meta tags."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from translations.models.language import Language
+        Language.objects.get_or_create(
+            iso='en',
+            defaults={'name': 'English', 'en_label': 'English'}
+        )
+
+    def setUp(self):
+        self.client = Client()
+
+    def test_index_has_title(self):
+        response = self.client.get('/')
+        self.assertContains(response, '<title>')
+
+    def test_index_has_meta_description(self):
+        response = self.client.get('/')
+        self.assertContains(response, 'meta')
+
+    def test_pricing_page_loads(self):
+        response = self.client.get('/pricing/')
+        self.assertEqual(response.status_code, 200)
+
+    def test_contact_has_form(self):
+        response = self.client.get('/contact/')
+        self.assertContains(response, 'form')
+
+    def test_login_has_form(self):
+        response = self.client.get('/login/')
+        self.assertContains(response, 'form')
+
+    def test_signup_has_form(self):
+        response = self.client.get('/signup/')
+        self.assertContains(response, 'form')
+
+    def test_paraphraser_has_textarea(self):
+        response = self.client.get('/paraphrasing-tool/')
+        self.assertContains(response, 'textarea')
+
+
+# ======================================================================
+# Dynamic test classes -- iterate registries to cover ALL pages
 # ======================================================================
 
 class AIToolPageTests(TestCase):
