@@ -1,0 +1,68 @@
+---
+# Safely deploy nginx from template with automatic backup and validation.
+#
+# Usage:
+#   cd ansible
+#   ansible-playbook -i servers nginx_safe_deploy.yml
+
+- hosts: all
+  gather_facts: true
+  tasks:
+    - name: Ensure nginx config backup directory exists
+      become: true
+      file:
+        path: /etc/nginx/backups
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Backup current nginx site config
+      become: true
+      copy:
+        src: /etc/nginx/sites-available/{{ projectname }}.conf
+        dest: /etc/nginx/backups/{{ projectname }}.conf.{{ ansible_date_time.iso8601_basic_short }}.bak
+        remote_src: true
+        mode: "0644"
+      ignore_errors: true
+
+    - name: Deploy nginx template
+      become: true
+      template:
+        src: files/nginx.conf.j2
+        dest: /etc/nginx/sites-available/{{ projectname }}.conf
+        mode: "0644"
+
+    - name: Ensure nginx site symlink is enabled
+      become: true
+      file:
+        src: /etc/nginx/sites-available/{{ projectname }}.conf
+        dest: /etc/nginx/sites-enabled/{{ projectname }}.conf
+        state: link
+        force: true
+
+    - name: Remove stale backup symlinks from sites-enabled
+      become: true
+      shell: rm -f /etc/nginx/sites-enabled/{{ projectname }}.conf.bak*
+      changed_when: false
+
+    - name: Validate nginx configuration
+      become: true
+      command: nginx -t
+      changed_when: false
+
+    - name: Reload nginx
+      become: true
+      service:
+        name: nginx
+        state: reloaded
+
+    - name: Verify local HTTPS health through nginx
+      become: true
+      shell: 'curl -kfsS -I https://localhost -H "Host: {{ domain }}" | head -n 1'
+      register: nginx_health
+      changed_when: false
+
+    - name: Print health line
+      debug:
+        msg: "{{ nginx_health.stdout }}"
